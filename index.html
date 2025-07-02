@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .iframe-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 1;
+        }
+        
+        .iframe-container.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        
+        .dynamic-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            background: white;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            z-index: 10;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border-left: 4px solid #dc2626;
+            z-index: 100;
+            position: relative;
+        }
+        
+        .status-indicator {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-loading {
+            background: #fbbf24;
+            color: #92400e;
+        }
+        
+        .status-ready {
+            background: #10b981;
+            color: white;
+        }
+        
+        .status-error {
+            background: #ef4444;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1 id="app-title">🚀 Dashboard Dynamique</h1>
+        <nav class="nav" id="navigation">
+            <!-- Navigation générée dynamiquement -->
+        </nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Chargement du système...</div>
+        </div>
+        <div class="status-indicator status-loading" id="status">
+            Initialisation...
+        </div>
+    </main>
+
+    <script>
+        // Templates intégrés dans le widget
+        const INTEGRATED_TEMPLATES = {
+            dashboard_main: {
+                id: 'dashboard_main',
+                name: '📊 Dashboard',
+                type: 'dashboard',
+                html: `
+                    <div class="dashboard">
+                        <div class="metrics-grid">
+                            <div class="metric-card total">
+                                <div class="metric-value" id="total-clients">0</div>
+                                <div class="metric-label">Total Clients</div>
+                                <div class="metric-icon">👥</div>
+                            </div>
+                            <div class="metric-card active">
+                                <div class="metric-value" id="active-clients">0</div>
+                                <div class="metric-label">Clients Actifs</div>
+                                <div class="metric-icon">✅</div>
+                            </div>
+                            <div class="metric-card revenue">
+                                <div class="metric-value" id="total-revenue">€0</div>
+                                <div class="metric-label">CA Total</div>
+                                <div class="metric-icon">💰</div>
+                            </div>
+                            <div class="metric-card recent">
+                                <div class="metric-value" id="recent-sales">0</div>
+                                <div class="metric-label">Ventes Récentes</div>
+                                <div class="metric-icon">📈</div>
+                            </div>
+                        </div>
+                        
+                        <div class="content-grid">
+                            <div class="chart-card">
+                                <h3>📊 Répartition Clients par Statut</h3>
+                                <canvas id="status-chart" width="300" height="200"></canvas>
+                            </div>
+                            
+                            <div class="activity-card">
+                                <h3>🕒 Activité Récente</h3>
+                                <div id="recent-activity"></div>
+                            </div>
+                            
+                            <div class="sales-card">
+                                <h3>💰 Évolution des Ventes</h3>
+                                <canvas id="sales-chart" width="400" height="200"></canvas>
+                            </div>
+                            
+                            <div class="actions-card">
+                                <h3>⚡ Actions Rapides</h3>
+                                <div class="quick-actions">
+                                    <button onclick="gristAPI.navigate('list_clients')" class="action-btn">
+                                        👥 Voir Clients
+                                    </button>
+                                    <button onclick="gristAPI.navigate('chart_ventes')" class="action-btn">
+                                        📈 Analyses
+                                    </button>
+                                    <button onclick="addNewClient()" class="action-btn primary">
+                                        ➕ Nouveau Client
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                css: `
+                    .dashboard {
+                        padding: 20px;
+                        max-width: 1400px;
+                        margin: 0 auto;
+                    }
+                    
+                    .metrics-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                        gap: 20px;
+                        margin-bottom: 30px;
+                    }
+                    
+                    .metric-card {
+                        background: white;
+                        border-radius: 12px;
+                        padding: 24px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        position: relative;
+                        overflow: hidden;
+                    }
+                    
+                    .metric-card::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 4px;
+                    }
+                    
+                    .metric-card.total::before { background: #3b82f6; }
+                    .metric-card.active::before { background: #10b981; }
+                    .metric-card.revenue::before { background: #f59e0b; }
+                    .metric-card.recent::before { background: #8b5cf6; }
+                    
+                    .metric-value {
+                        font-size: 2.5rem;
+                        font-weight: bold;
+                        color: #1f2937;
+                        margin-bottom: 8px;
+                    }
+                    
+                    .metric-label {
+                        color: #6b7280;
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                    }
+                    
+                    .metric-icon {
+                        position: absolute;
+                        top: 20px;
+                        right: 20px;
+                        font-size: 2rem;
+                        opacity: 0.3;
+                    }
+                    
+                    .content-grid {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr;
+                        grid-template-rows: auto auto;
+                        gap: 20px;
+                    }
+                    
+                    .chart-card, .activity-card, .sales-card, .actions-card {
+                        background: white;
+                        border-radius: 12px;
+                        padding: 24px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+                    
+                    .chart-card h3, .activity-card h3, .sales-card h3, .actions-card h3 {
+                        margin: 0 0 20px 0;
+                        color: #374151;
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                    }
+                    
+                    .chart-card canvas, .sales-card canvas {
+                        width: 100% !important;
+                        height: 200px !important;
+                    }
+                    
+                    .activity-item {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        padding: 12px 0;
+                        border-bottom: 1px solid #f3f4f6;
+                    }
+                    
+                    .activity-item:last-child {
+                        border-bottom: none;
+                    }
+                    
+                    .activity-main {
+                        font-weight: 500;
+                        color: #1f2937;
+                    }
+                    
+                    .activity-time {
+                        font-size: 0.85rem;
+                        color: #6b7280;
+                    }
+                    
+                    .quick-actions {
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                    }
+                    
+                    .action-btn {
+                        background: #f8fafc;
+                        border: 1px solid #e2e8f0;
+                        padding: 12px 16px;
+                        border-radius: 8px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        text-align: left;
+                        transition: all 0.2s;
+                    }
+                    
+                    .action-btn:hover {
+                        background: #f1f5f9;
+                        border-color: #cbd5e1;
+                    }
+                    
+                    .action-btn.primary {
+                        background: #667eea;
+                        color: white;
+                        border-color: #667eea;
+                    }
+                    
+                    .action-btn.primary:hover {
+                        background: #5a67d8;
+                    }
+                `,
+                js: `
+                    class DashboardMain {
+                        async init() {
+                            const clientsData = await gristAPI.getData('Clients') || [];
+                            const ventesData = await gristAPI.getData('Ventes') || [];
+                            
+                            this.renderMetrics(clientsData, ventesData);
+                            this.renderCharts(clientsData, ventesData);
+                            this.renderActivity(clientsData, ventesData);
+                        }
+                        
+                        renderMetrics(clients, ventes) {
+                            const totalClients = clients.length;
+                            const activeClients = clients.filter(c => c.status === 'actif').length;
+                            const totalRevenue = ventes.reduce((sum, v) => sum + (v.montant || 0), 0);
+                            const recentSales = ventes.filter(v => {
+                                const saleDate = new Date(v.date);
+                                const weekAgo = new Date();
+                                weekAgo.setDate(weekAgo.getDate() - 7);
+                                return saleDate >= weekAgo;
+                            }).length;
+                            
+                            document.getElementById('total-clients').textContent = totalClients;
+                            document.getElementById('active-clients').textContent = activeClients;
+                            document.getElementById('total-revenue').textContent = '€' + totalRevenue.toLocaleString('fr-FR');
+                            document.getElementById('recent-sales').textContent = recentSales;
+                        }
+                        
+                        renderCharts(clients, ventes) {
+                            this.renderStatusChart(clients);
+                            this.renderSalesChart(ventes);
+                        }
+                        
+                        renderStatusChart(clients) {
+                            const canvas = document.getElementById('status-chart');
+                            const ctx = canvas.getContext('2d');
+                            
+                            const statusCount = {};
+                            clients.forEach(client => {
+                                const status = client.status || 'unknown';
+                                statusCount[status] = (statusCount[status] || 0) + 1;
+                            });
+                            
+                            this.drawPieChart(ctx, statusCount, {
+                                'actif': '#10b981',
+                                'inactif': '#ef4444',
+                                'prospect': '#f59e0b',
+                                'unknown': '#6b7280'
+                            });
+                        }
+                        
+                        renderSalesChart(ventes) {
+                            const canvas = document.getElementById('sales-chart');
+                            const ctx = canvas.getContext('2d');
+                            
+                            // Grouper par jour
+                            const dailySales = {};
+                            ventes.forEach(vente => {
+                                const date = vente.date ? vente.date.split('T')[0] : new Date().toISOString().split('T')[0];
+                                dailySales[date] = (dailySales[date] || 0) + (vente.montant || 0);
+                            });
+                            
+                            this.drawLineChart(ctx, dailySales);
+                        }
+                        
+                        drawPieChart(ctx, data, colors) {
+                            const canvas = ctx.canvas;
+                            canvas.width = canvas.offsetWidth;
+                            canvas.height = 200;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            const values = Object.values(data);
+                            const total = values.reduce((sum, val) => sum + val, 0);
+                            
+                            if (total === 0) {
+                                ctx.fillStyle = '#9ca3af';
+                                ctx.font = '14px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Aucune donnée', canvas.width / 2, canvas.height / 2);
+                                return;
+                            }
+                            
+                            const centerX = canvas.width / 2;
+                            const centerY = canvas.height / 2;
+                            const radius = Math.min(centerX, centerY) - 40;
+                            
+                            let currentAngle = 0;
+                            
+                            Object.entries(data).forEach(([key, value], index) => {
+                                const sliceAngle = (value / total) * 2 * Math.PI;
+                                const color = colors[key] || '#64748b';
+                                
+                                ctx.fillStyle = color;
+                                ctx.beginPath();
+                                ctx.moveTo(centerX, centerY);
+                                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                                ctx.closePath();
+                                ctx.fill();
+                                
+                                // Label
+                                if (sliceAngle > 0.1) {
+                                    const labelAngle = currentAngle + sliceAngle / 2;
+                                    const labelX = centerX + Math.cos(labelAngle) * (radius * 0.7);
+                                    const labelY = centerY + Math.sin(labelAngle) * (radius * 0.7);
+                                    
+                                    ctx.fillStyle = 'white';
+                                    ctx.font = 'bold 12px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(value.toString(), labelX, labelY);
+                                }
+                                
+                                currentAngle += sliceAngle;
+                            });
+                        }
+                        
+                        drawLineChart(ctx, data) {
+                            const canvas = ctx.canvas;
+                            canvas.width = canvas.offsetWidth;
+                            canvas.height = 200;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            const dates = Object.keys(data).sort();
+                            const values = dates.map(date => data[date]);
+                            const max = Math.max(...values) || 1;
+                            
+                            if (dates.length === 0) {
+                                ctx.fillStyle = '#9ca3af';
+                                ctx.font = '14px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Aucune vente', canvas.width / 2, canvas.height / 2);
+                                return;
+                            }
+                            
+                            const padding = 40;
+                            const chartWidth = canvas.width - 2 * padding;
+                            const chartHeight = canvas.height - 2 * padding;
+                            
+                            // Axes
+                            ctx.strokeStyle = '#e5e7eb';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(padding, padding);
+                            ctx.lineTo(padding, canvas.height - padding);
+                            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+                            ctx.stroke();
+                            
+                            // Ligne de données
+                            if (values.length > 1) {
+                                ctx.strokeStyle = '#667eea';
+                                ctx.lineWidth = 3;
+                                ctx.beginPath();
+                                
+                                values.forEach((value, index) => {
+                                    const x = padding + (index * chartWidth) / (values.length - 1);
+                                    const y = canvas.height - padding - (value / max) * chartHeight;
+                                    
+                                    if (index === 0) {
+                                        ctx.moveTo(x, y);
+                                    } else {
+                                        ctx.lineTo(x, y);
+                                    }
+                                });
+                                
+                                ctx.stroke();
+                                
+                                // Points
+                                ctx.fillStyle = '#667eea';
+                                values.forEach((value, index) => {
+                                    const x = padding + (index * chartWidth) / (values.length - 1);
+                                    const y = canvas.height - padding - (value / max) * chartHeight;
+                                    
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                });
+                            }
+                        }
+                        
+                        renderActivity(clients, ventes) {
+                            const activities = [];
+                            
+                            // Derniers clients ajoutés
+                            clients.slice(-3).forEach(client => {
+                                activities.push({
+                                    text: \`👤 \${client.name || 'Client'} ajouté\`,
+                                    time: client.created_at ? new Date(client.created_at).toLocaleDateString('fr-FR') : 'Récent'
+                                });
+                            });
+                            
+                            // Dernières ventes
+                            ventes.slice(-2).forEach(vente => {
+                                activities.push({
+                                    text: \`💰 Vente de €\${vente.montant || 0}\`,
+                                    time: vente.date ? new Date(vente.date).toLocaleDateString('fr-FR') : 'Récent'
+                                });
+                            });
+                            
+                            const html = activities.map(activity => \`
+                                <div class="activity-item">
+                                    <div class="activity-main">\${activity.text}</div>
+                                    <div class="activity-time">\${activity.time}</div>
+                                </div>
+                            \`).join('');
+                            
+                            document.getElementById('recent-activity').innerHTML = html || '<div class="activity-item">Aucune activité récente</div>';
+                        }
+                    }
+                    
+                    async function addNewClient() {
+                        const name = prompt('Nom du client:');
+                        const company = prompt('Entreprise:');
+                        const email = prompt('Email:');
+                        
+                        if (name) {
+                            const result = await gristAPI.addRecord('Clients', {
+                                name: name,
+                                company: company || '',
+                                email: email || '',
+                                status: 'prospect',
+                                created_at: new Date().toISOString()
+                            });
+                            
+                            if (result.success) {
+                                dashboard.init(); // Refresh
+                            } else {
+                                alert('Erreur: ' + result.error);
+                            }
+                        }
+                    }
+                    
+                    const dashboard = new DashboardMain();
+                    document.addEventListener('DOMContentLoaded', () => {
+                        dashboard.init();
+                    });
+                `
+            },
+            
+            list_clients: {
+                id: 'list_clients',
+                name: '👥 Clients',
+                type: 'list',
+                html: `
+                    <div class="list-container">
+                        <div class="list-header">
+                            <h2>👥 Gestion des Clients</h2>
+                            <div class="list-actions">
+                                <input type="search" id="search" placeholder="🔍 Rechercher un client...">
+                                <select id="status-filter">
+                                    <option value="">Tous les statuts</option>
+                                    <option value="actif">Actifs</option>
+                                    <option value="inactif">Inactifs</option>
+                                    <option value="prospect">Prospects</option>
+                                </select>
+                                <button onclick="addClient()" class="btn-primary">➕ Nouveau Client</button>
+                            </div>
+                        </div>
+                        
+                        <div class="list-stats">
+                            <div class="stat-item">
+                                <span class="stat-label">Total:</span>
+                                <span class="stat-value" id="total-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Actifs:</span>
+                                <span class="stat-value" id="active-count">0</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-label">Prospects:</span>
+                                <span class="stat-value" id="prospect-count">0</span>
+                            </div>
+                        </div>
+                        
+                        <div class="list-content">
+                            <div class="list-table">
+                                <div class="table-header">
+                                    <div>Nom</div>
+                                    <div>Entreprise</div>
+                                    <div>Email</div>
+                                    <div>Statut</div>
+                                    <div>Création</div>
+                                    <div>Actions</div>
+                                </div>
+                                <div id="clients-list" class="table-body">
+                                    <!-- Généré dynamiquement -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                css: `
+                    .list-container {
+                        padding: 20px;
+                        max-width: 1400px;
+                        margin: 0 auto;
+                    }
+
+                    .list-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 20px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid #e2e8f0;
+                    }
+
+                    .list-header h2 {
+                        color: #1f2937;
+                        font-size: 1.8rem;
+                        font-weight: 700;
+                    }
+
+                    .list-actions {
+                        display: flex;
+                        gap: 12px;
+                        align-items: center;
+                    }
+
+                    #search, #status-filter {
+                        padding: 8px 12px;
+                        border: 1px solid #d1d5db;
+                        border-radius: 6px;
+                        font-size: 14px;
+                    }
+
+                    #search {
+                        width: 300px;
+                    }
+
+                    #status-filter {
+                        width: 150px;
+                    }
+
+                    .btn-primary {
+                        background: #667eea;
+                        color: white;
+                        border: none;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        font-weight: 500;
+                        transition: background 0.2s;
+                    }
+
+                    .btn-primary:hover {
+                        background: #5a67d8;
+                    }
+
+                    .list-stats {
+                        display: flex;
+                        gap: 20px;
+                        margin-bottom: 20px;
+                        padding: 16px;
+                        background: white;
+                        border-radius: 8px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    }
+
+                    .stat-item {
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .stat-label {
+                        color: #6b7280;
+                        font-weight: 500;
+                    }
+
+                    .stat-value {
+                        color: #1f2937;
+                        font-weight: 700;
+                        font-size: 1.1rem;
+                    }
+
+                    .list-table {
+                        background: white;
+                        border-radius: 8px;
+                        overflow: hidden;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+                    }
+
+                    .table-header {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr 120px 120px 120px;
+                        gap: 16px;
+                        padding: 16px 20px;
+                        background: #f8fafc;
+                        font-weight: 600;
+                        color: #374151;
+                        border-bottom: 1px solid #e5e7eb;
+                    }
+
+                    .table-body {
+                        max-height: 500px;
+                        overflow-y: auto;
+                    }
+
+                    .table-row {
+                        display: grid;
+                        grid-template-columns: 1fr 1fr 1fr 120px 120px 120px;
+                        gap: 16px;
+                        padding: 16px 20px;
+                        border-bottom: 1px solid #f3f4f6;
+                        align-items: center;
+                        transition: background 0.2s;
+                    }
+
+                    .table-row:hover {
+                        background: #f9fafb;
+                    }
+
+                    .table-row:last-child {
+                        border-bottom: none;
+                    }
+
+                    .client-name {
+                        font-weight: 600;
+                        color: #1f2937;
+                    }
+
+                    .client-email {
+                        color: #6b7280;
+                        font-size: 0.9rem;
+                    }
+
+                    .status-badge {
+                        padding: 4px 8px;
+                        border-radius: 12px;
+                        font-size: 11px;
+                        font-weight: 600;
+                        text-align: center;
+                        text-transform: uppercase;
+                    }
+
+                    .status-actif { 
+                        background: #dcfce7; 
+                        color: #166534; 
+                    }
+                    .status-inactif { 
+                        background: #fee2e2; 
+                        color: #dc2626; 
+                    }
+                    .status-prospect { 
+                        background: #fef3c7; 
+                        color: #92400e; 
+                    }
+
+                    .action-buttons {
+                        display: flex;
+                        gap: 4px;
+                    }
+
+                    .action-btn {
+                        background: none;
+                        border: 1px solid #d1d5db;
+                        padding: 4px 8px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                        font-size: 12px;
+                        transition: all 0.2s;
+                    }
+
+                    .action-btn:hover {
+                        background: #f3f4f6;
+                        border-color: #9ca3af;
+                    }
+
+                    .action-btn.danger:hover {
+                        background: #fee2e2;
+                        border-color: #fca5a5;
+                        color: #dc2626;
+                    }
+
+                    .empty-state {
+                        text-align: center;
+                        padding: 40px;
+                        color: #6b7280;
+                    }
+
+                    .empty-state-icon {
+                        font-size: 3rem;
+                        margin-bottom: 16px;
+                        opacity: 0.5;
+                    }
+                `,
+                js: `
+                    class ListClients {
+                        constructor() {
+                            this.data = [];
+                            this.filteredData = [];
+                        }
+                        
+                        async init() {
+                            this.data = await gristAPI.getData('Clients') || [];
+                            this.filteredData = [...this.data];
+                            this.updateStats();
+                            this.renderList();
+                            this.setupEventListeners();
+                        }
+                        
+                        updateStats() {
+                            const total = this.data.length;
+                            const active = this.data.filter(c => c.status === 'actif').length;
+                            const prospects = this.data.filter(c => c.status === 'prospect').length;
+                            
+                            document.getElementById('total-count').textContent = total;
+                            document.getElementById('active-count').textContent = active;
+                            document.getElementById('prospect-count').textContent = prospects;
+                        }
+                        
+                        renderList() {
+                            const tbody = document.getElementById('clients-list');
+                            
+                            if (this.filteredData.length === 0) {
+                                tbody.innerHTML = \`
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">👥</div>
+                                        <div>Aucun client trouvé</div>
+                                    </div>
+                                \`;
+                                return;
+                            }
+                            
+                            const html = this.filteredData.map(client => \`
+                                <div class="table-row">
+                                    <div class="client-name">\${client.name || 'Sans nom'}</div>
+                                    <div>\${client.company || '-'}</div>
+                                    <div class="client-email">\${client.email || '-'}</div>
+                                    <div>
+                                        <span class="status-badge status-\${client.status || 'prospect'}">
+                                            \${client.status || 'prospect'}
+                                        </span>
+                                    </div>
+                                    <div>\${client.created_at ? new Date(client.created_at).toLocaleDateString('fr-FR') : '-'}</div>
+                                    <div class="action-buttons">
+                                        <button class="action-btn" onclick="editClient(\${client.id})">
+                                            ✏️ Éditer
+                                        </button>
+                                        <button class="action-btn danger" onclick="deleteClient(\${client.id})">
+                                            🗑️ Suppr.
+                                        </button>
+                                    </div>
+                                </div>
+                            \`).join('');
+                            
+                            tbody.innerHTML = html;
+                        }
+                        
+                        setupEventListeners() {
+                            const searchInput = document.getElementById('search');
+                            const statusFilter = document.getElementById('status-filter');
+                            
+                            searchInput.addEventListener('input', () => this.applyFilters());
+                            statusFilter.addEventListener('change', () => this.applyFilters());
+                        }
+                        
+                        applyFilters() {
+                            const query = document.getElementById('search').value.toLowerCase();
+                            const status = document.getElementById('status-filter').value;
+                            
+                            this.filteredData = this.data.filter(client => {
+                                const matchesSearch = !query || 
+                                    (client.name || '').toLowerCase().includes(query) ||
+                                    (client.company || '').toLowerCase().includes(query) ||
+                                    (client.email || '').toLowerCase().includes(query);
+                                
+                                const matchesStatus = !status || client.status === status;
+                                
+                                return matchesSearch && matchesStatus;
+                            });
+                            
+                            this.renderList();
+                        }
+                        
+                        async refresh() {
+                            await this.init();
+                        }
+                    }
+
+                    async function addClient() {
+                        const name = prompt('Nom du client:');
+                        if (!name) return;
+                        
+                        const company = prompt('Entreprise:') || '';
+                        const email = prompt('Email:') || '';
+                        const status = prompt('Statut (actif/inactif/prospect):', 'prospect') || 'prospect';
+                        
+                        const result = await gristAPI.addRecord('Clients', {
+                            name: name,
+                            company: company,
+                            email: email,
+                            status: status,
+                            created_at: new Date().toISOString()
+                        });
+                        
+                        if (result.success) {
+                            listClients.refresh();
+                        } else {
+                            alert('Erreur: ' + result.error);
+                        }
+                    }
+
+                    async function editClient(clientId) {
+                        const client = listClients.data.find(c => c.id === clientId);
+                        if (!client) return;
+                        
+                        const name = prompt('Nom:', client.name) || client.name;
+                        const company = prompt('Entreprise:', client.company || '') || '';
+                        const email = prompt('Email:', client.email || '') || '';
+                        const status = prompt('Statut (actif/inactif/prospect):', client.status || 'prospect') || 'prospect';
+                        
+                        const result = await gristAPI.updateRecord('Clients', clientId, {
+                            name: name,
+                            company: company,
+                            email: email,
+                            status: status
+                        });
+                        
+                        if (result.success) {
+                            listClients.refresh();
+                        } else {
+                            alert('Erreur: ' + result.error);
+                        }
+                    }
+
+                    async function deleteClient(clientId) {
+                        const client = listClients.data.find(c => c.id === clientId);
+                        if (!client) return;
+                        
+                        if (confirm(\`Supprimer le client "\${client.name}" ?\\nCette action est irréversible.\`)) {
+                            const result = await gristAPI.deleteRecord('Clients', clientId);
+                            
+                            if (result.success) {
+                                listClients.refresh();
+                            } else {
+                                alert('Erreur: ' + result.error);
+                            }
+                        }
+                    }
+
+                    const listClients = new ListClients();
+                    document.addEventListener('DOMContentLoaded', () => {
+                        listClients.init();
+                    });
+                `
+            },
+            
+            chart_ventes: {
+                id: 'chart_ventes',
+                name: '📈 Analyses',
+                type: 'chart',
+                html: `
+                    <div class="chart-dashboard">
+                        <div class="chart-header">
+                            <h2>📈 Analyses des Ventes</h2>
+                            <div class="chart-controls">
+                                <select id="period-select">
+                                    <option value="7">7 derniers jours</option>
+                                    <option value="30">30 derniers jours</option>
+                                    <option value="90">3 derniers mois</option>
+                                    <option value="365">12 derniers mois</option>
+                                </select>
+                                <button onclick="exportData()" class="btn-secondary">📥 Exporter</button>
+                            </div>
+                        </div>
+                        
+                        <div class="charts-grid">
+                            <div class="chart-card large">
+                                <h3>💰 Évolution du Chiffre d'Affaires</h3>
+                                <canvas id="revenue-chart"></canvas>
+                            </div>
+                            
+                            <div class="chart-card">
+                                <h3>🏷️ Répartition par Produit</h3>
+                                <canvas id="products-chart"></canvas>
+                            </div>
+                            
+                            <div class="summary-stats">
+                                <div class="stat-card revenue">
+                                    <div class="stat-icon">💰</div>
+                                    <div class="stat-content">
+                                        <div class="stat-value" id="total-revenue">€0</div>
+                                        <div class="stat-label">CA Total</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card orders">
+                                    <div class="stat-icon">📦</div>
+                                    <div class="stat-content">
+                                        <div class="stat-value" id="total-orders">0</div>
+                                        <div class="stat-label">Commandes</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card average">
+                                    <div class="stat-icon">📊</div>
+                                    <div class="stat-content">
+                                        <div class="stat-value" id="avg-order">€0</div>
+                                        <div class="stat-label">Panier Moyen</div>
+                                    </div>
+                                </div>
+                                <div class="stat-card growth">
+                                    <div class="stat-icon">📈</div>
+                                    <div class="stat-content">
+                                        <div class="stat-value" id="growth-rate">+0%</div>
+                                        <div class="stat-label">Croissance</div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="chart-card">
+                                <h3>📅 Ventes par Jour de la Semaine</h3>
+                                <canvas id="weekday-chart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                `,
+                css: `
+                    .chart-dashboard {
+                        padding: 20px;
+                        max-width: 1400px;
+                        margin: 0 auto;
+                    }
+
+                    .chart-header {
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                        margin-bottom: 30px;
+                        padding-bottom: 20px;
+                        border-bottom: 2px solid #e2e8f0;
+                    }
+
+                    .chart-header h2 {
+                        color: #1f2937;
+                        font-size: 1.8rem;
+                        font-weight: 700;
+                    }
+
+                    .chart-controls {
+                        display: flex;
+                        gap: 12px;
+                        align-items: center;
+                    }
+
+                    .charts-grid {
+                        display: grid;
+                        grid-template-columns: 2fr 1fr;
+                        grid-template-rows: auto auto auto;
+                        gap: 20px;
+                    }
+
+                    .chart-card {
+                        background: white;
+                        border-radius: 12px;
+                        padding: 24px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                    }
+
+                    .chart-card.large {
+                        grid-column: 1 / -1;
+                    }
+
+                    .chart-card h3 {
+                        margin: 0 0 20px 0;
+                        color: #374151;
+                        font-size: 1.1rem;
+                        font-weight: 600;
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .chart-card canvas {
+                        width: 100% !important;
+                        height: 250px !important;
+                    }
+
+                    .chart-card.large canvas {
+                        height: 300px !important;
+                    }
+
+                    .summary-stats {
+                        grid-column: 1 / -1;
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                        gap: 20px;
+                    }
+
+                    .stat-card {
+                        background: white;
+                        border-radius: 12px;
+                        padding: 20px;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                        display: flex;
+                        align-items: center;
+                        gap: 16px;
+                        position: relative;
+                        overflow: hidden;
+                    }
+
+                    .stat-card::before {
+                        content: '';
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        right: 0;
+                        height: 4px;
+                    }
+
+                    .stat-card.revenue::before { background: #10b981; }
+                    .stat-card.orders::before { background: #3b82f6; }
+                    .stat-card.average::before { background: #f59e0b; }
+                    .stat-card.growth::before { background: #8b5cf6; }
+
+                    .stat-icon {
+                        font-size: 2.5rem;
+                        opacity: 0.8;
+                    }
+
+                    .stat-content {
+                        flex: 1;
+                    }
+
+                    .stat-value {
+                        font-size: 1.8rem;
+                        font-weight: bold;
+                        color: #1f2937;
+                        margin-bottom: 4px;
+                    }
+
+                    .stat-label {
+                        color: #6b7280;
+                        font-size: 0.9rem;
+                        font-weight: 500;
+                    }
+
+                    #period-select {
+                        padding: 8px 12px;
+                        border: 1px solid #d1d5db;
+                        border-radius: 6px;
+                        background: white;
+                        font-size: 14px;
+                    }
+
+                    .btn-secondary {
+                        background: #f8fafc;
+                        border: 1px solid #d1d5db;
+                        color: #374151;
+                        padding: 8px 16px;
+                        border-radius: 6px;
+                        cursor: pointer;
+                        font-size: 14px;
+                        transition: all 0.2s;
+                    }
+
+                    .btn-secondary:hover {
+                        background: #f1f5f9;
+                        border-color: #9ca3af;
+                    }
+                `,
+                js: `
+                    class ChartVentes {
+                        constructor() {
+                            this.data = [];
+                            this.currentPeriod = 30;
+                        }
+                        
+                        async init() {
+                            this.data = await gristAPI.getData('Ventes') || [];
+                            this.setupControls();
+                            this.renderCharts();
+                            this.renderStats();
+                        }
+                        
+                        setupControls() {
+                            const periodSelect = document.getElementById('period-select');
+                            periodSelect.value = this.currentPeriod;
+                            periodSelect.addEventListener('change', (e) => {
+                                this.currentPeriod = parseInt(e.target.value);
+                                this.renderCharts();
+                                this.renderStats();
+                            });
+                        }
+                        
+                        getFilteredData() {
+                            const cutoffDate = new Date();
+                            cutoffDate.setDate(cutoffDate.getDate() - this.currentPeriod);
+                            
+                            return this.data.filter(vente => {
+                                const venteDate = new Date(vente.date || new Date());
+                                return venteDate >= cutoffDate;
+                            });
+                        }
+                        
+                        renderCharts() {
+                            this.renderRevenueChart();
+                            this.renderProductsChart();
+                            this.renderWeekdayChart();
+                        }
+                        
+                        renderRevenueChart() {
+                            const canvas = document.getElementById('revenue-chart');
+                            const ctx = canvas.getContext('2d');
+                            const filteredData = this.getFilteredData();
+                            
+                            // Grouper par jour
+                            const dailyRevenue = {};
+                            filteredData.forEach(vente => {
+                                const date = vente.date ? vente.date.split('T')[0] : new Date().toISOString().split('T')[0];
+                                dailyRevenue[date] = (dailyRevenue[date] || 0) + (vente.montant || 0);
+                            });
+                            
+                            this.drawLineChart(ctx, dailyRevenue, 'CA quotidien');
+                        }
+                        
+                        renderProductsChart() {
+                            const canvas = document.getElementById('products-chart');
+                            const ctx = canvas.getContext('2d');
+                            const filteredData = this.getFilteredData();
+                            
+                            // Grouper par produit
+                            const productRevenue = {};
+                            filteredData.forEach(vente => {
+                                const product = vente.produit || 'Autre';
+                                productRevenue[product] = (productRevenue[product] || 0) + (vente.montant || 0);
+                            });
+                            
+                            this.drawPieChart(ctx, productRevenue);
+                        }
+                        
+                        renderWeekdayChart() {
+                            const canvas = document.getElementById('weekday-chart');
+                            const ctx = canvas.getContext('2d');
+                            const filteredData = this.getFilteredData();
+                            
+                            const weekdays = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
+                            const weekdayData = {};
+                            
+                            weekdays.forEach(day => weekdayData[day] = 0);
+                            
+                            filteredData.forEach(vente => {
+                                const date = new Date(vente.date || new Date());
+                                const dayName = weekdays[date.getDay()];
+                                weekdayData[dayName] += (vente.montant || 0);
+                            });
+                            
+                            this.drawBarChart(ctx, weekdayData);
+                        }
+                        
+                        drawLineChart(ctx, data, title) {
+                            const canvas = ctx.canvas;
+                            canvas.width = canvas.offsetWidth;
+                            canvas.height = 300;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            const dates = Object.keys(data).sort();
+                            const values = dates.map(date => data[date]);
+                            const max = Math.max(...values) || 1;
+                            
+                            if (dates.length === 0) {
+                                ctx.fillStyle = '#9ca3af';
+                                ctx.font = '16px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Aucune donnée pour cette période', canvas.width / 2, canvas.height / 2);
+                                return;
+                            }
+                            
+                            const padding = 60;
+                            const chartWidth = canvas.width - 2 * padding;
+                            const chartHeight = canvas.height - 2 * padding;
+                            
+                            // Axes
+                            ctx.strokeStyle = '#e5e7eb';
+                            ctx.lineWidth = 1;
+                            ctx.beginPath();
+                            ctx.moveTo(padding, padding);
+                            ctx.lineTo(padding, canvas.height - padding);
+                            ctx.lineTo(canvas.width - padding, canvas.height - padding);
+                            ctx.stroke();
+                            
+                            // Grille
+                            ctx.strokeStyle = '#f3f4f6';
+                            for (let i = 1; i <= 5; i++) {
+                                const y = padding + (i * chartHeight / 5);
+                                ctx.beginPath();
+                                ctx.moveTo(padding, y);
+                                ctx.lineTo(canvas.width - padding, y);
+                                ctx.stroke();
+                            }
+                            
+                            // Ligne de données avec gradient
+                            if (values.length > 1) {
+                                const gradient = ctx.createLinearGradient(0, padding, 0, canvas.height - padding);
+                                gradient.addColorStop(0, 'rgba(102, 126, 234, 0.1)');
+                                gradient.addColorStop(1, 'rgba(102, 126, 234, 0)');
+                                
+                                // Zone sous la courbe
+                                ctx.fillStyle = gradient;
+                                ctx.beginPath();
+                                ctx.moveTo(padding, canvas.height - padding);
+                                
+                                values.forEach((value, index) => {
+                                    const x = padding + (index * chartWidth) / (values.length - 1);
+                                    const y = canvas.height - padding - (value / max) * chartHeight;
+                                    ctx.lineTo(x, y);
+                                });
+                                
+                                ctx.lineTo(canvas.width - padding, canvas.height - padding);
+                                ctx.closePath();
+                                ctx.fill();
+                                
+                                // Ligne
+                                ctx.strokeStyle = '#667eea';
+                                ctx.lineWidth = 3;
+                                ctx.beginPath();
+                                
+                                values.forEach((value, index) => {
+                                    const x = padding + (index * chartWidth) / (values.length - 1);
+                                    const y = canvas.height - padding - (value / max) * chartHeight;
+                                    
+                                    if (index === 0) {
+                                        ctx.moveTo(x, y);
+                                    } else {
+                                        ctx.lineTo(x, y);
+                                    }
+                                });
+                                
+                                ctx.stroke();
+                                
+                                // Points
+                                ctx.fillStyle = '#667eea';
+                                values.forEach((value, index) => {
+                                    const x = padding + (index * chartWidth) / (values.length - 1);
+                                    const y = canvas.height - padding - (value / max) * chartHeight;
+                                    
+                                    ctx.beginPath();
+                                    ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                                    ctx.fill();
+                                });
+                            }
+                            
+                            // Labels des valeurs
+                            ctx.fillStyle = '#6b7280';
+                            ctx.font = '12px Arial';
+                            ctx.textAlign = 'right';
+                            for (let i = 0; i <= 5; i++) {
+                                const value = (max / 5) * (5 - i);
+                                const y = padding + (i * chartHeight / 5);
+                                ctx.fillText('€' + Math.round(value), padding - 10, y + 4);
+                            }
+                        }
+                        
+                        drawPieChart(ctx, data) {
+                            const canvas = ctx.canvas;
+                            canvas.width = canvas.offsetWidth;
+                            canvas.height = 250;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            const values = Object.values(data);
+                            const total = values.reduce((sum, val) => sum + val, 0);
+                            
+                            if (total === 0) {
+                                ctx.fillStyle = '#9ca3af';
+                                ctx.font = '14px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText('Aucune donnée', canvas.width / 2, canvas.height / 2);
+                                return;
+                            }
+                            
+                            const centerX = canvas.width / 2;
+                            const centerY = canvas.height / 2;
+                            const radius = Math.min(centerX, centerY) - 60;
+                            
+                            let currentAngle = 0;
+                            const colors = ['#667eea', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4'];
+                            
+                            Object.entries(data).forEach(([product, value], index) => {
+                                const sliceAngle = (value / total) * 2 * Math.PI;
+                                const color = colors[index % colors.length];
+                                
+                                ctx.fillStyle = color;
+                                ctx.beginPath();
+                                ctx.moveTo(centerX, centerY);
+                                ctx.arc(centerX, centerY, radius, currentAngle, currentAngle + sliceAngle);
+                                ctx.closePath();
+                                ctx.fill();
+                                
+                                // Label avec pourcentage
+                                if (sliceAngle > 0.1) {
+                                    const labelAngle = currentAngle + sliceAngle / 2;
+                                    const percentage = Math.round((value / total) * 100);
+                                    
+                                    // Label sur le côté
+                                    const labelX = centerX + Math.cos(labelAngle) * (radius + 30);
+                                    const labelY = centerY + Math.sin(labelAngle) * (radius + 30);
+                                    
+                                    ctx.fillStyle = '#374151';
+                                    ctx.font = '12px Arial';
+                                    ctx.textAlign = 'center';
+                                    ctx.fillText(\`\${product}\\n\${percentage}%\`, labelX, labelY);
+                                }
+                                
+                                currentAngle += sliceAngle;
+                            });
+                        }
+                        
+                        drawBarChart(ctx, data) {
+                            const canvas = ctx.canvas;
+                            canvas.width = canvas.offsetWidth;
+                            canvas.height = 250;
+                            
+                            ctx.clearRect(0, 0, canvas.width, canvas.height);
+                            
+                            const keys = Object.keys(data);
+                            const values = Object.values(data);
+                            const max = Math.max(...values) || 1;
+                            
+                            const padding = 40;
+                            const chartWidth = canvas.width - 2 * padding;
+                            const chartHeight = canvas.height - 2 * padding;
+                            
+                            const barWidth = chartWidth / keys.length * 0.7;
+                            const barSpacing = chartWidth / keys.length * 0.3;
+                            
+                            keys.forEach((key, index) => {
+                                const barHeight = (values[index] / max) * chartHeight;
+                                const x = padding + index * (barWidth + barSpacing) + barSpacing / 2;
+                                const y = canvas.height - padding - barHeight;
+                                
+                                // Barre avec gradient
+                                const gradient = ctx.createLinearGradient(0, y, 0, y + barHeight);
+                                gradient.addColorStop(0, '#667eea');
+                                gradient.addColorStop(1, '#764ba2');
+                                
+                                ctx.fillStyle = gradient;
+                                ctx.fillRect(x, y, barWidth, barHeight);
+                                
+                                // Label jour
+                                ctx.fillStyle = '#374151';
+                                ctx.font = '12px Arial';
+                                ctx.textAlign = 'center';
+                                ctx.fillText(key, x + barWidth/2, canvas.height - 10);
+                                
+                                // Valeur
+                                if (values[index] > 0) {
+                                    ctx.fillText('€' + Math.round(values[index]), x + barWidth/2, y - 5);
+                                }
+                            });
+                        }
+                        
+                        renderStats() {
+                            const filteredData = this.getFilteredData();
+                            
+                            const totalRevenue = filteredData.reduce((sum, vente) => sum + (vente.montant || 0), 0);
+                            const totalOrders = filteredData.length;
+                            const avgOrder = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+                            
+                            // Calcul croissance (période précédente vs actuelle)
+                            const prevPeriodStart = new Date();
+                            prevPeriodStart.setDate(prevPeriodStart.getDate() - (this.currentPeriod * 2));
+                            const prevPeriodEnd = new Date();
+                            prevPeriodEnd.setDate(prevPeriodEnd.getDate() - this.currentPeriod);
+                            
+                            const prevPeriodData = this.data.filter(vente => {
+                                const venteDate = new Date(vente.date || new Date());
+                                return venteDate >= prevPeriodStart && venteDate < prevPeriodEnd;
+                            });
+                            
+                            const prevRevenue = prevPeriodData.reduce((sum, vente) => sum + (vente.montant || 0), 0);
+                            const growthRate = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
+                            
+                            document.getElementById('total-revenue').textContent = '€' + totalRevenue.toLocaleString('fr-FR');
+                            document.getElementById('total-orders').textContent = totalOrders;
+                            document.getElementById('avg-order').textContent = '€' + Math.round(avgOrder);
+                            
+                            const growthElement = document.getElementById('growth-rate');
+                            const growthText = (growthRate >= 0 ? '+' : '') + growthRate.toFixed(1) + '%';
+                            growthElement.textContent = growthText;
+                            growthElement.style.color = growthRate >= 0 ? '#10b981' : '#ef4444';
+                        }
+                    }
+
+                    function exportData() {
+                        const data = chartVentes.getFilteredData();
+                        const csv = 'Date,Produit,Montant\\n' + 
+                            data.map(v => \`\${v.date || ''},\${v.produit || ''},\${v.montant || 0}\`).join('\\n');
+                        
+                        const blob = new Blob([csv], { type: 'text/csv' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'ventes_export.csv';
+                        a.click();
+                        URL.revokeObjectURL(url);
+                    }
+
+                    const chartVentes = new ChartVentes();
+                    document.addEventListener('DOMContentLoaded', () => {
+                        chartVentes.init();
+                    });
+                `
+            }
+        };
+
+        class GristDynamicDashboard {
+            constructor() {
+                this.templates = new Map();
+                this.currentTemplate = null;
+                this.iframeCounter = 0;
+                this.cache = new Map();
+                this.isReady = false;
+            }
+
+            async init() {
+                try {
+                    this.updateStatus('loading', 'Connexion à Grist...');
+                    
+                    await grist.ready({ 
+                        requiredAccess: 'read table',
+                        allowSelectBy: true 
+                    });
+                    
+                    this.updateStatus('loading', 'Chargement de la configuration...');
+                    await this.loadConfiguration();
+                    
+                    this.updateStatus('loading', 'Configuration de la navigation...');
+                    await this.setupNavigation();
+                    
+                    this.updateStatus('loading', 'Chargement de la page par défaut...');
+                    await this.loadDefaultPage();
+                    
+                    this.updateStatus('ready', 'Système prêt !');
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                } catch (error) {
+                    console.error('Erreur d\'initialisation:', error);
+                    this.updateStatus('error', 'Erreur: ' + error.message);
+                    this.showError('Erreur d\'initialisation: ' + error.message);
+                }
+            }
+
+            updateStatus(type, message) {
+                const statusElement = document.getElementById('status');
+                statusElement.className = `status-indicator status-${type}`;
+                statusElement.textContent = message;
+            }
+
+            async loadConfiguration() {
+                try {
+                    // Essai de charger depuis Grist, sinon utiliser templates intégrés
+                    try {
+                        const apps = await grist.docApi.fetchTable('Apps');
+                        this.currentApp = apps[0] || { name: 'Dashboard Demo', page: 'dashboard_main' };
+                    } catch (e) {
+                        console.log('Table Apps non trouvée, utilisation de la config par défaut');
+                        this.currentApp = { name: 'Dashboard Demo', page: 'dashboard_main' };
+                    }
+                    
+                    try {
+                        const templates = await grist.docApi.fetchTable('Templates');
+                        templates.forEach(template => {
+                            this.templates.set(template.id, template);
+                        });
+                    } catch (e) {
+                        console.log('Table Templates non trouvée, utilisation des templates intégrés');
+                    }
+                    
+                    // Ajouter les templates intégrés si aucun template n'est trouvé
+                    if (this.templates.size === 0) {
+                        Object.values(INTEGRATED_TEMPLATES).forEach(template => {
+                            this.templates.set(template.id, template);
+                        });
+                    }
+                    
+                    document.getElementById('app-title').textContent = this.currentApp.name;
+                } catch (error) {
+                    console.error('Erreur lors du chargement de la configuration:', error);
+                    throw error;
+                }
+            }
+
+            async setupNavigation() {
+                const nav = document.getElementById('navigation');
+                const pages = Array.from(this.templates.values());
+                
+                pages.forEach(page => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = page.name;
+                    btn.onclick = () => this.loadPage(page.id);
+                    nav.appendChild(btn);
+                });
+            }
+
+            async loadPage(templateId) {
+                if (!this.isReady) return;
+                
+                try {
+                    this.updateStatus('loading', 'Chargement de la page...');
+                    
+                    // Mise à jour navigation active
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === this.templates.get(templateId)?.name);
+                    });
+                    
+                    // Chargement du template
+                    const template = this.templates.get(templateId);
+                    if (!template) throw new Error(`Template ${templateId} introuvable`);
+                    
+                    // Compilation et affichage
+                    const compiledHTML = await this.compileTemplate(template, {});
+                    await this.displayInIframe(compiledHTML);
+                    
+                    this.currentTemplate = templateId;
+                    this.updateStatus('ready', 'Page chargée');
+                    
+                } catch (error) {
+                    console.error('Erreur de chargement de page:', error);
+                    this.updateStatus('error', 'Erreur de chargement');
+                    this.showError('Erreur de chargement: ' + error.message);
+                }
+            }
+
+            async loadDefaultPage() {
+                const defaultTemplate = this.currentApp.page || Array.from(this.templates.keys())[0];
+                if (defaultTemplate) {
+                    await this.loadPage(defaultTemplate);
+                }
+            }
+
+            compileTemplate(template, context = {}) {
+                let html = template.html || '<div>Template vide</div>';
+                
+                // Remplacement des variables {{variable}}
+                html = html.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
+                    return this.getNestedValue(context, path) || match;
+                });
+                
+                // Injection du script d'API Grist
+                const gristScript = this.generateGristScript(context);
+                
+                return `
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="UTF-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+                        <style>
+                            body { 
+                                margin: 0; 
+                                padding: 0; 
+                                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+                                background: #ffffff;
+                            }
+                            ${template.css || ''}
+                        </style>
+                    </head>
+                    <body>
+                        ${html}
+                        <script>
+                            ${gristScript}
+                            ${template.js || ''}
+                        </script>
+                    </body>
+                    </html>
+                `;
+            }
+
+            generateGristScript(context) {
+                return `
+                    // API simplifiée pour les templates
+                    window.gristAPI = {
+                        async getData(tableName) {
+                            try {
+                                const data = await parent.window.grist.docApi.fetchTable(tableName);
+                                return data || [];
+                            } catch (error) {
+                                console.warn('Erreur chargement table ' + tableName + ':', error);
+                                return [];
+                            }
+                        },
+                        
+                        async updateRecord(tableId, recordId, changes) {
+                            try {
+                                await parent.window.grist.docApi.applyUserActions([
+                                    ['UpdateRecord', tableId, recordId, changes]
+                                ]);
+                                return { success: true };
+                            } catch (error) {
+                                console.error('Erreur mise à jour:', error);
+                                return { success: false, error: error.message };
+                            }
+                        },
+                        
+                        async addRecord(tableId, record) {
+                            try {
+                                const result = await parent.window.grist.docApi.applyUserActions([
+                                    ['AddRecord', tableId, null, record]
+                                ]);
+                                return { success: true, id: result.retValues[0] };
+                            } catch (error) {
+                                console.error('Erreur ajout:', error);
+                                return { success: false, error: error.message };
+                            }
+                        },
+                        
+                        async deleteRecord(tableId, recordId) {
+                            try {
+                                await parent.window.grist.docApi.applyUserActions([
+                                    ['RemoveRecord', tableId, recordId]
+                                ]);
+                                return { success: true };
+                            } catch (error) {
+                                console.error('Erreur suppression:', error);
+                                return { success: false, error: error.message };
+                            }
+                        },
+                        
+                        navigate: (templateId) => {
+                            parent.postMessage({ type: 'NAVIGATE', templateId }, '*');
+                        }
+                    };
+                `;
+            }
+
+            async displayInIframe(html) {
+                const main = document.getElementById('main-content');
+                
+                // Suppression des anciens iframes inactifs
+                main.querySelectorAll('.iframe-container:not(.active)').forEach(container => {
+                    container.remove();
+                });
+                
+                // Désactivation de l'iframe actuel
+                const currentIframe = main.querySelector('.iframe-container.active');
+                if (currentIframe) {
+                    currentIframe.classList.remove('active');
+                }
+                
+                // Création du nouvel iframe
+                const container = document.createElement('div');
+                container.className = 'iframe-container';
+                
+                const iframe = document.createElement('iframe');
+                iframe.className = 'dynamic-iframe';
+                iframe.id = `iframe-${++this.iframeCounter}`;
+                
+                container.appendChild(iframe);
+                main.appendChild(container);
+                
+                // Chargement du contenu
+                const blob = new Blob([html], { type: 'text/html' });
+                const url = URL.createObjectURL(blob);
+                iframe.src = url;
+                
+                // Activation après chargement
+                iframe.onload = () => {
+                    container.classList.add('active');
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                };
+            }
+
+            getNestedValue(obj, path) {
+                return path.split('.').reduce((current, key) => {
+                    return current && current[key] !== undefined ? current[key] : null;
+                }, obj);
+            }
+
+            showLoading() {
+                document.getElementById('loading').style.display = 'block';
+            }
+
+            hideLoading() {
+                document.getElementById('loading').style.display = 'none';
+            }
+
+            showError(message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+            }
+        }
+
+        // Communication avec les iframes
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'NAVIGATE') {
+                dashboard.loadPage(event.data.templateId);
+            }
+        });
+
+        // Initialisation
+        const dashboard = new GristDynamicDashboard();
+        dashboard.init();
+    </script>
+</body>
+</html>
