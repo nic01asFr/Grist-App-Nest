@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - Version Corrigée</title>
+    <title>Grist Dynamic Dashboard - Version Corrigée v2.1</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <style>
         * {
@@ -83,6 +83,10 @@
             cursor: pointer;
             font-size: 12px;
             margin-left: 10px;
+        }
+        
+        .debug-toggle:hover {
+            background: #d97706;
         }
         
         .main {
@@ -169,9 +173,9 @@
 </head>
 <body>
     <header class="header">
-        <h1 id="app-title">🎮 Dashboard Dynamique Grist <span class="version-badge">v2.0</span></h1>
+        <h1 id="app-title">🎮 Dashboard Dynamique Grist <span class="version-badge">v2.1</span></h1>
         <nav class="nav" id="navigation"></nav>
-        <button class="debug-toggle" onclick="window.toggleDebug()">🐛 Debug</button>
+        <button class="debug-toggle" id="debug-btn">🐛 Debug</button>
     </header>
     
     <main class="main" id="main-content">
@@ -183,94 +187,85 @@
     </main>
 
     <script>
-        // NIVEAU 0: Templates intégrés de fallback (SANS CARACTÈRES ACCENTUÉS)
+        // Variables globales
+        window.dashboardDebugMode = false;
+        window.dashboard = null;
+
+        // Fonction debug globale DEFINIE EN PREMIER
+        window.toggleDebug = function() {
+            try {
+                window.dashboardDebugMode = !window.dashboardDebugMode;
+                console.log('Debug mode:', window.dashboardDebugMode ? 'ON' : 'OFF');
+                
+                const btn = document.getElementById('debug-btn');
+                if (btn) {
+                    btn.style.background = window.dashboardDebugMode ? '#dc2626' : '#f59e0b';
+                    btn.textContent = window.dashboardDebugMode ? '🔴 Debug ON' : '🐛 Debug';
+                }
+            } catch (error) {
+                console.error('Error in toggleDebug:', error);
+            }
+        };
+
+        // Utilitaires de logging sécurisés
+        window.debugLog = function(message, data) {
+            if (window.dashboardDebugMode) {
+                console.log('[DEBUG]', message, data || '');
+            }
+        };
+
+        // NIVEAU 0: Templates de fallback SANS CARACTERES ACCENTUES
         const FALLBACK_TEMPLATES = {
             dashboard_main: {
                 id: 'dashboard_main',
                 name: '📊 Dashboard',
                 type: 'dashboard',
                 table_source: 'Clients',
-                html: `<div class="dashboard" style="padding: 20px; max-width: 1400px; margin: 0 auto;">
-                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
-                        <h1>🔄 Template Integre de Secours</h1>
-                        <p>Aucun template Grist trouve - Utilisation du template par defaut</p>
-                    </div>
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;">
-                        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 4px solid #3b82f6;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;" id="total-clients">0</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">Total Clients</div>
-                        </div>
-                        <div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 4px solid #10b981;">
-                            <div style="font-size: 2.5rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;" id="active-clients">0</div>
-                            <div style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">Clients Actifs</div>
-                        </div>
-                    </div>
-                </div>`,
+                html: '<div class="dashboard" style="padding: 20px; max-width: 1400px; margin: 0 auto;"><div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; text-align: center;"><h1>🔄 Template Integre de Secours</h1><p>Aucun template Grist trouve - Utilisation du template par defaut</p></div><div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px;"><div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 4px solid #3b82f6;"><div style="font-size: 2.5rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;" id="total-clients">0</div><div style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">Total Clients</div></div><div style="background: white; border-radius: 12px; padding: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-top: 4px solid #10b981;"><div style="font-size: 2.5rem; font-weight: bold; color: #1f2937; margin-bottom: 8px;" id="active-clients">0</div><div style="color: #6b7280; font-size: 0.9rem; font-weight: 500;">Clients Actifs</div></div></div></div>',
                 css: '',
-                js: `(function() {
-                    function DashboardMain() {
-                        this.init = function() {
-                            console.log('Dashboard Fallback Loaded');
-                            this.loadData();
-                        };
-                        
-                        this.loadData = function() {
-                            var self = this;
-                            gristAPI.getData('Clients').then(function(clientsData) {
-                                var activeClients = clientsData.filter(function(c) { return c.status === 'actif'; }).length;
-                                
-                                var totalEl = document.getElementById('total-clients');
-                                var activeEl = document.getElementById('active-clients');
-                                
-                                if (totalEl) totalEl.textContent = clientsData.length;
-                                if (activeEl) activeEl.textContent = activeClients;
-                            }).catch(function(error) {
-                                console.error('Error loading data:', error);
-                            });
-                        };
-                    }
-                    
-                    var dashboard = new DashboardMain();
-                    document.addEventListener('DOMContentLoaded', function() {
-                        dashboard.init();
-                    });
-                })();`
+                js: '(function() { function DashboardMain() { this.init = function() { console.log("Dashboard Fallback Loaded"); this.loadData(); }; this.loadData = function() { var self = this; gristAPI.getData("Clients").then(function(clientsData) { var activeClients = clientsData.filter(function(c) { return c.status === "actif"; }).length; var totalEl = document.getElementById("total-clients"); var activeEl = document.getElementById("active-clients"); if (totalEl) totalEl.textContent = clientsData.length; if (activeEl) activeEl.textContent = activeClients; }).catch(function(error) { console.error("Error loading data:", error); }); }; } var dashboard = new DashboardMain(); document.addEventListener("DOMContentLoaded", function() { dashboard.init(); }); })();'
             }
         };
 
-        // NIVEAU 1: Utilitaires de validation et nettoyage
+        // NIVEAU 1: Utilitaires de validation AMELIORES
         class TemplateValidator {
             static cleanJavaScript(js) {
-                if (!js) return '';
+                if (!js || typeof js !== 'string') return '';
                 
-                // Remplacer les caractères accentués courants
-                const charMap = {
-                    'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
-                    'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a',
-                    'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
-                    'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
-                    'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o',
-                    'ç': 'c', 'ñ': 'n',
-                    'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E',
-                    'À': 'A', 'Á': 'A', 'Â': 'A', 'Ä': 'A',
-                    'Ù': 'U', 'Ú': 'U', 'Û': 'U', 'Ü': 'U',
-                    'Ì': 'I', 'Í': 'I', 'Î': 'I', 'Ï': 'I',
-                    'Ò': 'O', 'Ó': 'O', 'Ô': 'O', 'Ö': 'O',
-                    'Ç': 'C', 'Ñ': 'N'
-                };
-                
-                let cleanJs = js;
-                for (const [accented, clean] of Object.entries(charMap)) {
-                    cleanJs = cleanJs.replace(new RegExp(accented, 'g'), clean);
+                try {
+                    // Remplacer les caracteres accentes
+                    const charMap = {
+                        'é': 'e', 'è': 'e', 'ê': 'e', 'ë': 'e',
+                        'à': 'a', 'á': 'a', 'â': 'a', 'ä': 'a',
+                        'ù': 'u', 'ú': 'u', 'û': 'u', 'ü': 'u',
+                        'ì': 'i', 'í': 'i', 'î': 'i', 'ï': 'i',
+                        'ò': 'o', 'ó': 'o', 'ô': 'o', 'ö': 'o',
+                        'ç': 'c', 'ñ': 'n'
+                    };
+                    
+                    let cleanJs = js;
+                    for (const [accented, clean] of Object.entries(charMap)) {
+                        const regex = new RegExp(accented, 'g');
+                        cleanJs = cleanJs.replace(regex, clean);
+                    }
+                    
+                    // Supprimer les caracteres de controle
+                    cleanJs = cleanJs.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
+                    
+                    // Nettoyer les guillemets problematiques
+                    cleanJs = cleanJs.replace(/[""]/g, '"');
+                    cleanJs = cleanJs.replace(/['']/g, "'");
+                    
+                    return cleanJs.trim();
+                } catch (error) {
+                    console.error('Error cleaning JavaScript:', error);
+                    return '';
                 }
-                
-                // Supprimer les caractères de contrôle problématiques
-                cleanJs = cleanJs.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '');
-                
-                return cleanJs.trim();
             }
             
             static validateJavaScript(js) {
+                if (!js) return { valid: true, error: null };
+                
                 try {
                     new Function(js);
                     return { valid: true, error: null };
@@ -280,17 +275,20 @@
             }
             
             static sanitizeHTML(html) {
-                if (!html) return '';
+                if (!html || typeof html !== 'string') return '';
                 
-                // Nettoyer les balises dangereuses
-                const dangerous = /<script[^>]*>.*?<\/script>/gi;
-                html = html.replace(dangerous, '');
-                
-                return html.trim();
+                try {
+                    // Nettoyer les balises script embeddees
+                    html = html.replace(/<script[^>]*>.*?<\/script>/gi, '');
+                    return html.trim();
+                } catch (error) {
+                    console.error('Error sanitizing HTML:', error);
+                    return '';
+                }
             }
         }
 
-        // NIVEAU 2: Classe principale améliorée
+        // NIVEAU 2: Classe principale AMELIOREE
         class GristDynamicDashboard {
             constructor() {
                 this.templates = new Map();
@@ -298,11 +296,11 @@
                 this.iframeCounter = 0;
                 this.isReady = false;
                 this.templatesSource = 'unknown';
-                this.debugMode = false;
             }
 
             async init() {
                 try {
+                    window.debugLog('Initializing dashboard system...');
                     this.updateStatus('loading', 'Connexion a Grist...');
                     
                     await grist.ready({ 
@@ -323,7 +321,7 @@
                     this.hideLoading();
                     this.isReady = true;
                     
-                    this.debugLog('System initialized successfully', { 
+                    window.debugLog('System initialized successfully', { 
                         templatesCount: this.templates.size,
                         source: this.templatesSource 
                     });
@@ -337,29 +335,32 @@
 
             async loadConfiguration() {
                 try {
-                    console.log('Loading templates from Grist...');
+                    window.debugLog('Loading templates from Grist...');
                     const gristTemplates = await grist.docApi.fetchTable('Templates');
                     
                     if (gristTemplates && gristTemplates.length > 0) {
-                        console.log('Grist templates found:', gristTemplates.length);
+                        window.debugLog('Grist templates found:', gristTemplates.length);
                         this.templatesSource = 'grist';
                         
                         for (const template of gristTemplates) {
                             if (template.template_id && template.html) {
-                                // Nettoyage rigoureux des données
-                                const cleanTemplate = this.cleanTemplate(template);
-                                this.templates.set(cleanTemplate.id, cleanTemplate);
-                                this.debugLog('Grist template loaded:', cleanTemplate.id);
+                                try {
+                                    const cleanTemplate = this.cleanTemplate(template);
+                                    this.templates.set(cleanTemplate.id, cleanTemplate);
+                                    window.debugLog('Grist template loaded:', cleanTemplate.id);
+                                } catch (templateError) {
+                                    console.warn('Error processing template:', template.template_id, templateError);
+                                }
                             }
                         }
                     }
                 } catch (error) {
-                    this.debugLog('Error loading Grist templates:', error.message);
+                    window.debugLog('Error loading Grist templates:', error.message);
                 }
                 
                 // Fallback si aucun template Grist valide
                 if (this.templates.size === 0) {
-                    console.log('Using integrated templates');
+                    window.debugLog('Using integrated templates');
                     this.templatesSource = 'integrated';
                     for (const [key, template] of Object.entries(FALLBACK_TEMPLATES)) {
                         this.templates.set(key, template);
@@ -374,46 +375,62 @@
                     this.currentApp = { name: 'Dashboard Dynamique', page: 'dashboard_main' };
                 }
                 
-                document.getElementById('app-title').innerHTML = this.currentApp.name + ' <span class="version-badge">v2.0</span>';
+                const titleElement = document.getElementById('app-title');
+                if (titleElement) {
+                    titleElement.innerHTML = this.currentApp.name + ' <span class="version-badge">v2.1</span>';
+                }
             }
 
             cleanTemplate(template) {
-                // Filtrer les colonnes parasites A, B
-                const cleanedTemplate = {};
-                for (const [key, value] of Object.entries(template)) {
-                    if (key !== 'A' && key !== 'B' && value !== '') {
-                        cleanedTemplate[key] = value;
+                try {
+                    // Filtrer les colonnes parasites A, B
+                    const cleanedTemplate = {};
+                    for (const [key, value] of Object.entries(template)) {
+                        if (key !== 'A' && key !== 'B' && value !== '') {
+                            cleanedTemplate[key] = value;
+                        }
                     }
+                    
+                    return {
+                        id: cleanedTemplate.template_id || 'unknown',
+                        name: cleanedTemplate.template_name || cleanedTemplate.template_id || 'Unnamed',
+                        type: cleanedTemplate.type || 'page',
+                        table_source: cleanedTemplate.table_source || '',
+                        html: TemplateValidator.sanitizeHTML(cleanedTemplate.html || ''),
+                        css: cleanedTemplate.css || '',
+                        js: TemplateValidator.cleanJavaScript(cleanedTemplate.js || '')
+                    };
+                } catch (error) {
+                    console.error('Error cleaning template:', error);
+                    return null;
                 }
-                
-                return {
-                    id: cleanedTemplate.template_id,
-                    name: cleanedTemplate.template_name || cleanedTemplate.template_id,
-                    type: cleanedTemplate.type || 'page',
-                    table_source: cleanedTemplate.table_source || '',
-                    html: TemplateValidator.sanitizeHTML(cleanedTemplate.html || ''),
-                    css: cleanedTemplate.css || '',
-                    js: TemplateValidator.cleanJavaScript(cleanedTemplate.js || '')
-                };
             }
 
             async setupNavigation() {
-                const nav = document.getElementById('navigation');
-                const templates = Array.from(this.templates.values());
-                
-                // Indicateur de source
-                const sourceIndicator = document.createElement('span');
-                sourceIndicator.style.cssText = `background: ${this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;`;
-                sourceIndicator.textContent = this.templatesSource === 'grist' ? 'GRIST' : 'INTEGRE';
-                nav.appendChild(sourceIndicator);
-                
-                // Boutons de navigation
-                for (const template of templates) {
-                    const btn = document.createElement('button');
-                    btn.className = 'nav-btn';
-                    btn.textContent = template.name;
-                    btn.onclick = () => this.loadPage(template.id);
-                    nav.appendChild(btn);
+                try {
+                    const nav = document.getElementById('navigation');
+                    if (!nav) return;
+                    
+                    nav.innerHTML = ''; // Clear existing content
+                    
+                    const templates = Array.from(this.templates.values());
+                    
+                    // Indicateur de source
+                    const sourceIndicator = document.createElement('span');
+                    sourceIndicator.style.cssText = 'background: ' + (this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280') + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;';
+                    sourceIndicator.textContent = this.templatesSource === 'grist' ? 'GRIST' : 'INTEGRE';
+                    nav.appendChild(sourceIndicator);
+                    
+                    // Boutons de navigation
+                    for (const template of templates) {
+                        const btn = document.createElement('button');
+                        btn.className = 'nav-btn';
+                        btn.textContent = template.name;
+                        btn.onclick = () => this.loadPage(template.id);
+                        nav.appendChild(btn);
+                    }
+                } catch (error) {
+                    console.error('Error setting up navigation:', error);
                 }
             }
 
@@ -421,19 +438,22 @@
                 if (!this.isReady) return;
                 
                 try {
+                    window.debugLog('Loading page:', templateId);
                     this.updateStatus('compiling', 'Compilation...');
                     
                     // Navigation active
                     const navButtons = document.querySelectorAll('.nav-btn');
                     const template = this.templates.get(templateId);
                     
+                    if (!template) {
+                        throw new Error('Template ' + templateId + ' introuvable');
+                    }
+                    
                     navButtons.forEach(btn => {
                         btn.classList.toggle('active', btn.textContent === template.name);
                     });
                     
-                    if (!template) throw new Error('Template ' + templateId + ' introuvable');
-                    
-                    this.debugLog('Loading template:', template.id);
+                    window.debugLog('Compiling template:', template.id);
                     
                     const compiledHTML = this.compileTemplate(template);
                     await this.displayInIframe(compiledHTML);
@@ -449,138 +469,138 @@
             }
 
             compileTemplate(template) {
-                const html = template.html || '<div style="padding: 20px; text-align: center;">Template vide</div>';
-                const css = template.css || '';
-                let js = template.js || '';
-                
-                // Validation JavaScript stricte
-                const jsValidation = TemplateValidator.validateJavaScript(js);
-                if (!jsValidation.valid) {
-                    console.warn('JavaScript invalide, utilisation du fallback:', jsValidation.error);
-                    js = 'console.warn("Template JavaScript invalide: ' + jsValidation.error.replace(/"/g, '\\"') + '");';
+                try {
+                    const html = template.html || '<div style="padding: 20px; text-align: center;">Template vide</div>';
+                    const css = template.css || '';
+                    let js = template.js || '';
+                    
+                    // Validation JavaScript stricte
+                    const jsValidation = TemplateValidator.validateJavaScript(js);
+                    if (!jsValidation.valid) {
+                        console.warn('JavaScript invalide, utilisation du fallback:', jsValidation.error);
+                        js = 'console.warn("Template JavaScript invalide: ' + jsValidation.error.replace(/"/g, '\\"') + '");';
+                    }
+                    
+                    const gristScript = this.generateGristScript();
+                    const debugInfo = this.templatesSource === 'grist' ? '🎮 Template Grist' : '🔄 Template integre';
+                    
+                    // Assemblage final securise
+                    return this.buildSecureDocument(html, css, js, gristScript, debugInfo, template.id);
+                } catch (error) {
+                    console.error('Error compiling template:', error);
+                    return this.buildErrorDocument(error.message);
                 }
-                
-                const gristScript = this.generateGristScript();
-                const debugInfo = this.templatesSource === 'grist' ? '🎮 Template Grist' : '🔄 Template integre';
-                
-                // Assemblage final sécurisé
-                return this.buildSecureDocument(html, css, js, gristScript, debugInfo, template.id);
             }
 
             buildSecureDocument(html, css, js, gristScript, debugInfo, templateId) {
-                return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Template ${templateId}</title>
-    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-    <style>
-        body { 
-            margin: 0; 
-            padding: 0; 
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-            background: #ffffff; 
-        }
-        .debug-info { 
-            position: fixed; 
-            top: 10px; 
-            right: 10px; 
-            background: ${this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280'}; 
-            color: white; 
-            padding: 4px 8px; 
-            border-radius: 4px; 
-            font-size: 11px; 
-            z-index: 1000; 
-        }
-        ${css}
-    </style>
-</head>
-<body>
-    <div class="debug-info">${debugInfo}</div>
-    ${html}
-    <script>
-        console.log("${debugInfo}: ${templateId}");
-        ${gristScript}
-        try {
-            ${js}
-        } catch (error) {
-            console.error('Template execution error:', error);
-            document.body.innerHTML += '<div style="background: #fee2e2; color: #dc2626; padding: 10px; margin: 10px; border-radius: 4px;">Erreur execution template: ' + error.message + '</div>';
-        }
-    </script>
-</body>
-</html>`;
+                try {
+                    return '<!DOCTYPE html>' +
+                        '<html lang="fr">' +
+                        '<head>' +
+                        '<meta charset="UTF-8">' +
+                        '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+                        '<title>Template ' + templateId + '</title>' +
+                        '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>' +
+                        '<style>' +
+                        'body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #ffffff; }' +
+                        '.debug-info { position: fixed; top: 10px; right: 10px; background: ' + (this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280') + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }' +
+                        css +
+                        '</style>' +
+                        '</head>' +
+                        '<body>' +
+                        '<div class="debug-info">' + debugInfo + '</div>' +
+                        html +
+                        '<script>' +
+                        'console.log("' + debugInfo + ': ' + templateId + '");' +
+                        gristScript +
+                        'try {' +
+                        js +
+                        '} catch (error) {' +
+                        'console.error("Template execution error:", error);' +
+                        'document.body.innerHTML += "<div style=\\"background: #fee2e2; color: #dc2626; padding: 10px; margin: 10px; border-radius: 4px;\\">Erreur execution template: " + error.message + "</div>";' +
+                        '}' +
+                        '</script>' +
+                        '</body>' +
+                        '</html>';
+                } catch (error) {
+                    console.error('Error building document:', error);
+                    return this.buildErrorDocument(error.message);
+                }
+            }
+
+            buildErrorDocument(errorMessage) {
+                return '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Error</title></head><body><div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;"><h2>Erreur Template</h2><p>' + errorMessage + '</p></div></body></html>';
             }
 
             generateGristScript() {
-                return `window.gristAPI = {
-                    async getData(tableName) {
-                        try {
-                            console.log("Loading table:", tableName);
-                            const data = await parent.window.grist.docApi.fetchTable(tableName);
-                            console.log("Data loaded:", tableName, data ? data.length : 0, "records");
-                            return data || [];
-                        } catch (error) {
-                            console.warn("Error loading table:", tableName, error);
-                            return [];
-                        }
-                    },
-                    async updateRecord(tableId, recordId, changes) {
-                        try {
-                            await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);
-                            return { success: true };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    async addRecord(tableId, record) {
-                        try {
-                            const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);
-                            return { success: true, id: result.retValues[0] };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    async deleteRecord(tableId, recordId) {
-                        try {
-                            await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);
-                            return { success: true };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    navigate(templateId) {
-                        parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");
-                    }
-                };`;
+                return 'window.gristAPI = {' +
+                    'async getData(tableName) {' +
+                        'try {' +
+                            'console.log("Loading table:", tableName);' +
+                            'const data = await parent.window.grist.docApi.fetchTable(tableName);' +
+                            'console.log("Data loaded:", tableName, data ? data.length : 0, "records");' +
+                            'return data || [];' +
+                        '} catch (error) {' +
+                            'console.warn("Error loading table:", tableName, error);' +
+                            'return [];' +
+                        '}' +
+                    '},' +
+                    'async updateRecord(tableId, recordId, changes) {' +
+                        'try {' +
+                            'await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);' +
+                            'return { success: true };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'async addRecord(tableId, record) {' +
+                        'try {' +
+                            'const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);' +
+                            'return { success: true, id: result.retValues[0] };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'async deleteRecord(tableId, recordId) {' +
+                        'try {' +
+                            'await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);' +
+                            'return { success: true };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'navigate(templateId) {' +
+                        'parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");' +
+                    '}' +
+                '};';
             }
 
             async displayInIframe(html) {
-                const main = document.getElementById('main-content');
-                
-                // Nettoyage des anciens iframes
-                const oldContainers = main.querySelectorAll('.iframe-container:not(.active)');
-                oldContainers.forEach(container => container.remove());
-                
-                const currentIframe = main.querySelector('.iframe-container.active');
-                if (currentIframe) {
-                    currentIframe.classList.remove('active');
-                }
-                
-                // Nouveau iframe
-                const container = document.createElement('div');
-                container.className = 'iframe-container';
-                
-                const iframe = document.createElement('iframe');
-                iframe.className = 'dynamic-iframe';
-                iframe.id = 'iframe-' + (++this.iframeCounter);
-                
-                container.appendChild(iframe);
-                main.appendChild(container);
-                
-                // Chargement sécurisé avec gestion d'erreurs
                 try {
+                    const main = document.getElementById('main-content');
+                    if (!main) return;
+                    
+                    // Nettoyage des anciens iframes
+                    const oldContainers = main.querySelectorAll('.iframe-container:not(.active)');
+                    oldContainers.forEach(container => container.remove());
+                    
+                    const currentIframe = main.querySelector('.iframe-container.active');
+                    if (currentIframe) {
+                        currentIframe.classList.remove('active');
+                    }
+                    
+                    // Nouveau iframe
+                    const container = document.createElement('div');
+                    container.className = 'iframe-container';
+                    
+                    const iframe = document.createElement('iframe');
+                    iframe.className = 'dynamic-iframe';
+                    iframe.id = 'iframe-' + (++this.iframeCounter);
+                    
+                    container.appendChild(iframe);
+                    main.appendChild(container);
+                    
+                    // Chargement securise
                     const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
                     const url = URL.createObjectURL(blob);
                     iframe.src = url;
@@ -601,67 +621,81 @@
             }
 
             async loadDefaultPage() {
-                const defaultTemplate = this.currentApp.page || Array.from(this.templates.keys())[0];
-                if (defaultTemplate && this.templates.has(defaultTemplate)) {
-                    await this.loadPage(defaultTemplate);
-                } else if (this.templates.size > 0) {
-                    await this.loadPage(Array.from(this.templates.keys())[0]);
+                try {
+                    const defaultTemplate = this.currentApp.page || Array.from(this.templates.keys())[0];
+                    if (defaultTemplate && this.templates.has(defaultTemplate)) {
+                        await this.loadPage(defaultTemplate);
+                    } else if (this.templates.size > 0) {
+                        await this.loadPage(Array.from(this.templates.keys())[0]);
+                    }
+                } catch (error) {
+                    console.error('Error loading default page:', error);
                 }
             }
 
             updateStatus(type, message) {
-                const statusElement = document.getElementById('status');
-                if (statusElement) {
-                    statusElement.className = 'status-indicator status-' + type;
-                    statusElement.textContent = message;
+                try {
+                    const statusElement = document.getElementById('status');
+                    if (statusElement) {
+                        statusElement.className = 'status-indicator status-' + type;
+                        statusElement.textContent = message;
+                    }
+                } catch (error) {
+                    console.error('Error updating status:', error);
                 }
-            }
-
-            showLoading() {
-                const loading = document.getElementById('loading');
-                if (loading) loading.style.display = 'block';
             }
 
             hideLoading() {
-                const loading = document.getElementById('loading');
-                if (loading) loading.style.display = 'none';
-            }
-
-            showError(message) {
-                const main = document.getElementById('main-content');
-                if (main) {
-                    main.innerHTML = `<div class="error">⚠️ ${message}<br><small>Verifiez la console pour plus de details</small></div>`;
+                try {
+                    const loading = document.getElementById('loading');
+                    if (loading) loading.style.display = 'none';
+                } catch (error) {
+                    console.error('Error hiding loading:', error);
                 }
             }
 
-            debugLog(message, data = null) {
-                if (this.debugMode) {
-                    console.log(`[DEBUG] ${message}`, data);
+            showError(message) {
+                try {
+                    const main = document.getElementById('main-content');
+                    if (main) {
+                        main.innerHTML = '<div class="error">⚠️ ' + message + '<br><small>Verifiez la console pour plus de details</small></div>';
+                    }
+                } catch (error) {
+                    console.error('Error showing error:', error);
                 }
             }
         }
 
         // Communication avec les iframes
         window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'NAVIGATE') {
-                if (window.dashboard) {
-                    window.dashboard.loadPage(event.data.templateId);
+            try {
+                if (event.data && event.data.type === 'NAVIGATE') {
+                    if (window.dashboard) {
+                        window.dashboard.loadPage(event.data.templateId);
+                    }
                 }
+            } catch (error) {
+                console.error('Error handling message:', error);
             }
         });
 
-        // Fonction globale de debug
-        window.toggleDebug = () => {
-            if (window.dashboard) {
-                window.dashboard.debugMode = !window.dashboard.debugMode;
-                console.log('Debug mode:', window.dashboard.debugMode ? 'ON' : 'OFF');
-            }
-        };
-
-        // Initialisation du système
-        window.dashboard = new GristDynamicDashboard();
+        // Ajout des event listeners
         document.addEventListener('DOMContentLoaded', () => {
-            window.dashboard.init();
+            try {
+                // Initialisation du dashboard
+                window.dashboard = new GristDynamicDashboard();
+                window.dashboard.init();
+                
+                // Event listener pour le bouton debug
+                const debugBtn = document.getElementById('debug-btn');
+                if (debugBtn) {
+                    debugBtn.addEventListener('click', window.toggleDebug);
+                }
+                
+                window.debugLog('DOM Content Loaded - System ready');
+            } catch (error) {
+                console.error('Error during initialization:', error);
+            }
         });
     </script>
 </body>
