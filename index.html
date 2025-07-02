@@ -230,6 +230,7 @@
                         
                         renderChart(clients) {
                             const canvas = document.getElementById('simple-chart');
+                            if (!canvas) return;
                             const ctx = canvas.getContext('2d');
                             canvas.width = canvas.offsetWidth;
                             canvas.height = 200;
@@ -309,13 +310,13 @@
                         allowSelectBy: true 
                     });
                     
-                    this.updateStatus('loading', 'Chargement templates depuis Grist...');
+                    this.updateStatus('loading', 'Chargement templates...');
                     await this.loadConfiguration();
                     
                     this.updateStatus('loading', 'Configuration navigation...');
                     await this.setupNavigation();
                     
-                    this.updateStatus('loading', 'Chargement page par défaut...');
+                    this.updateStatus('loading', 'Chargement page...');
                     await this.loadDefaultPage();
                     
                     const statusText = this.templatesSource === 'grist' ? 
@@ -335,75 +336,93 @@
 
             updateStatus(type, message) {
                 const statusElement = document.getElementById('status');
-                statusElement.className = `status-indicator status-${type}`;
-                statusElement.textContent = message;
+                if (statusElement) {
+                    statusElement.className = `status-indicator status-${type}`;
+                    statusElement.textContent = message;
+                }
             }
 
             async loadConfiguration() {
-                // 1. PRIORITÉ : Charger depuis la table Grist Templates
                 try {
-                    console.log('🔍 Tentative de chargement des templates depuis Grist...');
+                    console.log('🔍 Chargement templates...');
                     const gristTemplates = await grist.docApi.fetchTable('Templates');
                     
                     if (gristTemplates && gristTemplates.length > 0) {
-                        console.log('✅ Templates trouvés dans Grist:', gristTemplates.length);
+                        console.log('✅ Templates Grist trouvés:', gristTemplates.length);
                         this.templatesSource = 'grist';
                         
                         gristTemplates.forEach(template => {
-                            // Mapping des noms de colonnes Grist vers format attendu
                             const normalizedTemplate = {
                                 id: template.template_id || template.id,
                                 name: template.template_name || template.name,
                                 type: template.type,
                                 table_source: template.table_source,
-                                html: template.html,
-                                css: template.css,
-                                js: template.js
+                                html: this.sanitizeHTML(template.html || ''),
+                                css: this.sanitizeCSS(template.css || ''),
+                                js: this.sanitizeJS(template.js || '')
                             };
                             
-                            if (normalizedTemplate.id && normalizedTemplate.html) {
+                            if (normalizedTemplate.id) {
                                 this.templates.set(normalizedTemplate.id, normalizedTemplate);
-                                console.log('📄 Template Grist chargé:', normalizedTemplate.id, normalizedTemplate.name);
+                                console.log('📄 Template Grist:', normalizedTemplate.id);
                             }
                         });
                     }
                 } catch (error) {
-                    console.log('ℹ️ Table Templates Grist non trouvée ou vide:', error.message);
+                    console.log('ℹ️ Templates Grist non disponibles:', error.message);
                 }
                 
-                // 2. FALLBACK : Si aucun template Grist, utiliser intégrés
+                // Fallback si aucun template Grist
                 if (this.templates.size === 0) {
-                    console.log('🔄 Aucun template Grist, utilisation des templates intégrés');
+                    console.log('🔄 Utilisation templates intégrés');
                     this.templatesSource = 'integrated';
                     Object.values(FALLBACK_TEMPLATES).forEach(template => {
                         this.templates.set(template.id, template);
-                        console.log('📄 Template intégré chargé:', template.id, template.name);
                     });
                 }
                 
-                // 3. Configuration de l'app
+                // Configuration app
                 try {
                     const apps = await grist.docApi.fetchTable('Apps');
                     this.currentApp = apps[0] || { name: 'Dashboard Dynamique', page: 'dashboard_main' };
                 } catch (e) {
-                    console.log('ℹ️ Table Apps non trouvée, config par défaut');
                     this.currentApp = { name: 'Dashboard Dynamique', page: 'dashboard_main' };
                 }
                 
                 document.getElementById('app-title').textContent = this.currentApp.name;
+            }
+
+            sanitizeHTML(html) {
+                // Nettoyer et sécuriser le HTML
+                if (!html) return '';
+                return html.replace(/\\n/g, '\\n').replace(/\\t/g, '\\t');
+            }
+
+            sanitizeCSS(css) {
+                // Nettoyer le CSS
+                if (!css) return '';
+                return css.replace(/\\n/g, '\\n');
+            }
+
+            sanitizeJS(js) {
+                // Nettoyer le JavaScript et échapper les caractères problématiques
+                if (!js) return '';
                 
-                console.log('📊 Configuration chargée:', {
-                    source: this.templatesSource,
-                    templates: this.templates.size,
-                    app: this.currentApp.name
-                });
+                // Remplacer les caractères d'échappement problématiques
+                let cleanJS = js
+                    .replace(/\\n/g, '\\n')
+                    .replace(/\\t/g, '\\t')
+                    .replace(/\\'/g, "\\'")
+                    .replace(/\\"/g, '\\"');
+                
+                return cleanJS;
             }
 
             async setupNavigation() {
                 const nav = document.getElementById('navigation');
                 const pages = Array.from(this.templates.values());
                 
-                // Ajouter indicateur de source
+                // Indicateur de source
                 const sourceIndicator = document.createElement('span');
                 sourceIndicator.style.cssText = `
                     background: ${this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280'};
@@ -429,40 +448,28 @@
                 if (!this.isReady) return;
                 
                 try {
-                    this.updateStatus('loading', 'Chargement template...');
+                    this.updateStatus('loading', 'Chargement...');
                     
-                    // Mise à jour navigation active
+                    // Navigation active
                     document.querySelectorAll('.nav-btn').forEach(btn => {
                         btn.classList.toggle('active', btn.textContent === this.templates.get(templateId)?.name);
                     });
                     
-                    // Chargement du template
                     const template = this.templates.get(templateId);
                     if (!template) throw new Error(`Template ${templateId} introuvable`);
                     
-                    console.log('🎨 Chargement template:', {
-                        id: template.id,
-                        name: template.name,
-                        source: this.templatesSource,
-                        hasHtml: !!template.html,
-                        hasJs: !!template.js
-                    });
+                    console.log('🎨 Chargement:', template.id, 'Source:', this.templatesSource);
                     
-                    // Compilation et affichage
                     const compiledHTML = await this.compileTemplate(template, {});
                     await this.displayInIframe(compiledHTML);
                     
                     this.currentTemplate = templateId;
-                    
-                    const statusText = this.templatesSource === 'grist' ? 
-                        'Template Grist chargé !' : 
-                        'Template intégré chargé';
-                    this.updateStatus(this.templatesSource === 'grist' ? 'grist' : 'ready', statusText);
+                    this.updateStatus(this.templatesSource === 'grist' ? 'grist' : 'ready', 'Chargé !');
                     
                 } catch (error) {
-                    console.error('Erreur de chargement template:', error);
-                    this.updateStatus('error', 'Erreur template');
-                    this.showError('Erreur de chargement: ' + error.message);
+                    console.error('Erreur chargement:', error);
+                    this.updateStatus('error', 'Erreur');
+                    this.showError('Erreur: ' + error.message);
                 }
             }
 
@@ -471,26 +478,22 @@
                 if (defaultTemplate && this.templates.has(defaultTemplate)) {
                     await this.loadPage(defaultTemplate);
                 } else if (this.templates.size > 0) {
-                    const firstTemplate = Array.from(this.templates.keys())[0];
-                    await this.loadPage(firstTemplate);
+                    await this.loadPage(Array.from(this.templates.keys())[0]);
                 }
             }
 
             compileTemplate(template, context = {}) {
-                let html = template.html || '<div style="padding: 20px; text-align: center;">Template vide - Ajoutez du HTML dans la table Templates</div>';
+                let html = template.html || '<div style="padding: 20px; text-align: center;">Template vide</div>';
                 
-                // Remplacement des variables {{variable}}
+                // Variables de remplacement simples
                 html = html.replace(/\{\{(\w+(?:\.\w+)*)\}\}/g, (match, path) => {
                     return this.getNestedValue(context, path) || match;
                 });
                 
-                // Script d'API Grist
                 const gristScript = this.generateGristScript(context);
-                
-                // Log pour debug
                 const debugInfo = this.templatesSource === 'grist' ? 
-                    '🎮 Template chargé depuis Grist' : 
-                    '🔄 Template intégré utilisé';
+                    '🎮 Template Grist' : 
+                    '🔄 Template intégré';
                 
                 return `
                     <!DOCTYPE html>
@@ -524,11 +527,14 @@
                         <div class="debug-info">${debugInfo}</div>
                         ${html}
                         <script>
-                            console.log('${debugInfo}');
-                            console.log('Template ID: ${template.id}');
-                            console.log('Source: ${this.templatesSource}');
+                            console.log('${debugInfo}: ${template.id}');
                             ${gristScript}
-                            ${template.js || ''}
+                            try {
+                                ${template.js || ''}
+                            } catch (error) {
+                                console.error('Erreur template JS:', error);
+                                document.body.innerHTML += '<div style="background: #fee2e2; color: #dc2626; padding: 10px; margin: 10px;">Erreur template: ' + error.message + '</div>';
+                            }
                         </script>
                     </body>
                     </html>
@@ -537,64 +543,56 @@
 
             generateGristScript(context) {
                 return `
-                    // API Grist pour templates
                     window.gristAPI = {
                         async getData(tableName) {
                             try {
-                                console.log('📊 Chargement table:', tableName);
+                                console.log('📊 Chargement:', tableName);
                                 const data = await parent.window.grist.docApi.fetchTable(tableName);
-                                console.log('✅ Données chargées:', tableName, data?.length || 0, 'enregistrements');
+                                console.log('✅ Données:', tableName, data?.length || 0);
                                 return data || [];
                             } catch (error) {
-                                console.warn('⚠️ Erreur chargement table ' + tableName + ':', error);
+                                console.warn('⚠️ Erreur table:', tableName, error);
                                 return [];
                             }
                         },
                         
                         async updateRecord(tableId, recordId, changes) {
                             try {
-                                console.log('📝 Mise à jour enregistrement:', tableId, recordId, changes);
                                 await parent.window.grist.docApi.applyUserActions([
                                     ['UpdateRecord', tableId, recordId, changes]
                                 ]);
-                                console.log('✅ Enregistrement mis à jour');
                                 return { success: true };
                             } catch (error) {
-                                console.error('❌ Erreur mise à jour:', error);
+                                console.error('❌ Erreur update:', error);
                                 return { success: false, error: error.message };
                             }
                         },
                         
                         async addRecord(tableId, record) {
                             try {
-                                console.log('➕ Ajout enregistrement:', tableId, record);
                                 const result = await parent.window.grist.docApi.applyUserActions([
                                     ['AddRecord', tableId, null, record]
                                 ]);
-                                console.log('✅ Enregistrement ajouté, ID:', result.retValues[0]);
                                 return { success: true, id: result.retValues[0] };
                             } catch (error) {
-                                console.error('❌ Erreur ajout:', error);
+                                console.error('❌ Erreur add:', error);
                                 return { success: false, error: error.message };
                             }
                         },
                         
                         async deleteRecord(tableId, recordId) {
                             try {
-                                console.log('🗑️ Suppression enregistrement:', tableId, recordId);
                                 await parent.window.grist.docApi.applyUserActions([
                                     ['RemoveRecord', tableId, recordId]
                                 ]);
-                                console.log('✅ Enregistrement supprimé');
                                 return { success: true };
                             } catch (error) {
-                                console.error('❌ Erreur suppression:', error);
+                                console.error('❌ Erreur delete:', error);
                                 return { success: false, error: error.message };
                             }
                         },
                         
                         navigate: (templateId) => {
-                            console.log('🧭 Navigation vers:', templateId);
                             parent.postMessage({ type: 'NAVIGATE', templateId }, '*');
                         }
                     };
@@ -604,7 +602,7 @@
             async displayInIframe(html) {
                 const main = document.getElementById('main-content');
                 
-                // Nettoyage des anciens iframes
+                // Nettoyage
                 main.querySelectorAll('.iframe-container:not(.active)').forEach(container => {
                     container.remove();
                 });
@@ -614,7 +612,7 @@
                     currentIframe.classList.remove('active');
                 }
                 
-                // Nouveau iframe
+                // Nouvel iframe
                 const container = document.createElement('div');
                 container.className = 'iframe-container';
                 
@@ -625,15 +623,25 @@
                 container.appendChild(iframe);
                 main.appendChild(container);
                 
-                // Chargement contenu
-                const blob = new Blob([html], { type: 'text/html' });
-                const url = URL.createObjectURL(blob);
-                iframe.src = url;
-                
-                iframe.onload = () => {
-                    container.classList.add('active');
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                };
+                // Chargement sécurisé
+                try {
+                    const blob = new Blob([html], { type: 'text/html' });
+                    const url = URL.createObjectURL(blob);
+                    iframe.src = url;
+                    
+                    iframe.onload = () => {
+                        container.classList.add('active');
+                        setTimeout(() => URL.revokeObjectURL(url), 1000);
+                    };
+                    
+                    iframe.onerror = (error) => {
+                        console.error('Erreur iframe:', error);
+                        this.showError('Erreur de chargement du template');
+                    };
+                } catch (error) {
+                    console.error('Erreur création iframe:', error);
+                    this.showError('Erreur de compilation du template');
+                }
             }
 
             getNestedValue(obj, path) {
@@ -643,29 +651,35 @@
             }
 
             showLoading() {
-                document.getElementById('loading').style.display = 'block';
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'block';
             }
 
             hideLoading() {
-                document.getElementById('loading').style.display = 'none';
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
             }
 
             showError(message) {
                 const main = document.getElementById('main-content');
-                main.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+                if (main) {
+                    main.innerHTML = `<div class="error">⚠️ ${message}</div>`;
+                }
             }
         }
 
         // Communication avec les iframes
         window.addEventListener('message', (event) => {
-            if (event.data.type === 'NAVIGATE') {
-                dashboard.loadPage(event.data.templateId);
+            if (event.data && event.data.type === 'NAVIGATE') {
+                if (window.dashboard) {
+                    window.dashboard.loadPage(event.data.templateId);
+                }
             }
         });
 
         // Initialisation
-        const dashboard = new GristDynamicDashboard();
-        dashboard.init();
+        window.dashboard = new GristDynamicDashboard();
+        window.dashboard.init();
     </script>
 </body>
 </html>
