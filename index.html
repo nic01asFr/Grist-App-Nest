@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v2.3 Fixed</title>
+    <title>Grist Dynamic Dashboard - v2.4 STABLE</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <style>
         * {
@@ -192,7 +192,7 @@
 </head>
 <body>
     <header class="header">
-        <h1 id="app-title">🔒 Dashboard Dynamique Grist <span class="version-badge">v2.3</span><span class="security-badge">FIXED</span></h1>
+        <h1 id="app-title">🔒 Dashboard Dynamique Grist <span class="version-badge">v2.4</span><span class="security-badge">STABLE</span></h1>
         <nav class="nav" id="navigation"></nav>
         <div class="control-buttons">
             <button class="control-btn security" id="security-btn">🔒 MODERATE</button>
@@ -203,7 +203,7 @@
     <main class="main" id="main-content">
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <div>Compilation robuste...</div>
+            <div>Compilation stable...</div>
         </div>
         <div class="status-indicator status-loading" id="status">Initialisation...</div>
     </main>
@@ -214,7 +214,7 @@
         window.dashboard = null;
         window.securityLevel = 'moderate';
 
-        // PROCESSEUR SÉCURISÉ AVEC COMPILATION ROBUSTE
+        // PROCESSEUR SÉCURISÉ AVEC COMPILATION STABLE
         class SecureTemplateProcessor {
             constructor() {
                 this.securityLevels = {
@@ -409,7 +409,7 @@
                 return text.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
             }
 
-            // COMPILATION ROBUSTE AVEC TEMPLATE LITERALS ÉCHAPPÉS
+            // COMPILATION STABLE SANS TEMPLATE LITERALS
             compileSecureTemplate(template) {
                 try {
                     const html = template.html || '<div>Template vide</div>';
@@ -419,37 +419,38 @@
                     const securityColor = this.getSecurityColor();
                     const gristScript = this.generateSecureGristAPI();
                     
-                    // NOUVELLE APPROCHE : Construction par parties pour éviter les conflits
-                    const parts = {
-                        doctype: '<!DOCTYPE html>',
-                        htmlOpen: '<html lang="fr">',
-                        headOpen: '<head>',
-                        charset: '<meta charset="UTF-8">',
-                        viewport: '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-                        title: '<title>Secure Template ' + this.escapeHtml(template.id) + '</title>',
-                        gristScript: '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
-                        styleOpen: '<style>',
-                        baseStyles: this.getBaseStyles(),
-                        securityStyles: '.security-info { position: fixed; top: 10px; right: 10px; background: ' + securityColor + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }',
-                        customStyles: css,
-                        styleClose: '</style>',
-                        headClose: '</head>',
-                        bodyOpen: '<body>',
-                        securityInfo: '<div class="security-info">🔒 ' + this.currentLevel.toUpperCase() + '</div>',
-                        content: html,
-                        scriptOpen: '<script>',
-                        logStatement: 'console.log("🔒 Secure Template: ' + this.escapeJs(template.id) + '");',
-                        gristAPI: gristScript,
-                        wrapperOpen: '(function() { "use strict";',
-                        templateCode: js,
-                        wrapperClose: '})();',
-                        scriptClose: '</script>',
-                        bodyClose: '</body>',
-                        htmlClose: '</html>'
-                    };
+                    // ASSEMBLAGE SÉCURISÉ PAR CONCATÉNATION
+                    const parts = [
+                        '<!DOCTYPE html>',
+                        '<html lang="fr">',
+                        '<head>',
+                        '<meta charset="UTF-8">',
+                        '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
+                        '<title>Secure Template ' + this.escapeHtml(template.id) + '</title>',
+                        '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
+                        '<style>',
+                        this.getBaseStyles(),
+                        '.security-info { position: fixed; top: 10px; right: 10px; background: ' + securityColor + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }',
+                        css,
+                        '</style>',
+                        '</head>',
+                        '<body>',
+                        '<div class="security-info">🔒 ' + this.currentLevel.toUpperCase() + '</div>',
+                        html,
+                        '<script>',
+                        'console.log("🔒 Secure Template: ' + this.escapeJs(template.id) + '");',
+                        gristScript,
+                        '(function() {',
+                        '"use strict";',
+                        js,
+                        '})();',
+                        '</script>',
+                        '</body>',
+                        '</html>'
+                    ];
 
-                    // Assemblage sécurisé
-                    const document = Object.values(parts).join('');
+                    // Assemblage final
+                    const document = parts.join('\n');
                     
                     return document;
 
@@ -473,18 +474,28 @@
             }
 
             escapeHtml(text) {
-                const div = document.createElement('div');
-                div.textContent = text;
-                return div.innerHTML;
+                if (!text) return '';
+                return String(text)
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#x27;');
             }
 
             escapeJs(text) {
-                return text.replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/'/g, "\\'");
+                if (!text) return '';
+                return String(text)
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/'/g, "\\'")
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r');
             }
 
             generateSecureGristAPI() {
-                // Utilisation de Array.join() pour éviter les problèmes de concaténation
-                const apiMethods = [
+                // Construction par tableau pour éviter les problèmes
+                const apiLines = [
                     'window.gristAPI = {',
                     '  async getData(tableName) {',
                     '    try {',
@@ -530,22 +541,24 @@
                     '};'
                 ];
 
-                return apiMethods.join('\n');
+                return apiLines.join('\n');
             }
 
             buildErrorDocument(errorMessage) {
-                return [
+                const escapedMessage = this.escapeHtml(errorMessage);
+                const errorLines = [
                     '<!DOCTYPE html>',
                     '<html>',
                     '<head><meta charset="UTF-8"><title>Template Error</title></head>',
                     '<body>',
                     '<div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;">',
                     '<h2>🚨 Erreur de Template</h2>',
-                    '<p>Message: ' + this.escapeHtml(errorMessage) + '</p>',
+                    '<p>Message: ' + escapedMessage + '</p>',
                     '</div>',
                     '</body>',
                     '</html>'
-                ].join('');
+                ];
+                return errorLines.join('\n');
             }
 
             setSecurityLevel(level) {
@@ -555,7 +568,7 @@
             }
         }
 
-        // SYSTÈME PRINCIPAL IDENTIQUE
+        // SYSTÈME PRINCIPAL
         class SecureGristDashboard {
             constructor() {
                 this.templates = new Map();
@@ -569,8 +582,8 @@
 
             async init() {
                 try {
-                    window.debugLog('🔒 Initializing secure dashboard...');
-                    this.updateStatus('validating', 'Compilation robuste...');
+                    window.debugLog('🔒 Initializing secure dashboard v2.4...');
+                    this.updateStatus('validating', 'Compilation stable...');
                     
                     await grist.ready({ 
                         requiredAccess: 'read table',
@@ -633,24 +646,24 @@
                     this.templatesSource = 'integrated';
                     const fallbackTemplate = {
                         id: 'secure_fallback',
-                        name: '🔒 Fallback Robuste',
+                        name: '🔒 Fallback Stable',
                         type: 'dashboard',
-                        html: '<div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 12px;"><h1>🔒 Compilation Robuste</h1><p>Système opérationnel avec compilation sécurisée</p></div>',
+                        html: '<div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 12px;"><h1>🔒 Compilation Stable v2.4</h1><p>Système opérationnel avec compilation corrigée</p></div>',
                         css: '',
-                        js: 'console.log("Secure compilation working");'
+                        js: 'console.log("Stable compilation working perfectly");'
                     };
                     this.templates.set(fallbackTemplate.id, fallbackTemplate);
                 }
                 
                 try {
                     const apps = await grist.docApi.fetchTable('Apps');
-                    this.currentApp = apps[0] || { name: 'Dashboard Robuste', page: 'dashboard_main' };
+                    this.currentApp = apps[0] || { name: 'Dashboard Stable', page: 'dashboard_main' };
                 } catch (e) {
-                    this.currentApp = { name: 'Dashboard Robuste', page: 'dashboard_main' };
+                    this.currentApp = { name: 'Dashboard Stable', page: 'dashboard_main' };
                 }
                 
                 document.getElementById('app-title').innerHTML = 
-                    '🔒 ' + this.currentApp.name + ' <span class="version-badge">v2.3</span><span class="security-badge">FIXED</span>';
+                    '🔒 ' + this.currentApp.name + ' <span class="version-badge">v2.4</span><span class="security-badge">STABLE</span>';
             }
 
             async setupNavigation() {
@@ -770,13 +783,14 @@
             }
 
             logSecurityReport() {
-                console.log('🔒 RAPPORT DE COMPILATION');
+                console.log('🔒 RAPPORT DE COMPILATION v2.4');
                 console.log('   Niveau: ' + this.secureProcessor.currentLevel.toUpperCase());
                 console.log('   Templates traités: ' + this.validationStats.processed);
                 console.log('   Templates validés: ' + this.templates.size);
                 console.log('   Erreurs: ' + this.validationStats.errors);
                 console.log('   Avertissements: ' + this.validationStats.warnings);
                 console.log('   Source: ' + this.templatesSource.toUpperCase());
+                console.log('   Status: COMPILATION STABLE');
             }
 
             setSecurityLevel(level) {
@@ -849,7 +863,7 @@
                 if (debugBtn) debugBtn.addEventListener('click', window.toggleDebug);
                 if (securityBtn) securityBtn.addEventListener('click', window.toggleSecurity);
                 
-                window.debugLog('🔒 System initialized');
+                window.debugLog('🔒 System v2.4 initialized - STABLE');
                 
             } catch (error) {
                 console.error('Initialization error:', error);
