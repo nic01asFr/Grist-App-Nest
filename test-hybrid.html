@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧪 Test Hybride - Dashboard Base64 & Components</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 80px 1fr;
+        }
+        
+        .header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            position: relative;
+            z-index: 1000;
+        }
+        
+        .header h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .test-badges {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+        }
+        
+        .badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .badge.test { background: #fef3c7; color: #92400e; }
+        .badge.hybrid { background: #ede9fe; color: #6b46c1; }
+        .badge.ready { background: #d1fae5; color: #065f46; }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .nav-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+        
+        .nav-btn.active {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4);
+        }
+        
+        .control-buttons {
+            display: flex;
+            gap: 8px;
+            margin-left: 15px;
+        }
+        
+        .control-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #667eea;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 12px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        
+        .control-btn:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.05);
+        }
+        
+        .control-btn.migrate {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            border: none;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+            margin: 20px;
+            border-radius: 20px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .iframe-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            z-index: 1;
+        }
+        
+        .iframe-container.active {
+            opacity: 1;
+            z-index: 2;
+        }
+        
+        .dynamic-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 20px;
+            background: white;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            max-width: 500px;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f3f4f6;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            font-size: 1.1rem;
+            color: #374151;
+            font-weight: 500;
+            margin-bottom: 10px;
+        }
+        
+        .loading-details {
+            font-size: 0.9rem;
+            color: #6b7280;
+            line-height: 1.5;
+        }
+        
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            z-index: 1001;
+            backdrop-filter: blur(10px);
+        }
+        
+        .status-loading { background: rgba(251, 191, 36, 0.9); color: #92400e; }
+        .status-ready { background: rgba(16, 185, 129, 0.9); color: white; }
+        .status-error { background: rgba(239, 68, 68, 0.9); color: white; }
+        .status-hybrid { background: rgba(139, 92, 246, 0.9); color: white; }
+        .status-testing { background: rgba(59, 130, 246, 0.9); color: white; }
+        
+        .test-info {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            font-size: 12px;
+            color: #374151;
+            z-index: 1001;
+            max-width: 300px;
+        }
+        
+        .test-info h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        .test-stats {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-top: 10px;
+        }
+        
+        .test-stat {
+            background: #f8fafc;
+            padding: 5px 8px;
+            border-radius: 6px;
+            text-align: center;
+        }
+        
+        .error {
+            background: linear-gradient(135deg, #fee2e2, #fecaca);
+            color: #dc2626;
+            padding: 30px;
+            border-radius: 15px;
+            margin: 20px;
+            border-left: 5px solid #dc2626;
+            z-index: 100;
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🧪 Test Environnement Hybride</h1>
+        <div class="test-badges">
+            <span class="badge test">Test Environment</span>
+            <span class="badge hybrid">Hybrid System</span>
+            <span class="badge ready">Base64 Ready</span>
+        </div>
+        <nav class="nav" id="navigation"></nav>
+        <div class="control-buttons">
+            <button class="control-btn migrate" id="migrate-btn">🔄 Migrate to Base64</button>
+            <button class="control-btn" id="debug-btn">🔍 Debug</button>
+            <button class="control-btn" id="stats-btn">📊 Stats</button>
+        </div>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div class="loading-text">Système de test hybride en cours...</div>
+            <div class="loading-details">
+                🔍 Détection des formats de templates<br>
+                🧪 Environnement de test initialisé<br>
+                📊 Document Grist: oz5QLFrrL5azQGmCqFzTaq
+            </div>
+        </div>
+        <div class="status-indicator status-testing" id="status">Test Mode</div>
+        <div class="test-info" id="test-info">
+            <h4>🧪 Environnement de Test</h4>
+            <div>Document: oz5QLFrrL5azQGmCqFzTaq</div>
+            <div>Formats: Legacy, Base64, Component</div>
+            <div class="test-stats">
+                <div class="test-stat">
+                    <div style="font-weight: 600;" id="template-count">0</div>
+                    <div>Templates</div>
+                </div>
+                <div class="test-stat">
+                    <div style="font-weight: 600;" id="format-info">-</div>
+                    <div>Formats</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // CONFIGURATION POUR LE DOCUMENT DE TEST
+        const TEST_DOCUMENT_ID = 'oz5QLFrrL5azQGmCqFzTaq';
+        
+        // SYSTÈME HYBRIDE DE TEST
+        window.dashboardDebugMode = true;
+        window.dashboard = null;
+        window.testStats = { processed: 0, legacy: 0, base64: 0, component: 0, errors: 0 };
+
+        // PROCESSEUR HYBRIDE AMÉLIORÉ POUR TESTS
+        class TestHybridProcessor {
+            constructor() {
+                this.supportedFormats = {
+                    LEGACY: 'legacy',
+                    BASE64: 'base64',
+                    COMPONENT: 'component'
+                };
+            }
+
+            detectTemplateFormat(template) {
+                if (template.component_js && template.component_js.trim()) {
+                    return this.supportedFormats.COMPONENT;
+                } else if (template.html_base64 || template.css_base64 || template.js_base64) {
+                    return this.supportedFormats.BASE64;
+                } else if (template.html || template.css || template.js) {
+                    return this.supportedFormats.LEGACY;
+                } else {
+                    return null;
+                }
+            }
+
+            async processTemplate(rawTemplate) {
+                const format = this.detectTemplateFormat(rawTemplate);
+                console.log(`🧪 [TEST] Format détecté pour ${rawTemplate.template_id}:`, format);
+
+                // Stats pour les tests
+                window.testStats.processed++;
+                if (format) window.testStats[format]++;
+
+                switch (format) {
+                    case this.supportedFormats.COMPONENT:
+                        return await this.processComponent(rawTemplate);
+                    case this.supportedFormats.BASE64:
+                        return this.processBase64(rawTemplate);
+                    case this.supportedFormats.LEGACY:
+                        return this.processLegacy(rawTemplate);
+                    default:
+                        throw new Error('Format de template non reconnu');
+                }
+            }
+
+            async processComponent(rawTemplate) {
+                try {
+                    console.log('🚀 [TEST] Traitement composant:', rawTemplate.template_id);
+                    const componentFunction = new Function('return ' + rawTemplate.component_js);
+                    const component = componentFunction();
+                    
+                    return {
+                        id: rawTemplate.template_id,
+                        name: rawTemplate.template_name,
+                        type: 'component',
+                        format: this.supportedFormats.COMPONENT,
+                        component: component,
+                        render: async (container) => {
+                            await component.render(container, window.gristAPI);
+                        }
+                    };
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur composant:', error);
+                    window.testStats.errors++;
+                    throw error;
+                }
+            }
+
+            processBase64(rawTemplate) {
+                console.log('🔐 [TEST] Traitement Base64:', rawTemplate.template_id);
+                
+                const template = {
+                    id: rawTemplate.template_id,
+                    name: rawTemplate.template_name,
+                    type: 'base64',
+                    format: this.supportedFormats.BASE64,
+                    html: this.decodeBase64Safe(rawTemplate.html_base64),
+                    css: this.decodeBase64Safe(rawTemplate.css_base64),
+                    js: this.decodeBase64Safe(rawTemplate.js_base64)
+                };
+
+                template.render = async (container) => {
+                    const compiledHTML = this.compileBase64Template(template);
+                    await this.renderInIframe(container, compiledHTML);
+                };
+
+                return template;
+            }
+
+            processLegacy(rawTemplate) {
+                console.log('⚠️ [TEST] Traitement Legacy (problématique):', rawTemplate.template_id);
+                
+                const template = {
+                    id: rawTemplate.template_id,
+                    name: rawTemplate.template_name,
+                    type: 'legacy',
+                    format: this.supportedFormats.LEGACY,
+                    html: this.safeLegacyContent(rawTemplate.html),
+                    css: this.safeLegacyContent(rawTemplate.css),
+                    js: this.safeLegacyContent(rawTemplate.js)
+                };
+
+                template.render = async (container) => {
+                    try {
+                        const compiledHTML = this.compileLegacyTemplate(template);
+                        await this.renderInIframe(container, compiledHTML);
+                    } catch (error) {
+                        console.error('❌ [TEST] Erreur compilation Legacy:', error);
+                        window.testStats.errors++;
+                        throw error;
+                    }
+                };
+
+                return template;
+            }
+
+            decodeBase64Safe(encoded) {
+                if (!encoded) return '';
+                try {
+                    return atob(encoded);
+                } catch (error) {
+                    console.warn('⚠️ [TEST] Erreur décodage Base64:', error);
+                    return '';
+                }
+            }
+
+            safeLegacyContent(content) {
+                if (!content) return '';
+                return String(content)
+                    .replace(/[\u0000-\u001F\u007F]/g, '')
+                    .replace(/\r\n/g, '\n')
+                    .trim();
+            }
+
+            compileBase64Template(template) {
+                console.log('✅ [TEST] Compilation Base64 sans échappement');
+                const parts = [
+                    '<!DOCTYPE html>',
+                    '<html lang="fr">',
+                    '<head>',
+                    '<meta charset="UTF-8">',
+                    '<title>🔐 Base64 Template - ' + template.id + '</title>',
+                    '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
+                    '<style>',
+                    'body { margin: 0; padding: 0; font-family: system-ui; background: #f8fafc; }',
+                    template.css,
+                    '</style>',
+                    '</head>',
+                    '<body>',
+                    template.html,
+                    '<script>',
+                    'console.log("🔐 [TEST] Base64 Template loaded: ' + template.id + '");',
+                    'window.gristAPI = { getData: async (t) => { try { return await parent.window.grist.docApi.fetchTable(t); } catch(e) { return []; } } };',
+                    template.js,
+                    '</script>',
+                    '</body>',
+                    '</html>'
+                ];
+                
+                return parts.join('\n');
+            }
+
+            compileLegacyTemplate(template) {
+                console.log('⚠️ [TEST] Compilation Legacy avec échappement maximum');
+                
+                // Échappement ultra-sécurisé pour les tests
+                const escapeHtml = (str) => String(str || '')
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;')
+                    .replace(/'/g, '&#x27;');
+
+                const escapeJs = (str) => String(str || '')
+                    .replace(/\\/g, '\\\\')
+                    .replace(/"/g, '\\"')
+                    .replace(/'/g, "\\'")
+                    .replace(/\n/g, '\\n')
+                    .replace(/\r/g, '\\r')
+                    .replace(/\`/g, '\\`')
+                    .replace(/\$/g, '\\$');
+
+                try {
+                    const parts = [
+                        '<!DOCTYPE html>',
+                        '<html lang="fr">',
+                        '<head>',
+                        '<meta charset="UTF-8">',
+                        '<title>⚠️ Legacy Template - ' + escapeHtml(template.id) + '</title>',
+                        '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
+                        '<style>',
+                        'body { margin: 0; padding: 0; font-family: system-ui; background: #fef3c7; }',
+                        '.legacy-warning { background: #fbbf24; color: #92400e; padding: 10px; text-align: center; font-weight: bold; }',
+                        template.css || '',
+                        '</style>',
+                        '</head>',
+                        '<body>',
+                        '<div class="legacy-warning">⚠️ MODE LEGACY - Échappement requis</div>',
+                        template.html || '<div>Template vide</div>',
+                        '<script>',
+                        'console.log("⚠️ [TEST] Legacy Template loaded: ' + escapeJs(template.id) + '");',
+                        'window.gristAPI = { getData: async (t) => { try { return await parent.window.grist.docApi.fetchTable(t); } catch(e) { return []; } } };',
+                        'try { ' + (template.js || '') + ' } catch(error) { console.error("Legacy template error:", error); }',
+                        '</script>',
+                        '</body>',
+                        '</html>'
+                    ];
+                    
+                    return parts.join('\n');
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur compilation legacy:', error);
+                    return this.buildErrorTemplate('Erreur compilation Legacy: ' + error.message);
+                }
+            }
+
+            async renderInIframe(container, html) {
+                const oldIframes = container.querySelectorAll('.iframe-container');
+                oldIframes.forEach(iframe => iframe.remove());
+
+                const iframeContainer = document.createElement('div');
+                iframeContainer.className = 'iframe-container active';
+                
+                const iframe = document.createElement('iframe');
+                iframe.className = 'dynamic-iframe';
+                iframe.sandbox = 'allow-scripts allow-same-origin';
+                
+                iframeContainer.appendChild(iframe);
+                container.appendChild(iframeContainer);
+
+                const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
+                const url = URL.createObjectURL(blob);
+                iframe.src = url;
+
+                iframe.onload = () => {
+                    setTimeout(() => URL.revokeObjectURL(url), 1000);
+                };
+            }
+
+            buildErrorTemplate(message) {
+                return `<!DOCTYPE html><html><head><title>Test Error</title></head><body><div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;"><h2>🧪 Erreur de Test</h2><p>${message}</p></div></body></html>`;
+            }
+        }
+
+        // GESTIONNAIRE PRINCIPAL DE TEST
+        class TestHybridDashboard {
+            constructor() {
+                this.templates = new Map();
+                this.processor = new TestHybridProcessor();
+                this.currentTemplate = null;
+                this.isReady = false;
+            }
+
+            async init() {
+                try {
+                    console.log('🧪 [TEST] Initialisation environnement de test...');
+                    this.updateStatus('Connexion au document de test...');
+                    
+                    await grist.ready({ requiredAccess: 'read table' });
+                    
+                    this.updateStatus('Chargement templates de test...');
+                    await this.loadTestTemplates();
+                    
+                    this.updateStatus('Configuration navigation...');
+                    this.setupNavigation();
+                    
+                    await this.loadDefaultTemplate();
+                    
+                    this.updateStatus('Environnement de test prêt');
+                    this.updateTestInfo();
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    this.logTestReport();
+                    
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur initialisation:', error);
+                    this.showError('Erreur: ' + error.message);
+                }
+            }
+
+            async loadTestTemplates() {
+                try {
+                    const rawTemplates = await grist.docApi.fetchTable('Templates');
+                    console.log(`🧪 [TEST] ${rawTemplates.length} templates de test trouvés`);
+                    
+                    for (const rawTemplate of rawTemplates) {
+                        try {
+                            const processedTemplate = await this.processor.processTemplate(rawTemplate);
+                            this.templates.set(processedTemplate.id, processedTemplate);
+                            console.log(`✅ [TEST] Template ${processedTemplate.id} (${processedTemplate.format}) traité`);
+                        } catch (error) {
+                            console.warn(`❌ [TEST] Erreur template ${rawTemplate.template_id}:`, error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur chargement templates:', error);
+                    throw error;
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                if (!nav) return;
+                
+                nav.innerHTML = '';
+                
+                // Indicateur de formats avec stats détaillées
+                const formatStats = {};
+                this.templates.forEach(template => {
+                    formatStats[template.format] = (formatStats[template.format] || 0) + 1;
+                });
+                
+                this.templates.forEach(template => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = template.name;
+                    btn.title = `Format: ${template.format.toUpperCase()}`;
+                    
+                    // Couleur selon le format
+                    if (template.format === 'component') {
+                        btn.style.background = 'linear-gradient(135deg, #8b5cf6, #6366f1)';
+                    } else if (template.format === 'base64') {
+                        btn.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+                    } else if (template.format === 'legacy') {
+                        btn.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+                    }
+                    
+                    btn.onclick = () => this.loadTemplate(template.id);
+                    nav.appendChild(btn);
+                });
+            }
+
+            async loadTemplate(templateId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const template = this.templates.get(templateId);
+                    if (!template) {
+                        throw new Error('Template non trouvé: ' + templateId);
+                    }
+                    
+                    console.log(`🧪 [TEST] Chargement template ${templateId} (${template.format})`);
+                    this.updateStatus(`Test ${template.format.toUpperCase()}...`);
+                    
+                    const main = document.getElementById('main-content');
+                    await template.render(main);
+                    
+                    // Mise à jour navigation
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === template.name);
+                    });
+                    
+                    this.currentTemplate = templateId;
+                    this.updateStatus(`Template ${template.format} actif`);
+                    
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur chargement template:', error);
+                    this.showError('Erreur: ' + error.message);
+                }
+            }
+
+            async loadDefaultTemplate() {
+                if (this.templates.size > 0) {
+                    const firstTemplate = Array.from(this.templates.keys())[0];
+                    await this.loadTemplate(firstTemplate);
+                }
+            }
+
+            updateStatus(message) {
+                const status = document.getElementById('status');
+                if (status) status.textContent = message;
+                
+                const loadingText = document.querySelector('.loading-text');
+                if (loadingText) loadingText.textContent = message;
+            }
+
+            updateTestInfo() {
+                document.getElementById('template-count').textContent = this.templates.size;
+                
+                const formats = Array.from(new Set(Array.from(this.templates.values()).map(t => t.format)));
+                document.getElementById('format-info').textContent = formats.length;
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(message) {
+                const main = document.getElementById('main-content');
+                if (main) {
+                    main.innerHTML = `<div class="error">🧪 Erreur de Test<br>${message}</div>`;
+                }
+            }
+
+            logTestReport() {
+                console.log('🧪 RAPPORT DE TEST HYBRIDE');
+                console.log('===========================');
+                console.log('   Document de test:', TEST_DOCUMENT_ID);
+                console.log('   Templates traités:', window.testStats.processed);
+                console.log('   Legacy:', window.testStats.legacy);
+                console.log('   Base64:', window.testStats.base64);
+                console.log('   Component:', window.testStats.component);
+                console.log('   Erreurs:', window.testStats.errors);
+                console.log('   Templates chargés:', this.templates.size);
+                console.log('   Status: ENVIRONNEMENT DE TEST PRÊT');
+            }
+
+            // MIGRATION DE TEST
+            async performTestMigration() {
+                console.log('🔄 [TEST] Début migration test...');
+                let migrated = 0;
+                
+                try {
+                    for (const [templateId, template] of this.templates) {
+                        if (template.format === 'legacy') {
+                            console.log(`🔄 [TEST] Migration ${templateId}...`);
+                            
+                            const updates = {};
+                            if (template.html) updates.html_base64 = btoa(template.html);
+                            if (template.css) updates.css_base64 = btoa(template.css);
+                            if (template.js) updates.js_base64 = btoa(template.js);
+                            
+                            const allTemplates = await grist.docApi.fetchTable('Templates');
+                            const record = allTemplates.find(t => t.template_id === templateId);
+                            
+                            if (record && Object.keys(updates).length > 0) {
+                                await grist.docApi.applyUserActions([
+                                    ['UpdateRecord', 'Templates', record.id, updates]
+                                ]);
+                                migrated++;
+                                console.log(`✅ [TEST] Template ${templateId} migré vers Base64`);
+                            }
+                        }
+                    }
+                    
+                    alert(`🧪 Migration de test réussie: ${migrated} templates migrés vers Base64`);
+                    location.reload();
+                    
+                } catch (error) {
+                    console.error('❌ [TEST] Erreur migration:', error);
+                    alert('❌ Erreur migration: ' + error.message);
+                }
+            }
+        }
+
+        // INITIALISATION
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard = new TestHybridDashboard();
+            window.dashboard.init();
+        });
+
+        // GESTIONNAIRES D'ÉVÉNEMENTS
+        window.showTestStats = function() {
+            const stats = window.testStats;
+            const formats = {};
+            window.dashboard.templates.forEach(t => {
+                formats[t.format] = (formats[t.format] || 0) + 1;
+            });
+            
+            alert(`🧪 STATISTIQUES DE TEST
+            
+📊 Templates traités: ${stats.processed}
+🔧 Legacy: ${stats.legacy} (problématique)
+🔐 Base64: ${stats.base64} (sécurisé)  
+🚀 Component: ${stats.component} (moderne)
+❌ Erreurs: ${stats.errors}
+
+🎯 Document: ${TEST_DOCUMENT_ID}
+📈 Chargés: ${window.dashboard.templates.size}`);
+        };
+
+        window.startTestMigration = function() {
+            if (confirm('🧪 Migrer tous les templates Legacy vers Base64 dans l\'environnement de test ?')) {
+                window.dashboard.performTestMigration();
+            }
+        };
+
+        // Configuration des boutons
+        setTimeout(() => {
+            const debugBtn = document.getElementById('debug-btn');
+            const migrateBtn = document.getElementById('migrate-btn');
+            const statsBtn = document.getElementById('stats-btn');
+            
+            if (debugBtn) debugBtn.addEventListener('click', () => console.log('🧪 Test Debug'));
+            if (migrateBtn) migrateBtn.addEventListener('click', window.startTestMigration);
+            if (statsBtn) statsBtn.addEventListener('click', window.showTestStats);
+        }, 100);
+    </script>
+</body>
+</html>
