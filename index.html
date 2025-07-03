@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v2.4 STABLE</title>
+    <title>Grist Dynamic Dashboard - v2.5 DEBUG</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <style>
         * {
@@ -48,7 +48,7 @@
         }
         
         .security-badge {
-            background: #10b981;
+            background: #f59e0b;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 11px;
@@ -143,6 +143,11 @@
             text-align: center;
             color: #64748b;
             z-index: 10;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            max-width: 400px;
         }
         
         .spinner {
@@ -152,7 +157,7 @@
             border-top: 3px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto 15px;
         }
         
         @keyframes spin {
@@ -188,35 +193,247 @@
         .status-grist { background: #8b5cf6; color: white; }
         .status-secure { background: #059669; color: white; }
         .status-validating { background: #3b82f6; color: white; }
+        .status-debug { background: #f59e0b; color: white; }
+        
+        .debug-info {
+            font-size: 12px;
+            background: #f3f4f6;
+            border-radius: 6px;
+            padding: 10px;
+            margin-top: 15px;
+            text-align: left;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 2px;
+            margin: 10px 0;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            border-radius: 2px;
+            animation: progress 3s ease-in-out infinite;
+        }
+        
+        @keyframes progress {
+            0% { width: 0%; }
+            50% { width: 70%; }
+            100% { width: 100%; }
+        }
     </style>
 </head>
 <body>
     <header class="header">
-        <h1 id="app-title">🔒 Dashboard Dynamique Grist <span class="version-badge">v2.4</span><span class="security-badge">STABLE</span></h1>
+        <h1 id="app-title">🔒 Dashboard Dynamique Grist <span class="version-badge">v2.5</span><span class="security-badge">DEBUG</span></h1>
         <nav class="nav" id="navigation"></nav>
         <div class="control-buttons">
             <button class="control-btn security" id="security-btn">🔒 MODERATE</button>
-            <button class="control-btn" id="debug-btn">🐛 Debug</button>
+            <button class="control-btn" id="debug-btn">🐛 Debug ON</button>
         </div>
     </header>
     
     <main class="main" id="main-content">
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <div>Compilation stable...</div>
+            <div id="loading-text">Initialisation du système de debug...</div>
+            <div class="progress-bar">
+                <div class="progress-fill"></div>
+            </div>
+            <div class="debug-info" id="debug-info">
+                <div>🔍 Mode debug activé</div>
+                <div>📊 Chargement des diagnostics...</div>
+            </div>
         </div>
-        <div class="status-indicator status-loading" id="status">Initialisation...</div>
+        <div class="status-indicator status-debug" id="status">Debug Mode</div>
     </main>
 
     <script>
-        // Variables globales
-        window.dashboardDebugMode = false;
+        // DEBUG MODE FORCÉ - Variables globales avec monitoring
+        window.dashboardDebugMode = true;
         window.dashboard = null;
         window.securityLevel = 'moderate';
+        window.debugSteps = [];
+        window.compilationErrors = [];
 
-        // PROCESSEUR SÉCURISÉ AVEC COMPILATION STABLE
+        // LOGGER DE DEBUG RENFORCÉ
+        function debugLog(step, message, data, isError = false) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = {
+                timestamp,
+                step,
+                message,
+                data: data || null,
+                isError
+            };
+            
+            window.debugSteps.push(logEntry);
+            
+            const prefix = isError ? '❌' : '✅';
+            console.log(`[${timestamp}] ${prefix} ${step}: ${message}`, data || '');
+            
+            // Mise à jour de l'interface de debug
+            updateDebugDisplay();
+        }
+
+        function updateDebugDisplay() {
+            const debugInfo = document.getElementById('debug-info');
+            if (!debugInfo) return;
+            
+            const lastSteps = window.debugSteps.slice(-5);
+            const html = lastSteps.map(step => {
+                const icon = step.isError ? '❌' : '✅';
+                return `<div>${icon} ${step.timestamp} - ${step.step}: ${step.message}</div>`;
+            }).join('');
+            
+            debugInfo.innerHTML = html;
+        }
+
+        // FALLBACK TEMPLATE INTÉGRÉ
+        function createFallbackTemplate() {
+            debugLog('FALLBACK', 'Création du template de fallback');
+            return {
+                id: 'fallback_debug',
+                name: '🔧 Debug Fallback',
+                type: 'debug',
+                html: `
+                    <div style="padding: 30px; max-width: 800px; margin: 0 auto; font-family: Arial, sans-serif;">
+                        <div style="background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                            <h1 style="margin: 0; display: flex; align-items: center; gap: 10px;">
+                                🔧 Mode Debug Actif v2.5
+                            </h1>
+                            <p style="margin: 10px 0 0; opacity: 0.9;">
+                                Diagnostics en cours - Template de fallback chargé
+                            </p>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3 style="margin: 0 0 15px; color: #374151;">📋 État du Système</h3>
+                            <div id="system-status">Chargement des diagnostics...</div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3 style="margin: 0 0 15px; color: #374151;">🔍 Étapes de Debug</h3>
+                            <div id="debug-steps" style="font-family: monospace; font-size: 13px; background: #f8fafc; padding: 15px; border-radius: 6px; max-height: 200px; overflow-y: auto;">
+                                Initialisation du debug...
+                            </div>
+                        </div>
+                        
+                        <div style="background: white; border-radius: 8px; padding: 20px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+                            <h3 style="margin: 0 0 15px; color: #374151;">⚡ Actions de Debug</h3>
+                            <button onclick="testGristConnection()" style="background: #3b82f6; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px;">
+                                🔌 Test Connexion Grist
+                            </button>
+                            <button onclick="testTemplateCompilation()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; margin-right: 10px;">
+                                ⚙️ Test Compilation
+                            </button>
+                            <button onclick="reloadSystem()" style="background: #f59e0b; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">
+                                🔄 Reload Système
+                            </button>
+                        </div>
+                        
+                        <div style="background: #fee2e2; border-radius: 8px; padding: 20px; border-left: 4px solid #dc2626;">
+                            <h3 style="margin: 0 0 10px; color: #dc2626;">⚠️ Instructions de Debug</h3>
+                            <ol style="margin: 0; padding-left: 20px; color: #7f1d1d;">
+                                <li>Vérifiez la console pour les erreurs JavaScript</li>
+                                <li>Testez la connexion Grist avec le bouton ci-dessus</li>
+                                <li>Si problème persistant: Ctrl+Shift+R pour vider le cache</li>
+                                <li>Essayez en mode navigation privée</li>
+                            </ol>
+                        </div>
+                    </div>
+                `,
+                css: '',
+                js: `
+                    debugLog('FALLBACK_JS', 'JavaScript du template fallback exécuté');
+                    
+                    window.testGristConnection = function() {
+                        debugLog('TEST', 'Test de connexion Grist en cours...');
+                        
+                        if (typeof grist === 'undefined') {
+                            debugLog('TEST', 'API Grist non disponible', null, true);
+                            updateSystemStatus('❌ API Grist non trouvée');
+                            return;
+                        }
+                        
+                        grist.ready().then(() => {
+                            debugLog('TEST', 'Connexion Grist OK');
+                            updateSystemStatus('✅ Connexion Grist établie');
+                            
+                            return grist.docApi.fetchTable('Templates');
+                        }).then(templates => {
+                            debugLog('TEST', 'Templates chargés', { count: templates.length });
+                            updateSystemStatus('✅ Templates: ' + templates.length + ' trouvés');
+                        }).catch(error => {
+                            debugLog('TEST', 'Erreur test Grist', error, true);
+                            updateSystemStatus('❌ Erreur: ' + error.message);
+                        });
+                    };
+                    
+                    window.testTemplateCompilation = function() {
+                        debugLog('COMPILATION', 'Test de compilation...');
+                        
+                        const testTemplate = {
+                            id: 'test',
+                            html: '<div>Test HTML</div>',
+                            css: 'div { color: blue; }',
+                            js: 'console.log("Test JS");'
+                        };
+                        
+                        try {
+                            const compiled = window.dashboard?.secureProcessor?.compileSecureTemplate(testTemplate);
+                            if (compiled && compiled.length > 100) {
+                                debugLog('COMPILATION', 'Compilation réussie');
+                                updateSystemStatus('✅ Compilation OK');
+                            } else {
+                                debugLog('COMPILATION', 'Compilation échouée', null, true);
+                                updateSystemStatus('❌ Compilation échouée');
+                            }
+                        } catch (error) {
+                            debugLog('COMPILATION', 'Erreur compilation', error, true);
+                            updateSystemStatus('❌ Erreur compilation: ' + error.message);
+                        }
+                    };
+                    
+                    window.reloadSystem = function() {
+                        debugLog('RELOAD', 'Rechargement du système...');
+                        location.reload();
+                    };
+                    
+                    function updateSystemStatus(status) {
+                        const el = document.getElementById('system-status');
+                        if (el) el.innerHTML = status;
+                    }
+                    
+                    function updateDebugStepsDisplay() {
+                        const el = document.getElementById('debug-steps');
+                        if (el && window.debugSteps) {
+                            const html = window.debugSteps.slice(-10).map(step => {
+                                const icon = step.isError ? '❌' : '✅';
+                                return icon + ' [' + step.timestamp + '] ' + step.step + ': ' + step.message;
+                            }).join('\\n');
+                            el.textContent = html;
+                        }
+                    }
+                    
+                    // Mise à jour périodique
+                    setInterval(updateDebugStepsDisplay, 1000);
+                    
+                    debugLog('FALLBACK_READY', 'Template fallback prêt');
+                `
+            };
+        }
+
+        // PROCESSEUR SÉCURISÉ AVEC DEBUG RENFORCÉ
         class SecureTemplateProcessor {
             constructor() {
+                debugLog('PROCESSOR', 'Initialisation SecureTemplateProcessor');
                 this.securityLevels = {
                     STRICT: 'strict',
                     MODERATE: 'moderate', 
@@ -226,12 +443,14 @@
             }
 
             validateRawTemplate(template) {
+                debugLog('VALIDATION', 'Validation template: ' + (template.template_id || 'unknown'));
                 const result = { valid: true, errors: [], warnings: [], cleaned: null };
 
                 try {
                     if (!template || typeof template !== 'object') {
                         result.valid = false;
                         result.errors.push('Template invalide ou manquant');
+                        debugLog('VALIDATION', 'Template invalide', template, true);
                         return result;
                     }
 
@@ -246,6 +465,9 @@
                     
                     if (result.errors.length > 0) {
                         result.valid = false;
+                        debugLog('VALIDATION', 'Erreurs trouvées', result.errors, true);
+                    } else {
+                        debugLog('VALIDATION', 'Template validé avec succès');
                     }
 
                     result.cleaned = {
@@ -261,6 +483,7 @@
                 } catch (error) {
                     result.valid = false;
                     result.errors.push('Erreur validation: ' + error.message);
+                    debugLog('VALIDATION', 'Exception validation', error, true);
                 }
 
                 return result;
@@ -292,7 +515,7 @@
                         return result;
                     }
 
-                    // Nettoyage sécurisé
+                    // Nettoyage sécurisé plus prudent
                     cleanedHTML = cleanedHTML.replace(/<(script|iframe|object|embed|form)[^>]*>.*?<\/\1>/gi, '');
                     cleanedHTML = cleanedHTML.replace(/\s(on\w+|href\s*=\s*["']javascript:|src\s*=\s*["']javascript:)[^>]*/gi, '');
                     cleanedHTML = this.normalizeWhitespace(cleanedHTML);
@@ -302,6 +525,7 @@
                 } catch (error) {
                     result.errors.push('Erreur validation HTML');
                     result.cleaned = '<div class="error">Erreur HTML</div>';
+                    debugLog('HTML_VALIDATION', 'Erreur validation HTML', error, true);
                 }
 
                 return result;
@@ -329,6 +553,7 @@
 
                 } catch (error) {
                     result.errors.push('Erreur validation CSS');
+                    debugLog('CSS_VALIDATION', 'Erreur validation CSS', error, true);
                 }
 
                 return result;
@@ -366,6 +591,7 @@
                     if (!syntaxValidation.valid) {
                         result.warnings.push('Syntaxe corrigée');
                         cleanedJS = 'try { ' + cleanedJS + ' } catch(error) { console.error("Template error:", error); }';
+                        debugLog('JS_VALIDATION', 'Syntaxe JS corrigée', syntaxValidation.error);
                     }
 
                     cleanedJS = this.normalizeWhitespace(cleanedJS);
@@ -374,6 +600,7 @@
                 } catch (error) {
                     result.errors.push('Erreur validation JS');
                     result.cleaned = 'console.error("Template JS error");';
+                    debugLog('JS_VALIDATION', 'Erreur validation JS', error, true);
                 }
 
                 return result;
@@ -409,53 +636,91 @@
                 return text.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
             }
 
-            // COMPILATION STABLE SANS TEMPLATE LITERALS
+            // COMPILATION SÉCURISÉE AVEC DEBUG
             compileSecureTemplate(template) {
+                debugLog('COMPILATION', 'Début compilation template: ' + template.id);
+                
                 try {
                     const html = template.html || '<div>Template vide</div>';
                     const css = template.css || '';
                     const js = template.js || '';
                     
+                    debugLog('COMPILATION', 'Contenu à compiler', {
+                        htmlLength: html.length,
+                        cssLength: css.length,
+                        jsLength: js.length
+                    });
+                    
                     const securityColor = this.getSecurityColor();
                     const gristScript = this.generateSecureGristAPI();
                     
-                    // ASSEMBLAGE SÉCURISÉ PAR CONCATÉNATION
-                    const parts = [
-                        '<!DOCTYPE html>',
-                        '<html lang="fr">',
-                        '<head>',
-                        '<meta charset="UTF-8">',
-                        '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-                        '<title>Secure Template ' + this.escapeHtml(template.id) + '</title>',
-                        '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
-                        '<style>',
-                        this.getBaseStyles(),
-                        '.security-info { position: fixed; top: 10px; right: 10px; background: ' + securityColor + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }',
-                        css,
-                        '</style>',
-                        '</head>',
-                        '<body>',
-                        '<div class="security-info">🔒 ' + this.currentLevel.toUpperCase() + '</div>',
-                        html,
-                        '<script>',
-                        'console.log("🔒 Secure Template: ' + this.escapeJs(template.id) + '");',
-                        gristScript,
-                        '(function() {',
-                        '"use strict";',
-                        js,
-                        '})();',
-                        '</script>',
-                        '</body>',
-                        '</html>'
-                    ];
+                    // ASSEMBLAGE ULTRA-SÉCURISÉ
+                    const doctype = '<!DOCTYPE html>';
+                    const htmlOpen = '<html lang="fr">';
+                    const headOpen = '<head>';
+                    const charset = '<meta charset="UTF-8">';
+                    const viewport = '<meta name="viewport" content="width=device-width, initial-scale=1.0">';
+                    const title = '<title>Secure Template ' + this.escapeHtml(template.id) + '</title>';
+                    const gristScriptTag = '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>';
+                    const styleOpen = '<style>';
+                    const baseStyles = this.getBaseStyles();
+                    const securityInfoStyle = '.security-info { position: fixed; top: 10px; right: 10px; background: ' + securityColor + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }';
+                    const customStyles = css;
+                    const styleClose = '</style>';
+                    const headClose = '</head>';
+                    const bodyOpen = '<body>';
+                    const securityInfo = '<div class="security-info">🔒 ' + this.currentLevel.toUpperCase() + '</div>';
+                    const content = html;
+                    const scriptOpen = '<script>';
+                    const logStatement = 'console.log("🔒 Secure Template: ' + this.escapeJs(template.id) + '");';
+                    const wrapperOpen = '(function() {';
+                    const strictMode = '"use strict";';
+                    const templateCode = js;
+                    const wrapperClose = '})();';
+                    const scriptClose = '</script>';
+                    const bodyClose = '</body>';
+                    const htmlClose = '</html>';
 
-                    // Assemblage final
-                    const document = parts.join('\n');
+                    // Assemblage par concaténation simple
+                    let compiledDocument = '';
+                    compiledDocument += doctype + '\n';
+                    compiledDocument += htmlOpen + '\n';
+                    compiledDocument += headOpen + '\n';
+                    compiledDocument += charset + '\n';
+                    compiledDocument += viewport + '\n';
+                    compiledDocument += title + '\n';
+                    compiledDocument += gristScriptTag + '\n';
+                    compiledDocument += styleOpen + '\n';
+                    compiledDocument += baseStyles + '\n';
+                    compiledDocument += securityInfoStyle + '\n';
+                    compiledDocument += customStyles + '\n';
+                    compiledDocument += styleClose + '\n';
+                    compiledDocument += headClose + '\n';
+                    compiledDocument += bodyOpen + '\n';
+                    compiledDocument += securityInfo + '\n';
+                    compiledDocument += content + '\n';
+                    compiledDocument += scriptOpen + '\n';
+                    compiledDocument += logStatement + '\n';
+                    compiledDocument += gristScript + '\n';
+                    compiledDocument += wrapperOpen + '\n';
+                    compiledDocument += strictMode + '\n';
+                    compiledDocument += templateCode + '\n';
+                    compiledDocument += wrapperClose + '\n';
+                    compiledDocument += scriptClose + '\n';
+                    compiledDocument += bodyClose + '\n';
+                    compiledDocument += htmlClose;
                     
-                    return document;
+                    debugLog('COMPILATION', 'Compilation réussie', { 
+                        finalLength: compiledDocument.length,
+                        containsScript: compiledDocument.includes('<script>'),
+                        containsHtml: compiledDocument.includes('<!DOCTYPE html>')
+                    });
+                    
+                    return compiledDocument;
 
                 } catch (error) {
-                    console.error('Compilation error:', error);
+                    debugLog('COMPILATION', 'Erreur compilation', error, true);
+                    window.compilationErrors.push(error);
                     return this.buildErrorDocument(error.message);
                 }
             }
@@ -494,83 +759,130 @@
             }
 
             generateSecureGristAPI() {
-                // Construction par tableau pour éviter les problèmes
-                const apiLines = [
-                    'window.gristAPI = {',
-                    '  async getData(tableName) {',
-                    '    try {',
-                    '      if (typeof tableName !== "string" || tableName.length > 50) {',
-                    '        throw new Error("Table name invalid");',
-                    '      }',
-                    '      const data = await parent.window.grist.docApi.fetchTable(tableName);',
-                    '      return data || [];',
-                    '    } catch (error) {',
-                    '      console.warn("Secure API error:", error);',
-                    '      return [];',
-                    '    }',
-                    '  },',
-                    '  async updateRecord(tableId, recordId, changes) {',
-                    '    try {',
-                    '      await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);',
-                    '      return { success: true };',
-                    '    } catch (error) {',
-                    '      return { success: false, error: error.message };',
-                    '    }',
-                    '  },',
-                    '  async addRecord(tableId, record) {',
-                    '    try {',
-                    '      const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);',
-                    '      return { success: true, id: result.retValues[0] };',
-                    '    } catch (error) {',
-                    '      return { success: false, error: error.message };',
-                    '    }',
-                    '  },',
-                    '  async deleteRecord(tableId, recordId) {',
-                    '    try {',
-                    '      await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);',
-                    '      return { success: true };',
-                    '    } catch (error) {',
-                    '      return { success: false, error: error.message };',
-                    '    }',
-                    '  },',
-                    '  navigate(templateId) {',
-                    '    if (typeof templateId === "string" && templateId.length < 100) {',
-                    '      parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");',
-                    '    }',
-                    '  }',
-                    '};'
-                ];
+                debugLog('API_GENERATION', 'Génération de l\'API Grist sécurisée');
+                
+                const line1 = 'window.gristAPI = {';
+                const line2 = '  async getData(tableName) {';
+                const line3 = '    try {';
+                const line4 = '      if (typeof tableName !== "string" || tableName.length > 50) {';
+                const line5 = '        throw new Error("Table name invalid");';
+                const line6 = '      }';
+                const line7 = '      const data = await parent.window.grist.docApi.fetchTable(tableName);';
+                const line8 = '      return data || [];';
+                const line9 = '    } catch (error) {';
+                const line10 = '      console.warn("Secure API error:", error);';
+                const line11 = '      return [];';
+                const line12 = '    }';
+                const line13 = '  },';
+                const line14 = '  async updateRecord(tableId, recordId, changes) {';
+                const line15 = '    try {';
+                const line16 = '      await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);';
+                const line17 = '      return { success: true };';
+                const line18 = '    } catch (error) {';
+                const line19 = '      return { success: false, error: error.message };';
+                const line20 = '    }';
+                const line21 = '  },';
+                const line22 = '  async addRecord(tableId, record) {';
+                const line23 = '    try {';
+                const line24 = '      const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);';
+                const line25 = '      return { success: true, id: result.retValues[0] };';
+                const line26 = '    } catch (error) {';
+                const line27 = '      return { success: false, error: error.message };';
+                const line28 = '    }';
+                const line29 = '  },';
+                const line30 = '  async deleteRecord(tableId, recordId) {';
+                const line31 = '    try {';
+                const line32 = '      await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);';
+                const line33 = '      return { success: true };';
+                const line34 = '    } catch (error) {';
+                const line35 = '      return { success: false, error: error.message };';
+                const line36 = '    }';
+                const line37 = '  },';
+                const line38 = '  navigate(templateId) {';
+                const line39 = '    if (typeof templateId === "string" && templateId.length < 100) {';
+                const line40 = '      parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");';
+                const line41 = '    }';
+                const line42 = '  }';
+                const line43 = '};';
 
-                return apiLines.join('\n');
+                let apiCode = '';
+                apiCode += line1 + '\n';
+                apiCode += line2 + '\n';
+                apiCode += line3 + '\n';
+                apiCode += line4 + '\n';
+                apiCode += line5 + '\n';
+                apiCode += line6 + '\n';
+                apiCode += line7 + '\n';
+                apiCode += line8 + '\n';
+                apiCode += line9 + '\n';
+                apiCode += line10 + '\n';
+                apiCode += line11 + '\n';
+                apiCode += line12 + '\n';
+                apiCode += line13 + '\n';
+                apiCode += line14 + '\n';
+                apiCode += line15 + '\n';
+                apiCode += line16 + '\n';
+                apiCode += line17 + '\n';
+                apiCode += line18 + '\n';
+                apiCode += line19 + '\n';
+                apiCode += line20 + '\n';
+                apiCode += line21 + '\n';
+                apiCode += line22 + '\n';
+                apiCode += line23 + '\n';
+                apiCode += line24 + '\n';
+                apiCode += line25 + '\n';
+                apiCode += line26 + '\n';
+                apiCode += line27 + '\n';
+                apiCode += line28 + '\n';
+                apiCode += line29 + '\n';
+                apiCode += line30 + '\n';
+                apiCode += line31 + '\n';
+                apiCode += line32 + '\n';
+                apiCode += line33 + '\n';
+                apiCode += line34 + '\n';
+                apiCode += line35 + '\n';
+                apiCode += line36 + '\n';
+                apiCode += line37 + '\n';
+                apiCode += line38 + '\n';
+                apiCode += line39 + '\n';
+                apiCode += line40 + '\n';
+                apiCode += line41 + '\n';
+                apiCode += line42 + '\n';
+                apiCode += line43;
+
+                return apiCode;
             }
 
             buildErrorDocument(errorMessage) {
                 const escapedMessage = this.escapeHtml(errorMessage);
-                const errorLines = [
-                    '<!DOCTYPE html>',
-                    '<html>',
-                    '<head><meta charset="UTF-8"><title>Template Error</title></head>',
-                    '<body>',
-                    '<div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;">',
-                    '<h2>🚨 Erreur de Template</h2>',
-                    '<p>Message: ' + escapedMessage + '</p>',
-                    '</div>',
-                    '</body>',
-                    '</html>'
-                ];
-                return errorLines.join('\n');
+                
+                let errorDoc = '';
+                errorDoc += '<!DOCTYPE html>\n';
+                errorDoc += '<html>\n';
+                errorDoc += '<head><meta charset="UTF-8"><title>Template Error</title></head>\n';
+                errorDoc += '<body>\n';
+                errorDoc += '<div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;">\n';
+                errorDoc += '<h2>🚨 Erreur de Template</h2>\n';
+                errorDoc += '<p>Message: ' + escapedMessage + '</p>\n';
+                errorDoc += '</div>\n';
+                errorDoc += '</body>\n';
+                errorDoc += '</html>';
+                
+                return errorDoc;
             }
 
             setSecurityLevel(level) {
                 if (Object.values(this.securityLevels).includes(level)) {
                     this.currentLevel = level;
+                    debugLog('SECURITY', 'Niveau de sécurité changé: ' + level);
                 }
             }
         }
 
-        // SYSTÈME PRINCIPAL
+        // SYSTÈME PRINCIPAL AVEC DEBUG RENFORCÉ
         class SecureGristDashboard {
             constructor() {
+                debugLog('DASHBOARD', 'Initialisation SecureGristDashboard');
                 this.templates = new Map();
                 this.currentTemplate = null;
                 this.iframeCounter = 0;
@@ -578,20 +890,38 @@
                 this.templatesSource = 'unknown';
                 this.secureProcessor = new SecureTemplateProcessor();
                 this.validationStats = { processed: 0, errors: 0, warnings: 0 };
+                this.initTimeout = null;
             }
 
             async init() {
+                debugLog('INIT', 'Début initialisation dashboard');
+                
                 try {
-                    window.debugLog('🔒 Initializing secure dashboard v2.4...');
-                    this.updateStatus('validating', 'Compilation stable...');
+                    this.updateStatus('debug', 'Initialisation debug...');
+                    this.updateLoadingText('Connexion à Grist...');
                     
+                    // Timeout de sécurité
+                    this.initTimeout = setTimeout(() => {
+                        debugLog('INIT', 'Timeout atteint - utilisation du fallback', null, true);
+                        this.useFallback();
+                    }, 10000);
+                    
+                    debugLog('INIT', 'Appel grist.ready()');
                     await grist.ready({ 
                         requiredAccess: 'read table',
                         allowSelectBy: true 
                     });
                     
+                    debugLog('INIT', 'Grist ready - chargement configuration');
+                    this.updateLoadingText('Chargement des templates...');
                     await this.loadConfiguration();
+                    
+                    debugLog('INIT', 'Configuration chargée - setup navigation');
+                    this.updateLoadingText('Configuration de la navigation...');
                     await this.setupNavigation();
+                    
+                    debugLog('INIT', 'Navigation setup - chargement page par défaut');
+                    this.updateLoadingText('Chargement de la page par défaut...');
                     await this.loadDefaultPage();
                     
                     const statusText = this.templatesSource === 'grist' ? 
@@ -602,22 +932,62 @@
                     this.hideLoading();
                     this.isReady = true;
                     
+                    // Clear timeout
+                    if (this.initTimeout) {
+                        clearTimeout(this.initTimeout);
+                        this.initTimeout = null;
+                    }
+                    
                     this.logSecurityReport();
+                    debugLog('INIT', 'Initialisation terminée avec succès');
                     
                 } catch (error) {
-                    console.error('Secure initialization error:', error);
+                    debugLog('INIT', 'Erreur initialisation', error, true);
                     this.updateStatus('error', 'Erreur: ' + error.message);
-                    this.showError('Erreur: ' + error.message);
+                    
+                    // En cas d'erreur, utiliser le fallback après 3 secondes
+                    setTimeout(() => {
+                        this.useFallback();
+                    }, 3000);
                 }
+            }
+
+            useFallback() {
+                debugLog('FALLBACK', 'Activation du mode fallback');
+                
+                if (this.initTimeout) {
+                    clearTimeout(this.initTimeout);
+                    this.initTimeout = null;
+                }
+                
+                this.templatesSource = 'fallback';
+                const fallbackTemplate = createFallbackTemplate();
+                this.templates.set(fallbackTemplate.id, fallbackTemplate);
+                
+                this.setupNavigation();
+                this.loadPage(fallbackTemplate.id);
+                
+                this.updateStatus('debug', 'Mode fallback actif');
+                this.hideLoading();
+                this.isReady = true;
+            }
+
+            updateLoadingText(text) {
+                const loadingTextEl = document.getElementById('loading-text');
+                if (loadingTextEl) {
+                    loadingTextEl.textContent = text;
+                }
+                debugLog('LOADING', text);
             }
 
             async loadConfiguration() {
                 try {
-                    window.debugLog('🔍 Loading and validating templates...');
+                    debugLog('CONFIG', 'Tentative de chargement depuis Grist');
                     const gristTemplates = await grist.docApi.fetchTable('Templates');
                     
                     if (gristTemplates && gristTemplates.length > 0) {
                         this.templatesSource = 'grist';
+                        debugLog('CONFIG', 'Templates Grist trouvés', { count: gristTemplates.length });
                         
                         for (const template of gristTemplates) {
                             this.validationStats.processed++;
@@ -626,44 +996,34 @@
                             
                             if (validation.valid) {
                                 this.templates.set(validation.cleaned.id, validation.cleaned);
-                                window.debugLog('✅ Template validated: ' + validation.cleaned.id);
+                                debugLog('CONFIG', 'Template validé: ' + validation.cleaned.id);
                                 
                                 if (validation.warnings.length > 0) {
                                     this.validationStats.warnings++;
-                                    window.debugLog('⚠️ Warnings: ' + validation.warnings.join(', '));
+                                    debugLog('CONFIG', 'Avertissements: ' + validation.warnings.join(', '));
                                 }
                             } else {
                                 this.validationStats.errors++;
-                                console.warn('❌ Template rejected: ' + template.template_id, validation.errors);
+                                debugLog('CONFIG', 'Template rejeté: ' + template.template_id, validation.errors, true);
                             }
                         }
                     }
                 } catch (error) {
-                    window.debugLog('Error loading Grist templates:', error.message);
-                }
-                
-                if (this.templates.size === 0) {
-                    this.templatesSource = 'integrated';
-                    const fallbackTemplate = {
-                        id: 'secure_fallback',
-                        name: '🔒 Fallback Stable',
-                        type: 'dashboard',
-                        html: '<div style="padding: 20px; text-align: center; background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; border-radius: 12px;"><h1>🔒 Compilation Stable v2.4</h1><p>Système opérationnel avec compilation corrigée</p></div>',
-                        css: '',
-                        js: 'console.log("Stable compilation working perfectly");'
-                    };
-                    this.templates.set(fallbackTemplate.id, fallbackTemplate);
+                    debugLog('CONFIG', 'Erreur chargement Grist', error, true);
+                    throw error; // Re-throw pour déclencher le fallback
                 }
                 
                 try {
                     const apps = await grist.docApi.fetchTable('Apps');
-                    this.currentApp = apps[0] || { name: 'Dashboard Stable', page: 'dashboard_main' };
+                    this.currentApp = apps[0] || { name: 'Dashboard Debug', page: 'dashboard_main' };
+                    debugLog('CONFIG', 'App configurée', this.currentApp);
                 } catch (e) {
-                    this.currentApp = { name: 'Dashboard Stable', page: 'dashboard_main' };
+                    this.currentApp = { name: 'Dashboard Debug', page: 'dashboard_main' };
+                    debugLog('CONFIG', 'App par défaut utilisée');
                 }
                 
                 document.getElementById('app-title').innerHTML = 
-                    '🔒 ' + this.currentApp.name + ' <span class="version-badge">v2.4</span><span class="security-badge">STABLE</span>';
+                    '🔒 ' + this.currentApp.name + ' <span class="version-badge">v2.5</span><span class="security-badge">DEBUG</span>';
             }
 
             async setupNavigation() {
@@ -673,8 +1033,8 @@
                 nav.innerHTML = '';
                 
                 const sourceIndicator = document.createElement('span');
-                sourceIndicator.style.cssText = 'background: ' + (this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280') + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;';
-                sourceIndicator.textContent = (this.templatesSource === 'grist' ? 'GRIST' : 'INTÉGRÉ') + ' (' + this.templates.size + ')';
+                sourceIndicator.style.cssText = 'background: ' + (this.templatesSource === 'grist' ? '#8b5cf6' : this.templatesSource === 'fallback' ? '#f59e0b' : '#6b7280') + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;';
+                sourceIndicator.textContent = this.templatesSource.toUpperCase() + ' (' + this.templates.size + ')';
                 nav.appendChild(sourceIndicator);
                 
                 for (const template of this.templates.values()) {
@@ -684,20 +1044,24 @@
                     btn.onclick = () => this.loadPage(template.id);
                     nav.appendChild(btn);
                 }
+                
+                debugLog('NAVIGATION', 'Navigation configurée', { 
+                    source: this.templatesSource,
+                    templatesCount: this.templates.size 
+                });
             }
 
             async loadPage(templateId) {
-                if (!this.isReady) return;
+                if (!this.isReady && this.templatesSource !== 'fallback') return;
                 
                 try {
+                    debugLog('LOAD_PAGE', 'Chargement template: ' + templateId);
                     this.updateStatus('validating', 'Compilation...');
                     
                     const template = this.templates.get(templateId);
                     if (!template) {
                         throw new Error('Template non trouvé: ' + templateId);
                     }
-                    
-                    window.debugLog('🔒 Loading template: ' + template.id);
                     
                     const secureHTML = this.secureProcessor.compileSecureTemplate(template);
                     await this.displayInIframe(secureHTML);
@@ -710,8 +1074,10 @@
                     this.currentTemplate = templateId;
                     this.updateStatus('secure', 'Template actif');
                     
+                    debugLog('LOAD_PAGE', 'Template chargé avec succès');
+                    
                 } catch (error) {
-                    console.error('Template loading error:', error);
+                    debugLog('LOAD_PAGE', 'Erreur chargement template', error, true);
                     this.updateStatus('error', 'Erreur');
                     this.showError('Erreur: ' + error.message);
                 }
@@ -745,15 +1111,25 @@
                     iframe.onload = () => {
                         container.classList.add('active');
                         setTimeout(() => URL.revokeObjectURL(url), 1000);
+                        debugLog('IFRAME', 'Iframe chargé avec succès');
+                    };
+                    
+                    iframe.onerror = (error) => {
+                        debugLog('IFRAME', 'Erreur iframe', error, true);
                     };
                     
                 } catch (error) {
-                    console.error('Iframe error:', error);
+                    debugLog('IFRAME', 'Erreur création iframe', error, true);
                     this.showError('Erreur iframe');
                 }
             }
 
             async loadDefaultPage() {
+                if (this.templates.size === 0) {
+                    debugLog('DEFAULT_PAGE', 'Aucun template disponible');
+                    return;
+                }
+                
                 const defaultTemplate = this.currentApp.page || Array.from(this.templates.keys())[0];
                 if (defaultTemplate && this.templates.has(defaultTemplate)) {
                     await this.loadPage(defaultTemplate);
@@ -783,21 +1159,22 @@
             }
 
             logSecurityReport() {
-                console.log('🔒 RAPPORT DE COMPILATION v2.4');
+                console.log('🔒 RAPPORT DE COMPILATION v2.5 DEBUG');
                 console.log('   Niveau: ' + this.secureProcessor.currentLevel.toUpperCase());
                 console.log('   Templates traités: ' + this.validationStats.processed);
                 console.log('   Templates validés: ' + this.templates.size);
                 console.log('   Erreurs: ' + this.validationStats.errors);
                 console.log('   Avertissements: ' + this.validationStats.warnings);
                 console.log('   Source: ' + this.templatesSource.toUpperCase());
-                console.log('   Status: COMPILATION STABLE');
+                console.log('   Erreurs compilation: ' + window.compilationErrors.length);
+                console.log('   Status: MODE DEBUG ACTIF');
             }
 
             setSecurityLevel(level) {
                 this.secureProcessor.setSecurityLevel(level);
                 window.securityLevel = level;
                 this.updateSecurityUI();
-                window.debugLog('🔒 Security level: ' + level.toUpperCase());
+                debugLog('SECURITY', 'Niveau sécurité: ' + level.toUpperCase());
             }
 
             updateSecurityUI() {
@@ -811,7 +1188,7 @@
             }
         }
 
-        // FONCTIONS GLOBALES
+        // FONCTIONS GLOBALES DE DEBUG
         window.toggleDebug = function() {
             window.dashboardDebugMode = !window.dashboardDebugMode;
             const btn = document.getElementById('debug-btn');
@@ -819,7 +1196,7 @@
                 btn.style.background = window.dashboardDebugMode ? '#dc2626' : '#f59e0b';
                 btn.textContent = window.dashboardDebugMode ? '🔴 Debug ON' : '🐛 Debug';
             }
-            console.log('🐛 Debug mode:', window.dashboardDebugMode ? 'ON' : 'OFF');
+            debugLog('DEBUG_TOGGLE', 'Debug mode: ' + (window.dashboardDebugMode ? 'ON' : 'OFF'));
         };
 
         window.toggleSecurity = function() {
@@ -832,12 +1209,6 @@
             window.dashboard.setSecurityLevel(nextLevel);
         };
 
-        window.debugLog = function(message, data) {
-            if (window.dashboardDebugMode) {
-                console.log('[🔒 DEBUG]', message, data || '');
-            }
-        };
-
         // Communication sécurisée
         window.addEventListener('message', (event) => {
             try {
@@ -847,13 +1218,15 @@
                     }
                 }
             } catch (error) {
-                console.error('Message handling error:', error);
+                debugLog('MESSAGE', 'Erreur gestion message', error, true);
             }
         });
 
-        // Initialisation
+        // Initialisation avec gestion d'erreur robuste
         document.addEventListener('DOMContentLoaded', () => {
             try {
+                debugLog('SYSTEM', 'Initialisation système v2.5 DEBUG');
+                
                 window.dashboard = new SecureGristDashboard();
                 window.dashboard.init();
                 
@@ -863,11 +1236,33 @@
                 if (debugBtn) debugBtn.addEventListener('click', window.toggleDebug);
                 if (securityBtn) securityBtn.addEventListener('click', window.toggleSecurity);
                 
-                window.debugLog('🔒 System v2.4 initialized - STABLE');
+                debugLog('SYSTEM', 'Système initialisé - mode debug actif');
                 
             } catch (error) {
-                console.error('Initialization error:', error);
+                debugLog('SYSTEM', 'Erreur critique initialisation', error, true);
+                
+                // Fallback d'urgence
+                setTimeout(() => {
+                    if (window.dashboard) {
+                        window.dashboard.useFallback();
+                    }
+                }, 2000);
             }
+        });
+
+        // Capture des erreurs globales
+        window.addEventListener('error', (event) => {
+            debugLog('GLOBAL_ERROR', 'Erreur JavaScript globale', {
+                message: event.message,
+                filename: event.filename,
+                lineno: event.lineno,
+                colno: event.colno,
+                error: event.error
+            }, true);
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            debugLog('UNHANDLED_PROMISE', 'Promise rejetée non gérée', event.reason, true);
         });
     </script>
 </body>
