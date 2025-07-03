@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v2.2 Secure</title>
+    <title>Grist Dynamic Dashboard - v2.2 Secure Fixed</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <style>
         * {
@@ -214,10 +214,7 @@
         window.dashboard = null;
         window.securityLevel = 'moderate';
 
-        // ========================================
-        // PROCESSEUR DE SÉCURITÉ INTÉGRÉ
-        // ========================================
-        
+        // PROCESSEUR DE SÉCURITÉ CORRIGÉ
         class SecureTemplateProcessor {
             constructor() {
                 this.securityLevels = {
@@ -263,7 +260,7 @@
 
                 } catch (error) {
                     result.valid = false;
-                    result.errors.push(`Erreur validation: ${error.message}`);
+                    result.errors.push('Erreur validation: ' + error.message);
                 }
 
                 return result;
@@ -291,7 +288,7 @@
                     let cleanedHTML = html;
 
                     if (html.length > 50000) {
-                        result.errors.push(`HTML trop long: ${html.length} caractères`);
+                        result.errors.push('HTML trop long: ' + html.length + ' caractères');
                         return result;
                     }
 
@@ -311,7 +308,7 @@
                     result.cleaned = cleanedHTML;
 
                 } catch (error) {
-                    result.errors.push(`Erreur validation HTML: ${error.message}`);
+                    result.errors.push('Erreur validation HTML: ' + error.message);
                     result.cleaned = '<div class="error">Erreur HTML</div>';
                 }
 
@@ -329,7 +326,7 @@
                     let cleanedCSS = css;
 
                     if (css.length > 10000) {
-                        result.errors.push(`CSS trop long: ${css.length} caractères`);
+                        result.errors.push('CSS trop long: ' + css.length + ' caractères');
                         return result;
                     }
 
@@ -343,7 +340,7 @@
                     result.cleaned = cleanedCSS;
 
                 } catch (error) {
-                    result.errors.push(`Erreur validation CSS: ${error.message}`);
+                    result.errors.push('Erreur validation CSS: ' + error.message);
                 }
 
                 return result;
@@ -360,7 +357,7 @@
                     let cleanedJS = js;
 
                     if (js.length > 100000) {
-                        result.errors.push(`JavaScript trop long: ${js.length} caractères`);
+                        result.errors.push('JavaScript trop long: ' + js.length + ' caractères');
                         return result;
                     }
 
@@ -383,7 +380,7 @@
 
                     const syntaxValidation = this.validateJSSyntax(cleanedJS);
                     if (!syntaxValidation.valid) {
-                        result.warnings.push(`Syntaxe corrigée: ${syntaxValidation.error}`);
+                        result.warnings.push('Syntaxe corrigée: ' + syntaxValidation.error);
                         cleanedJS = this.wrapInSafeContext(cleanedJS);
                     }
 
@@ -391,8 +388,8 @@
                     result.cleaned = cleanedJS;
 
                 } catch (error) {
-                    result.errors.push(`Erreur validation JS: ${error.message}`);
-                    result.cleaned = `console.error('Template JS error: ${error.message}');`;
+                    result.errors.push('Erreur validation JS: ' + error.message);
+                    result.cleaned = 'console.error("Template JS error: ' + error.message + '");';
                 }
 
                 return result;
@@ -425,13 +422,14 @@
             }
 
             wrapInSafeContext(js) {
-                return `try { ${js} } catch(error) { console.error('Template error:', error); }`;
+                return 'try { ' + js + ' } catch(error) { console.error("Template error:", error); }';
             }
 
             normalizeWhitespace(text) {
                 return text.replace(/\s+/g, ' ').replace(/\n\s*\n/g, '\n').trim();
             }
 
+            // MÉTHODE CORRIGÉE - SANS TEMPLATE LITERALS
             compileSecureTemplate(template) {
                 const html = template.html || '<div>Template vide</div>';
                 const css = template.css || '';
@@ -441,78 +439,79 @@
                 const securityColor = this.currentLevel === 'strict' ? '#dc2626' : 
                                     this.currentLevel === 'moderate' ? '#f59e0b' : '#10b981';
 
-                return `<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Secure Template ${template.id}</title>
-    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-    <style>
-        body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #ffffff; }
-        .security-info { position: fixed; top: 10px; right: 10px; background: ${securityColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }
-        ${css}
-    </style>
-</head>
-<body>
-    <div class="security-info">🔒 ${this.currentLevel.toUpperCase()}</div>
-    ${html}
-    <script>
-        console.log("🔒 Secure Template: ${template.id}");
-        ${gristScript}
-        (function() {
-            'use strict';
-            ${js}
-        })();
-    </script>
-</body>
-</html>`;
+                // CORRECTION: Utilisation de la concaténation au lieu des template literals
+                return '<!DOCTYPE html>' +
+                '<html lang="fr">' +
+                '<head>' +
+                '<meta charset="UTF-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1.0">' +
+                '<title>Secure Template ' + template.id + '</title>' +
+                '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>' +
+                '<style>' +
+                'body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #ffffff; }' +
+                '.security-info { position: fixed; top: 10px; right: 10px; background: ' + securityColor + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; z-index: 1000; }' +
+                css +
+                '</style>' +
+                '</head>' +
+                '<body>' +
+                '<div class="security-info">🔒 ' + this.currentLevel.toUpperCase() + '</div>' +
+                html +
+                '<script>' +
+                'console.log("🔒 Secure Template: ' + template.id + '");' +
+                gristScript +
+                '(function() {' +
+                '"use strict";' +
+                js +
+                '})();' +
+                '</script>' +
+                '</body>' +
+                '</html>';
             }
 
             generateSecureGristAPI() {
-                return `window.gristAPI = {
-                    async getData(tableName) {
-                        try {
-                            if (typeof tableName !== 'string' || tableName.length > 50) {
-                                throw new Error('Table name invalid');
-                            }
-                            const data = await parent.window.grist.docApi.fetchTable(tableName);
-                            return data || [];
-                        } catch (error) {
-                            console.warn("Secure API error:", error);
-                            return [];
-                        }
-                    },
-                    async updateRecord(tableId, recordId, changes) {
-                        try {
-                            await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);
-                            return { success: true };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    async addRecord(tableId, record) {
-                        try {
-                            const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);
-                            return { success: true, id: result.retValues[0] };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    async deleteRecord(tableId, recordId) {
-                        try {
-                            await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);
-                            return { success: true };
-                        } catch (error) {
-                            return { success: false, error: error.message };
-                        }
-                    },
-                    navigate(templateId) {
-                        if (typeof templateId === 'string' && templateId.length < 100) {
-                            parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");
-                        }
-                    }
-                };`;
+                return 'window.gristAPI = {' +
+                    'async getData(tableName) {' +
+                        'try {' +
+                            'if (typeof tableName !== "string" || tableName.length > 50) {' +
+                                'throw new Error("Table name invalid");' +
+                            '}' +
+                            'const data = await parent.window.grist.docApi.fetchTable(tableName);' +
+                            'return data || [];' +
+                        '} catch (error) {' +
+                            'console.warn("Secure API error:", error);' +
+                            'return [];' +
+                        '}' +
+                    '},' +
+                    'async updateRecord(tableId, recordId, changes) {' +
+                        'try {' +
+                            'await parent.window.grist.docApi.applyUserActions([["UpdateRecord", tableId, recordId, changes]]);' +
+                            'return { success: true };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'async addRecord(tableId, record) {' +
+                        'try {' +
+                            'const result = await parent.window.grist.docApi.applyUserActions([["AddRecord", tableId, null, record]]);' +
+                            'return { success: true, id: result.retValues[0] };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'async deleteRecord(tableId, recordId) {' +
+                        'try {' +
+                            'await parent.window.grist.docApi.applyUserActions([["RemoveRecord", tableId, recordId]]);' +
+                            'return { success: true };' +
+                        '} catch (error) {' +
+                            'return { success: false, error: error.message };' +
+                        '}' +
+                    '},' +
+                    'navigate(templateId) {' +
+                        'if (typeof templateId === "string" && templateId.length < 100) {' +
+                            'parent.postMessage({ type: "NAVIGATE", templateId: templateId }, "*");' +
+                        '}' +
+                    '}' +
+                '};';
             }
 
             setSecurityLevel(level) {
@@ -522,10 +521,7 @@
             }
         }
 
-        // ========================================
         // SYSTÈME PRINCIPAL SÉCURISÉ
-        // ========================================
-
         class SecureGristDashboard {
             constructor() {
                 this.templates = new Map();
@@ -583,15 +579,15 @@
                             
                             if (validation.valid) {
                                 this.templates.set(validation.cleaned.id, validation.cleaned);
-                                window.debugLog(`✅ Template validated: ${validation.cleaned.id}`);
+                                window.debugLog('✅ Template validated: ' + validation.cleaned.id);
                                 
                                 if (validation.warnings.length > 0) {
                                     this.validationStats.warnings++;
-                                    window.debugLog(`⚠️ Warnings for ${validation.cleaned.id}:`, validation.warnings);
+                                    window.debugLog('⚠️ Warnings for ' + validation.cleaned.id + ':', validation.warnings);
                                 }
                             } else {
                                 this.validationStats.errors++;
-                                console.warn(`❌ Template rejected: ${template.template_id}`, validation.errors);
+                                console.warn('❌ Template rejected: ' + template.template_id, validation.errors);
                             }
                         }
                     }
@@ -620,7 +616,7 @@
                 }
                 
                 document.getElementById('app-title').innerHTML = 
-                    `🔒 ${this.currentApp.name} <span class="version-badge">v2.2</span><span class="security-badge">SECURE</span>`;
+                    '🔒 ' + this.currentApp.name + ' <span class="version-badge">v2.2</span><span class="security-badge">SECURE</span>';
             }
 
             async setupNavigation() {
@@ -630,8 +626,8 @@
                 nav.innerHTML = '';
                 
                 const sourceIndicator = document.createElement('span');
-                sourceIndicator.style.cssText = `background: ${this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280'}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;`;
-                sourceIndicator.textContent = `${this.templatesSource === 'grist' ? 'GRIST' : 'INTÉGRÉ'} (${this.templates.size})`;
+                sourceIndicator.style.cssText = 'background: ' + (this.templatesSource === 'grist' ? '#8b5cf6' : '#6b7280') + '; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;';
+                sourceIndicator.textContent = (this.templatesSource === 'grist' ? 'GRIST' : 'INTÉGRÉ') + ' (' + this.templates.size + ')';
                 nav.appendChild(sourceIndicator);
                 
                 for (const template of this.templates.values()) {
@@ -654,7 +650,7 @@
                         throw new Error('Template non trouvé: ' + templateId);
                     }
                     
-                    window.debugLog(`🔒 Loading secure template: ${template.id}`);
+                    window.debugLog('🔒 Loading secure template: ' + template.id);
                     
                     const secureHTML = this.secureProcessor.compileSecureTemplate(template);
                     await this.displayInIframe(secureHTML);
@@ -735,42 +731,39 @@
             showError(message) {
                 const main = document.getElementById('main-content');
                 if (main) {
-                    main.innerHTML = `<div class="error">🔒 ${message}<br><small>Système sécurisé - Erreur contrôlée</small></div>`;
+                    main.innerHTML = '<div class="error">🔒 ' + message + '<br><small>Système sécurisé - Erreur contrôlée</small></div>';
                 }
             }
 
             logSecurityReport() {
                 console.log('🔒 RAPPORT DE SÉCURITÉ');
-                console.log(`   Niveau: ${this.secureProcessor.currentLevel.toUpperCase()}`);
-                console.log(`   Templates traités: ${this.validationStats.processed}`);
-                console.log(`   Templates validés: ${this.templates.size}`);
-                console.log(`   Erreurs: ${this.validationStats.errors}`);
-                console.log(`   Avertissements: ${this.validationStats.warnings}`);
-                console.log(`   Source: ${this.templatesSource.toUpperCase()}`);
+                console.log('   Niveau: ' + this.secureProcessor.currentLevel.toUpperCase());
+                console.log('   Templates traités: ' + this.validationStats.processed);
+                console.log('   Templates validés: ' + this.templates.size);
+                console.log('   Erreurs: ' + this.validationStats.errors);
+                console.log('   Avertissements: ' + this.validationStats.warnings);
+                console.log('   Source: ' + this.templatesSource.toUpperCase());
             }
 
             setSecurityLevel(level) {
                 this.secureProcessor.setSecurityLevel(level);
                 window.securityLevel = level;
                 this.updateSecurityUI();
-                window.debugLog(`🔒 Security level changed to: ${level.toUpperCase()}`);
+                window.debugLog('🔒 Security level changed to: ' + level.toUpperCase());
             }
 
             updateSecurityUI() {
                 const securityBtn = document.getElementById('security-btn');
                 if (securityBtn) {
                     const level = this.secureProcessor.currentLevel;
-                    securityBtn.textContent = `🔒 ${level.toUpperCase()}`;
+                    securityBtn.textContent = '🔒 ' + level.toUpperCase();
                     securityBtn.style.background = level === 'strict' ? '#dc2626' : 
                                                   level === 'moderate' ? '#f59e0b' : '#10b981';
                 }
             }
         }
 
-        // ========================================
         // FONCTIONS GLOBALES ET INITIALISATION
-        // ========================================
-
         window.toggleDebug = function() {
             window.dashboardDebugMode = !window.dashboardDebugMode;
             const btn = document.getElementById('debug-btn');
