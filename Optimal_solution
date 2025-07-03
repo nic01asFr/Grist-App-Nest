@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard - Solution Optimale</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+        
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+        
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.0 OPTIMAL</span></h1>
+        <nav class="nav" id="navigation"></nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Chargement des composants...</div>
+        </div>
+    </main>
+
+    <script>
+        // SOLUTION OPTIMALE : Système de Composants React Standardisé
+        class OptimalGristDashboard {
+            constructor() {
+                this.components = new Map();
+                this.currentComponent = null;
+                this.isReady = false;
+                this.gristAPI = null;
+            }
+
+            async init() {
+                try {
+                    console.log('🚀 Initialisation système optimal v3.0');
+                    
+                    // Initialiser Grist API
+                    await grist.ready({ requiredAccess: 'read table' });
+                    this.setupGristAPI();
+                    
+                    // Charger les composants
+                    await this.loadComponents();
+                    
+                    // Configurer la navigation
+                    this.setupNavigation();
+                    
+                    // Charger le composant par défaut
+                    await this.loadDefaultComponent();
+                    
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    console.log('✅ Système optimal prêt');
+                    
+                } catch (error) {
+                    console.error('❌ Erreur initialisation:', error);
+                    this.showError('Erreur initialisation', error.message);
+                }
+            }
+
+            setupGristAPI() {
+                // API simplifiée pour les composants
+                this.gristAPI = {
+                    // Récupérer des données
+                    getData: async (tableName) => {
+                        try {
+                            return await grist.docApi.fetchTable(tableName);
+                        } catch (error) {
+                            console.warn(`Table ${tableName} non trouvée:`, error);
+                            return [];
+                        }
+                    },
+                    
+                    // Ajouter un enregistrement
+                    addRecord: async (tableName, record) => {
+                        try {
+                            const result = await grist.docApi.applyUserActions([
+                                ['AddRecord', tableName, null, record]
+                            ]);
+                            return result[0];
+                        } catch (error) {
+                            console.error('Erreur ajout:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    // Modifier un enregistrement
+                    updateRecord: async (tableName, recordId, updates) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['UpdateRecord', tableName, recordId, updates]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur modification:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    // Supprimer un enregistrement
+                    deleteRecord: async (tableName, recordId) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['RemoveRecord', tableName, recordId]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur suppression:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    // Navigation
+                    navigate: (componentId) => {
+                        this.loadComponent(componentId);
+                    }
+                };
+            }
+
+            async loadComponents() {
+                try {
+                    // Charger les composants depuis la table Templates
+                    const templates = await this.gristAPI.getData('Templates');
+                    
+                    if (templates.length === 0) {
+                        console.log('🔄 Aucun composant Grist trouvé, chargement des composants par défaut');
+                        this.loadDefaultComponents();
+                        return;
+                    }
+                    
+                    console.log(`📊 ${templates.length} composants trouvés dans Grist`);
+                    
+                    for (const template of templates) {
+                        try {
+                            const component = this.processComponent(template);
+                            this.components.set(component.id, component);
+                            console.log(`✅ Composant ${component.id} chargé`);
+                        } catch (error) {
+                            console.warn(`❌ Erreur composant ${template.template_id}:`, error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composants:', error);
+                    this.loadDefaultComponents();
+                }
+            }
+
+            processComponent(template) {
+                // FORMAT STANDARDISÉ : Composant React en JSON
+                const componentData = {
+                    id: template.template_id,
+                    name: template.template_name,
+                    type: template.component_type || 'functional',
+                    code: template.component_code
+                };
+
+                // Validation du code
+                if (!componentData.code || typeof componentData.code !== 'string') {
+                    throw new Error('Code composant manquant ou invalide');
+                }
+
+                // Nettoyage du code
+                const cleanCode = this.sanitizeCode(componentData.code);
+
+                return {
+                    id: componentData.id,
+                    name: componentData.name,
+                    type: componentData.type,
+                    code: cleanCode,
+                    render: async (container) => {
+                        await this.renderReactComponent(container, cleanCode, componentData.id);
+                    }
+                };
+            }
+
+            sanitizeCode(code) {
+                // Nettoyage sécurisé du code
+                return code
+                    .replace(/\r\n/g, '\n')           // Normaliser les retours à la ligne
+                    .replace(/\u0000-\u001F/g, '')    // Supprimer les caractères de contrôle
+                    .trim();
+            }
+
+            async renderReactComponent(container, code, componentId) {
+                try {
+                    // Nettoyer le conteneur
+                    container.innerHTML = '';
+                    
+                    // Créer le conteneur React
+                    const reactContainer = document.createElement('div');
+                    reactContainer.id = `react-container-${componentId}`;
+                    reactContainer.className = 'component-container';
+                    container.appendChild(reactContainer);
+
+                    // Transformer le code JSX avec Babel
+                    const transformedCode = Babel.transform(code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+
+                    // Créer la fonction composant avec contexte sécurisé
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM', 
+                        'gristAPI',
+                        'container',
+                        `
+                        const { useState, useEffect, useCallback } = React;
+                        const { render } = ReactDOM;
+                        
+                        ${transformedCode}
+                        
+                        // Rendu du composant
+                        if (typeof Component !== 'undefined') {
+                            render(React.createElement(Component), container);
+                        } else {
+                            throw new Error('Composant non défini - assurez-vous de définir une variable Component');
+                        }
+                        `
+                    );
+
+                    // Exécuter avec le contexte sécurisé
+                    componentFunction(React, ReactDOM, this.gristAPI, reactContainer);
+                    
+                } catch (error) {
+                    console.error('Erreur rendu composant:', error);
+                    this.showComponentError(container, error, componentId);
+                }
+            }
+
+            showComponentError(container, error, componentId) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 Erreur Composant: ${componentId}</h3>
+                        <p><strong>Message:</strong> ${error.message}</p>
+                        <pre>${error.stack || 'Pas de stack trace'}</pre>
+                        <p><strong>Suggestions:</strong></p>
+                        <ul>
+                            <li>Vérifiez la syntaxe JSX</li>
+                            <li>Assurez-vous que la variable 'Component' est définie</li>
+                            <li>Vérifiez les imports React</li>
+                        </ul>
+                    </div>
+                `;
+            }
+
+            loadDefaultComponents() {
+                // Composants par défaut en cas d'absence de composants Grist
+                const defaultComponents = [
+                    {
+                        id: 'dashboard',
+                        name: '📊 Dashboard',
+                        type: 'functional',
+                        code: `
+                            const Component = () => {
+                                const [data, setData] = useState({ clients: 0, ventes: 0 });
+                                
+                                useEffect(() => {
+                                    const loadData = async () => {
+                                        const clients = await gristAPI.getData('Clients');
+                                        const ventes = await gristAPI.getData('Ventes');
+                                        setData({ clients: clients.length, ventes: ventes.length });
+                                    };
+                                    loadData();
+                                }, []);
+                                
+                                return (
+                                    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                                        <div style={{ 
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            color: 'white',
+                                            padding: '30px',
+                                            borderRadius: '12px',
+                                            textAlign: 'center',
+                                            marginBottom: '30px'
+                                        }}>
+                                            <h1 style={{ fontSize: '2.5rem', marginBottom: '10px' }}>
+                                                🚀 Dashboard Dynamique
+                                            </h1>
+                                            <p style={{ fontSize: '1.2rem', opacity: '0.9' }}>
+                                                Système optimal de composants React
+                                            </p>
+                                        </div>
+                                        
+                                        <div style={{ 
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                            gap: '20px'
+                                        }}>
+                                            <div style={{ 
+                                                background: 'white',
+                                                padding: '25px',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                                textAlign: 'center'
+                                            }}>
+                                                <div style={{ fontSize: '3rem', color: '#10b981', marginBottom: '10px' }}>
+                                                    {data.clients}
+                                                </div>
+                                                <div style={{ color: '#6b7280', fontSize: '1.1rem' }}>
+                                                    Total Clients
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ 
+                                                background: 'white',
+                                                padding: '25px',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                                textAlign: 'center'
+                                            }}>
+                                                <div style={{ fontSize: '3rem', color: '#f59e0b', marginBottom: '10px' }}>
+                                                    {data.ventes}
+                                                </div>
+                                                <div style={{ color: '#6b7280', fontSize: '1.1rem' }}>
+                                                    Total Ventes
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            };
+                        `
+                    },
+                    {
+                        id: 'clients',
+                        name: '👥 Clients',
+                        type: 'functional',
+                        code: `
+                            const Component = () => {
+                                const [clients, setClients] = useState([]);
+                                const [loading, setLoading] = useState(true);
+                                
+                                useEffect(() => {
+                                    loadClients();
+                                }, []);
+                                
+                                const loadClients = async () => {
+                                    try {
+                                        const data = await gristAPI.getData('Clients');
+                                        setClients(data);
+                                    } catch (error) {
+                                        console.error('Erreur chargement clients:', error);
+                                    } finally {
+                                        setLoading(false);
+                                    }
+                                };
+                                
+                                const addClient = async () => {
+                                    const nom = prompt('Nom du client:');
+                                    if (nom) {
+                                        try {
+                                            await gristAPI.addRecord('Clients', { name: nom });
+                                            await loadClients();
+                                        } catch (error) {
+                                            alert('Erreur ajout client: ' + error.message);
+                                        }
+                                    }
+                                };
+                                
+                                if (loading) {
+                                    return (
+                                        <div style={{ textAlign: 'center', padding: '50px' }}>
+                                            <div>Chargement des clients...</div>
+                                        </div>
+                                    );
+                                }
+                                
+                                return (
+                                    <div style={{ padding: '20px', maxWidth: '1200px', margin: '0 auto' }}>
+                                        <div style={{ 
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            alignItems: 'center',
+                                            marginBottom: '30px'
+                                        }}>
+                                            <h1 style={{ fontSize: '2rem', color: '#1f2937' }}>
+                                                👥 Gestion des Clients
+                                            </h1>
+                                            <button
+                                                onClick={addClient}
+                                                style={{
+                                                    background: '#10b981',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    padding: '12px 24px',
+                                                    borderRadius: '6px',
+                                                    fontSize: '16px',
+                                                    cursor: 'pointer'
+                                                }}
+                                            >
+                                                ➕ Ajouter Client
+                                            </button>
+                                        </div>
+                                        
+                                        <div style={{ 
+                                            background: 'white',
+                                            borderRadius: '8px',
+                                            boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                            overflow: 'hidden'
+                                        }}>
+                                            {clients.length === 0 ? (
+                                                <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
+                                                    Aucun client trouvé. Créez la table 'Clients' ou ajoutez des données.
+                                                </div>
+                                            ) : (
+                                                <div>
+                                                    <div style={{ 
+                                                        background: '#f9fafb',
+                                                        padding: '15px 20px',
+                                                        borderBottom: '1px solid #e5e7eb',
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        {clients.length} client(s) trouvé(s)
+                                                    </div>
+                                                    {clients.map((client, index) => (
+                                                        <div key={client.id || index} style={{ 
+                                                            padding: '15px 20px',
+                                                            borderBottom: '1px solid #e5e7eb',
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            alignItems: 'center'
+                                                        }}>
+                                                            <div>
+                                                                <div style={{ fontWeight: '500', fontSize: '1.1rem' }}>
+                                                                    {client.name || client.Name || 'Nom non défini'}
+                                                                </div>
+                                                                <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                                                                    {client.email || client.Email || 'Email non défini'}
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ color: '#6b7280', fontSize: '0.9rem' }}>
+                                                                ID: {client.id}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            };
+                        `
+                    }
+                ];
+
+                // Charger les composants par défaut
+                for (const comp of defaultComponents) {
+                    this.components.set(comp.id, {
+                        id: comp.id,
+                        name: comp.name,
+                        type: comp.type,
+                        code: comp.code,
+                        render: async (container) => {
+                            await this.renderReactComponent(container, comp.code, comp.id);
+                        }
+                    });
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                nav.innerHTML = '';
+                
+                // Indicateur de source
+                const indicator = document.createElement('span');
+                indicator.style.cssText = `
+                    background: ${this.components.size > 0 ? '#10b981' : '#f59e0b'};
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    margin-right: 10px;
+                `;
+                indicator.textContent = this.components.size > 0 ? 'GRIST' : 'DÉFAUT';
+                nav.appendChild(indicator);
+                
+                // Boutons de navigation
+                this.components.forEach(component => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = component.name;
+                    btn.onclick = () => this.loadComponent(component.id);
+                    nav.appendChild(btn);
+                });
+            }
+
+            async loadComponent(componentId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const component = this.components.get(componentId);
+                    if (!component) {
+                        throw new Error('Composant non trouvé: ' + componentId);
+                    }
+                    
+                    console.log(`🔄 Chargement composant: ${componentId}`);
+                    
+                    const main = document.getElementById('main-content');
+                    await component.render(main);
+                    
+                    // Mise à jour navigation
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === component.name);
+                    });
+                    
+                    this.currentComponent = componentId;
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composant:', error);
+                    this.showError('Erreur chargement composant', error.message);
+                }
+            }
+
+            async loadDefaultComponent() {
+                if (this.components.size > 0) {
+                    const firstComponent = Array.from(this.components.keys())[0];
+                    await this.loadComponent(firstComponent);
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(title, message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 ${title}</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Initialisation
+        window.dashboard = new OptimalGristDashboard();
+        document.addEventListener('DOMContentLoaded', () => {
+            window.dashboard.init();
+        });
+    </script>
+</body>
+</html>
