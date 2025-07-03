@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v2.6 SMART</title>
+    <title>Grist Dynamic Dashboard - v2.7 HYBRID</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <style>
         * {
@@ -48,7 +48,7 @@
         }
         
         .security-badge {
-            background: #10b981;
+            background: #8b5cf6;
             padding: 2px 8px;
             border-radius: 12px;
             font-size: 11px;
@@ -103,6 +103,10 @@
             background: #10b981;
         }
         
+        .control-btn.migrate {
+            background: #8b5cf6;
+        }
+        
         .control-btn:hover {
             opacity: 0.8;
         }
@@ -135,15 +139,34 @@
             background: white;
         }
         
-        .error {
-            background: #fee2e2;
-            color: #dc2626;
-            padding: 20px;
-            border-radius: 8px;
-            margin: 20px;
-            border-left: 4px solid #dc2626;
-            z-index: 100;
-            position: relative;
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            z-index: 10;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+            max-width: 400px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
         
         .status-indicator {
@@ -160,460 +183,502 @@
         .status-loading { background: #fbbf24; color: #92400e; }
         .status-ready { background: #10b981; color: white; }
         .status-error { background: #ef4444; color: white; }
-        .status-grist { background: #8b5cf6; color: white; }
-        .status-secure { background: #059669; color: white; }
-        .status-smart { background: #10b981; color: white; }
+        .status-hybrid { background: #8b5cf6; color: white; }
     </style>
 </head>
 <body>
     <header class="header">
-        <h1 id="app-title">🚀 Dashboard Dynamique Grist <span class="version-badge">v2.6</span><span class="security-badge">SMART</span></h1>
+        <h1 id="app-title">🔧 Dashboard Dynamique Grist <span class="version-badge">v2.7</span><span class="security-badge">HYBRID</span></h1>
         <nav class="nav" id="navigation"></nav>
         <div class="control-buttons">
             <button class="control-btn security" id="security-btn">🔒 MODERATE</button>
-            <button class="control-btn" id="debug-btn">🚀 Smart</button>
+            <button class="control-btn migrate" id="migrate-btn">🔧 Migrate</button>
+            <button class="control-btn" id="debug-btn">🐛 Debug</button>
         </div>
     </header>
     
     <main class="main" id="main-content">
-        <div class="status-indicator status-smart" id="status">Smart Loading...</div>
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div id="loading-text">Système hybride en cours...</div>
+        </div>
+        <div class="status-indicator status-hybrid" id="status">Hybrid Mode</div>
     </main>
 
     <script>
-        // VARIABLES GLOBALES
+        // SYSTÈME HYBRIDE - Gère les deux formats
         window.dashboardDebugMode = true;
         window.dashboard = null;
-        window.securityLevel = 'moderate';
-        window.smartLoading = true;
+        window.migrationStats = { processed: 0, migrated: 0, errors: 0 };
 
-        // SMART LOADER - Chargement intelligent avec fallback immédiat
-        class SmartDashboardLoader {
+        // PROCESSEUR HYBRIDE - Base64 + Composants
+        class HybridTemplateProcessor {
             constructor() {
-                this.loadStartTime = Date.now();
-                this.maxWaitTime = 3000; // 3 secondes maximum
-                this.gristAvailable = false;
-                this.templates = new Map();
-                this.fallbackActive = false;
+                this.supportedFormats = {
+                    LEGACY: 'legacy',     // HTML/CSS/JS séparés
+                    BASE64: 'base64',     // HTML/CSS/JS en Base64
+                    COMPONENT: 'component' // Composant React-like
+                };
             }
 
-            async init() {
-                console.log('🚀 Smart Dashboard v2.6 - Initialisation intelligente');
-                
-                // Tentative rapide de connexion Grist
+            detectTemplateFormat(template) {
+                // Détection automatique du format
+                if (template.component_js) {
+                    return this.supportedFormats.COMPONENT;
+                } else if (template.html_base64 || template.css_base64 || template.js_base64) {
+                    return this.supportedFormats.BASE64;
+                } else if (template.html || template.css || template.js) {
+                    return this.supportedFormats.LEGACY;
+                } else {
+                    return null;
+                }
+            }
+
+            async processTemplate(rawTemplate) {
+                const format = this.detectTemplateFormat(rawTemplate);
+                console.log(`🔍 Format détecté pour ${rawTemplate.template_id}:`, format);
+
+                switch (format) {
+                    case this.supportedFormats.COMPONENT:
+                        return await this.processComponent(rawTemplate);
+                    
+                    case this.supportedFormats.BASE64:
+                        return this.processBase64(rawTemplate);
+                    
+                    case this.supportedFormats.LEGACY:
+                        return this.processLegacy(rawTemplate);
+                    
+                    default:
+                        throw new Error('Format de template non reconnu');
+                }
+            }
+
+            // TRAITEMENT COMPOSANT (Format optimal)
+            async processComponent(rawTemplate) {
                 try {
-                    this.updateStatus('Vérification Grist...');
+                    const componentFunction = new Function('return ' + rawTemplate.component_js);
+                    const component = componentFunction();
                     
-                    // Test rapide de disponibilité
-                    const gristTest = this.testGristQuickly();
-                    const timeoutPromise = new Promise((_, reject) => 
-                        setTimeout(() => reject(new Error('Timeout')), this.maxWaitTime)
-                    );
-                    
-                    await Promise.race([gristTest, timeoutPromise]);
-                    
-                    // Si on arrive ici, Grist est disponible
-                    this.gristAvailable = true;
-                    console.log('✅ Grist disponible - chargement normal');
-                    await this.loadFromGrist();
-                    
-                } catch (error) {
-                    console.log('⚡ Grist indisponible - activation fallback intelligent');
-                    await this.activateSmartFallback();
-                }
-            }
-
-            async testGristQuickly() {
-                if (typeof grist === 'undefined') {
-                    throw new Error('Grist API non disponible');
-                }
-                
-                await grist.ready({ requiredAccess: 'read table' });
-                const testData = await grist.docApi.fetchTable('Templates');
-                
-                if (!testData || testData.length === 0) {
-                    throw new Error('Pas de templates Grist');
-                }
-                
-                return testData;
-            }
-
-            async loadFromGrist() {
-                try {
-                    this.updateStatus('Chargement templates Grist...');
-                    
-                    const templates = await grist.docApi.fetchTable('Templates');
-                    const apps = await grist.docApi.fetchTable('Apps').catch(() => []);
-                    
-                    // Configuration simple sans validation complexe
-                    templates.forEach(template => {
-                        if (template.template_id && template.html) {
-                            this.templates.set(template.template_id, {
-                                id: template.template_id,
-                                name: template.template_name || 'Template',
-                                html: template.html,
-                                css: template.css || '',
-                                js: template.js || ''
-                            });
+                    return {
+                        id: rawTemplate.template_id,
+                        name: rawTemplate.template_name,
+                        type: 'component',
+                        format: this.supportedFormats.COMPONENT,
+                        component: component,
+                        render: async (container) => {
+                            await component.render(container, window.gristAPI);
                         }
-                    });
-                    
-                    const currentApp = apps[0] || { name: 'Dashboard Grist', page: 'dashboard_main' };
-                    this.setupNavigation(currentApp);
-                    
-                    // Chargement de la première page
-                    const defaultTemplate = currentApp.page || Array.from(this.templates.keys())[0];
-                    if (defaultTemplate && this.templates.has(defaultTemplate)) {
-                        await this.loadTemplate(defaultTemplate);
-                    }
-                    
-                    this.updateStatus('Templates Grist actifs');
-                    console.log('✅ Dashboard Grist chargé avec succès');
-                    
+                    };
                 } catch (error) {
-                    console.error('Erreur chargement Grist:', error);
-                    await this.activateSmartFallback();
+                    console.error('Erreur composant:', error);
+                    throw new Error('Composant invalide: ' + error.message);
                 }
             }
 
-            async activateSmartFallback() {
-                this.fallbackActive = true;
-                this.updateStatus('Mode Smart actif');
-                
-                console.log('🚀 Activation du mode Smart Fallback');
-                
-                // Templates intégrés optimisés
-                const smartTemplates = this.createSmartTemplates();
-                smartTemplates.forEach(template => {
-                    this.templates.set(template.id, template);
-                });
-                
-                this.setupNavigation({ name: 'Dashboard Smart', page: 'smart_dashboard' });
-                await this.loadTemplate('smart_dashboard');
-                
-                console.log('✅ Mode Smart activé avec succès');
+            // TRAITEMENT BASE64 (Format sécurisé)
+            processBase64(rawTemplate) {
+                const template = {
+                    id: rawTemplate.template_id,
+                    name: rawTemplate.template_name,
+                    type: 'base64',
+                    format: this.supportedFormats.BASE64,
+                    html: this.decodeBase64Safe(rawTemplate.html_base64),
+                    css: this.decodeBase64Safe(rawTemplate.css_base64),
+                    js: this.decodeBase64Safe(rawTemplate.js_base64)
+                };
+
+                template.render = async (container) => {
+                    const compiledHTML = this.compileBase64Template(template);
+                    await this.renderInIframe(container, compiledHTML);
+                };
+
+                return template;
             }
 
-            createSmartTemplates() {
-                return [
-                    {
-                        id: 'smart_dashboard',
-                        name: '🚀 Dashboard Smart',
-                        html: `
-                            <div style="padding: 30px; max-width: 1000px; margin: 0 auto; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
-                                <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; text-align: center;">
-                                    <h1 style="margin: 0; font-size: 2.2rem; display: flex; align-items: center; justify-content: center; gap: 15px;">
-                                        🚀 Dashboard Smart v2.6
-                                    </h1>
-                                    <p style="margin: 15px 0 0; opacity: 0.9; font-size: 1.1rem;">
-                                        Système intelligent - Chargement optimisé réussi !
-                                    </p>
-                                    <div style="background: rgba(255,255,255,0.2); padding: 10px; border-radius: 8px; margin-top: 15px; font-size: 14px;">
-                                        Mode: <strong id="current-mode">Smart Fallback</strong> | 
-                                        Temps de chargement: <strong id="load-time">Calcul...</strong>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 25px;">
-                                    <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 4px solid #3b82f6;">
-                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                            <span style="font-size: 1.5rem;">⚡</span>
-                                            <h3 style="margin: 0; color: #1f2937;">Performance</h3>
-                                        </div>
-                                        <div style="font-size: 2rem; font-weight: bold; color: #3b82f6; margin-bottom: 5px;" id="perf-score">100%</div>
-                                        <div style="color: #6b7280; font-size: 0.9rem;">Chargement optimisé</div>
-                                    </div>
-                                    
-                                    <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 4px solid #10b981;">
-                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                            <span style="font-size: 1.5rem;">🔒</span>
-                                            <h3 style="margin: 0; color: #1f2937;">Sécurité</h3>
-                                        </div>
-                                        <div style="font-size: 2rem; font-weight: bold; color: #10b981; margin-bottom: 5px;">ACTIVE</div>
-                                        <div style="color: #6b7280; font-size: 0.9rem;">Protection complète</div>
-                                    </div>
-                                    
-                                    <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-left: 4px solid #f59e0b;">
-                                        <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
-                                            <span style="font-size: 1.5rem;">🧠</span>
-                                            <h3 style="margin: 0; color: #1f2937;">Intelligence</h3>
-                                        </div>
-                                        <div style="font-size: 2rem; font-weight: bold; color: #f59e0b; margin-bottom: 5px;">SMART</div>
-                                        <div style="color: #6b7280; font-size: 0.9rem;">Adaptation automatique</div>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 25px; margin-bottom: 25px;">
-                                    <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                        <h3 style="margin: 0 0 15px; color: #374151; display: flex; align-items: center; gap: 10px;">
-                                            <span>📊</span> Fonctionnalités Smart
-                                        </h3>
-                                        <ul style="margin: 0; padding-left: 20px; color: #4b5563; line-height: 1.6;">
-                                            <li>Détection automatique de Grist</li>
-                                            <li>Fallback intelligent en 3 secondes</li>
-                                            <li>Templates optimisés intégrés</li>
-                                            <li>Interface adaptative</li>
-                                            <li>Performance maximale</li>
-                                        </ul>
-                                    </div>
-                                    
-                                    <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                                        <h3 style="margin: 0 0 15px; color: #374151; display: flex; align-items: center; gap: 10px;">
-                                            <span>🛠️</span> Actions Disponibles
-                                        </h3>
-                                        <div style="display: flex; flex-direction: column; gap: 10px;">
-                                            <button onclick="testGristConnection()" style="background: #3b82f6; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                                                🔌 Tester Connexion Grist
-                                            </button>
-                                            <button onclick="gotoClientManagement()" style="background: #10b981; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                                                👥 Gestion Clients Smart
-                                            </button>
-                                            <button onclick="refreshDashboard()" style="background: #f59e0b; color: white; border: none; padding: 12px; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                                                🔄 Actualiser Dashboard
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div style="background: #f8fafc; border-radius: 10px; padding: 20px; border: 1px solid #e5e7eb;">
-                                    <h3 style="margin: 0 0 15px; color: #374151; display: flex; align-items: center; gap: 10px;">
-                                        <span>💡</span> Statut du Système
-                                    </h3>
-                                    <div id="system-info" style="font-family: monospace; font-size: 13px; color: #4b5563; line-height: 1.5;">
-                                        Initialisation...
-                                    </div>
-                                </div>
-                            </div>
-                        `,
-                        css: '',
-                        js: `
-                            console.log('🚀 Smart Dashboard Template loaded');
-                            
-                            // Calcul du temps de chargement
-                            const loadTime = Date.now() - window.smartLoader.loadStartTime;
-                            document.getElementById('load-time').textContent = loadTime + 'ms';
-                            
-                            // Mise à jour du mode
-                            const modeEl = document.getElementById('current-mode');
-                            if (modeEl) {
-                                modeEl.textContent = window.smartLoader.gristAvailable ? 'Grist Connected' : 'Smart Fallback';
-                            }
-                            
-                            // Informations système
-                            const systemInfo = [
-                                '✅ Dashboard v2.6 Smart initialisé',
-                                '⚡ Temps de chargement: ' + loadTime + 'ms',
-                                '🔧 Mode: ' + (window.smartLoader.gristAvailable ? 'Grist' : 'Fallback'),
-                                '🌐 Navigateur: ' + navigator.userAgent.split(')')[0] + ')',
-                                '📊 Templates disponibles: ' + window.smartLoader.templates.size,
-                                '🔒 Sécurité: Active',
-                                '⏰ Démarré: ' + new Date().toLocaleTimeString()
-                            ];
-                            
-                            document.getElementById('system-info').textContent = systemInfo.join('\\n');
-                            
-                            // Fonctions globales
-                            window.testGristConnection = function() {
-                                if (typeof grist !== 'undefined') {
-                                    grist.ready().then(() => {
-                                        alert('✅ Connexion Grist réussie !');
-                                    }).catch(error => {
-                                        alert('❌ Erreur Grist: ' + error.message);
-                                    });
-                                } else {
-                                    alert('❌ API Grist non disponible');
-                                }
-                            };
-                            
-                            window.gotoClientManagement = function() {
-                                if (window.smartLoader.templates.has('smart_clients')) {
-                                    window.smartLoader.loadTemplate('smart_clients');
-                                } else {
-                                    alert('Module Clients Smart en cours de développement');
-                                }
-                            };
-                            
-                            window.refreshDashboard = function() {
-                                location.reload();
-                            };
-                        `
-                    },
-                    {
-                        id: 'smart_clients',
-                        name: '👥 Clients Smart',
-                        html: `
-                            <div style="padding: 30px; max-width: 1000px; margin: 0 auto;">
-                                <div style="background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%); color: white; padding: 25px; border-radius: 12px; margin-bottom: 25px;">
-                                    <h1 style="margin: 0;">👥 Gestion Clients Smart</h1>
-                                    <p style="margin: 10px 0 0; opacity: 0.9;">Interface optimisée pour la gestion des clients</p>
-                                </div>
-                                
-                                <div style="background: white; border-radius: 10px; padding: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); text-align: center;">
-                                    <h2 style="color: #374151; margin-bottom: 15px;">🚧 En Construction</h2>
-                                    <p style="color: #6b7280; margin-bottom: 20px;">Cette section sera bientôt disponible avec toutes les fonctionnalités de gestion des clients.</p>
-                                    <button onclick="window.smartLoader.loadTemplate('smart_dashboard')" style="background: #10b981; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-weight: 500;">
-                                        🏠 Retour au Dashboard
-                                    </button>
-                                </div>
-                            </div>
-                        `,
-                        css: '',
-                        js: 'console.log("Smart Clients template loaded");'
-                    }
-                ];
+            // TRAITEMENT LEGACY (Format problématique)
+            processLegacy(rawTemplate) {
+                console.warn('⚠️ Template legacy détecté - échappement requis');
+                
+                const template = {
+                    id: rawTemplate.template_id,
+                    name: rawTemplate.template_name,
+                    type: 'legacy',
+                    format: this.supportedFormats.LEGACY,
+                    html: this.safeLegacyContent(rawTemplate.html),
+                    css: this.safeLegacyContent(rawTemplate.css),
+                    js: this.safeLegacyContent(rawTemplate.js)
+                };
+
+                template.render = async (container) => {
+                    const compiledHTML = this.compileLegacyTemplate(template);
+                    await this.renderInIframe(container, compiledHTML);
+                };
+
+                return template;
             }
 
-            setupNavigation(app) {
-                const nav = document.getElementById('navigation');
-                if (!nav) return;
-                
-                nav.innerHTML = '';
-                
-                // Indicateur de source
-                const sourceIndicator = document.createElement('span');
-                const sourceColor = this.gristAvailable ? '#8b5cf6' : '#10b981';
-                const sourceText = this.gristAvailable ? 'GRIST' : 'SMART';
-                
-                sourceIndicator.style.cssText = `background: ${sourceColor}; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;`;
-                sourceIndicator.textContent = `${sourceText} (${this.templates.size})`;
-                nav.appendChild(sourceIndicator);
-                
-                // Boutons de navigation
-                for (const template of this.templates.values()) {
-                    const btn = document.createElement('button');
-                    btn.className = 'nav-btn';
-                    btn.textContent = template.name;
-                    btn.onclick = () => this.loadTemplate(template.id);
-                    nav.appendChild(btn);
-                }
-                
-                // Mise à jour du titre
-                document.getElementById('app-title').innerHTML = 
-                    `🚀 ${app.name} <span class="version-badge">v2.6</span><span class="security-badge">SMART</span>`;
-            }
-
-            async loadTemplate(templateId) {
-                const template = this.templates.get(templateId);
-                if (!template) return;
-                
+            decodeBase64Safe(encoded) {
+                if (!encoded) return '';
                 try {
-                    console.log('🔄 Chargement template:', templateId);
-                    
-                    // Compilation simple et sécurisée
-                    const compiledHTML = this.compileTemplate(template);
-                    await this.displayInIframe(compiledHTML);
-                    
-                    // Mise à jour navigation
-                    const navButtons = document.querySelectorAll('.nav-btn');
-                    navButtons.forEach(btn => {
-                        btn.classList.toggle('active', btn.textContent === template.name);
-                    });
-                    
-                    this.updateStatus('Template actif: ' + template.name);
-                    
+                    return atob(encoded);
                 } catch (error) {
-                    console.error('Erreur chargement template:', error);
-                    this.updateStatus('Erreur template');
+                    console.warn('Erreur décodage Base64:', error);
+                    return '';
                 }
             }
 
-            compileTemplate(template) {
-                const lines = [
+            safeLegacyContent(content) {
+                if (!content) return '';
+                
+                // Nettoyage minimal pour éviter les erreurs de syntaxe
+                return String(content)
+                    .replace(/[\u0000-\u001F\u007F]/g, '') // Supprime les caractères de contrôle
+                    .replace(/\r\n/g, '\n')               // Normalise les retours à la ligne
+                    .trim();
+            }
+
+            compileBase64Template(template) {
+                // Compilation simple sans échappement
+                const parts = [
                     '<!DOCTYPE html>',
                     '<html lang="fr">',
                     '<head>',
                     '<meta charset="UTF-8">',
-                    '<meta name="viewport" content="width=device-width, initial-scale=1.0">',
-                    '<title>Smart Template - ' + template.id + '</title>',
+                    '<title>Base64 Template - ' + template.id + '</title>',
                     '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
                     '<style>',
-                    'body { margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #f8fafc; }',
-                    template.css || '',
+                    'body { margin: 0; padding: 0; font-family: system-ui; }',
+                    template.css,
                     '</style>',
                     '</head>',
                     '<body>',
-                    template.html || '<div>Template vide</div>',
+                    template.html,
                     '<script>',
-                    'console.log("🚀 Smart Template loaded: ' + template.id + '");',
-                    // API Grist simplifiée
-                    'window.gristAPI = { getData: async function(table) { try { return await parent.window.grist.docApi.fetchTable(table); } catch(e) { return []; } } };',
-                    // Code du template
-                    '(function() {',
-                    '"use strict";',
-                    template.js || '',
-                    '})();',
+                    'window.gristAPI = { getData: async (t) => { try { return await parent.window.grist.docApi.fetchTable(t); } catch(e) { return []; } } };',
+                    template.js,
                     '</script>',
                     '</body>',
                     '</html>'
                 ];
                 
-                return lines.join('\n');
+                return parts.join('\n');
             }
 
-            async displayInIframe(html) {
-                const main = document.getElementById('main-content');
-                if (!main) return;
-                
-                // Nettoyage
-                const oldContainers = main.querySelectorAll('.iframe-container');
-                oldContainers.forEach(container => container.remove());
-                
-                // Nouveau container
-                const container = document.createElement('div');
-                container.className = 'iframe-container active';
+            compileLegacyTemplate(template) {
+                // Compilation avec échappement renforcé
+                const escapeHtml = (str) => {
+                    return String(str)
+                        .replace(/&/g, '&amp;')
+                        .replace(/</g, '&lt;')
+                        .replace(/>/g, '&gt;')
+                        .replace(/"/g, '&quot;')
+                        .replace(/'/g, '&#x27;');
+                };
+
+                const escapeJs = (str) => {
+                    return String(str)
+                        .replace(/\\/g, '\\\\')
+                        .replace(/"/g, '\\"')
+                        .replace(/'/g, "\\'")
+                        .replace(/\n/g, '\\n')
+                        .replace(/\r/g, '\\r');
+                };
+
+                try {
+                    const parts = [
+                        '<!DOCTYPE html>',
+                        '<html lang="fr">',
+                        '<head>',
+                        '<meta charset="UTF-8">',
+                        '<title>Legacy Template - ' + escapeHtml(template.id) + '</title>',
+                        '<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>',
+                        '<style>',
+                        'body { margin: 0; padding: 0; font-family: system-ui; }',
+                        template.css || '',
+                        '</style>',
+                        '</head>',
+                        '<body>',
+                        template.html || '<div>Template vide</div>',
+                        '<script>',
+                        'window.gristAPI = { getData: async (t) => { try { return await parent.window.grist.docApi.fetchTable(t); } catch(e) { return []; } } };',
+                        'try { ' + (template.js || '') + ' } catch(error) { console.error("Template error:", error); }',
+                        '</script>',
+                        '</body>',
+                        '</html>'
+                    ];
+                    
+                    return parts.join('\n');
+                } catch (error) {
+                    console.error('Erreur compilation legacy:', error);
+                    return this.buildErrorTemplate('Erreur compilation: ' + error.message);
+                }
+            }
+
+            async renderInIframe(container, html) {
+                // Nettoyage des anciens iframes
+                const oldIframes = container.querySelectorAll('.iframe-container');
+                oldIframes.forEach(iframe => iframe.remove());
+
+                // Création du nouveau iframe
+                const iframeContainer = document.createElement('div');
+                iframeContainer.className = 'iframe-container active';
                 
                 const iframe = document.createElement('iframe');
                 iframe.className = 'dynamic-iframe';
                 iframe.sandbox = 'allow-scripts allow-same-origin';
                 
-                container.appendChild(iframe);
-                main.appendChild(container);
-                
+                iframeContainer.appendChild(iframe);
+                container.appendChild(iframeContainer);
+
                 // Chargement du contenu
                 const blob = new Blob([html], { type: 'text/html; charset=utf-8' });
                 const url = URL.createObjectURL(blob);
                 iframe.src = url;
-                
+
                 iframe.onload = () => {
                     setTimeout(() => URL.revokeObjectURL(url), 1000);
                 };
             }
 
+            buildErrorTemplate(message) {
+                return `
+                    <!DOCTYPE html>
+                    <html>
+                    <head><title>Erreur Template</title></head>
+                    <body>
+                        <div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;">
+                            <h2>🚨 Erreur de Template</h2>
+                            <p>${message}</p>
+                        </div>
+                    </body>
+                    </html>
+                `;
+            }
+        }
+
+        // GESTIONNAIRE PRINCIPAL HYBRIDE
+        class HybridGristDashboard {
+            constructor() {
+                this.templates = new Map();
+                this.processor = new HybridTemplateProcessor();
+                this.currentTemplate = null;
+                this.isReady = false;
+            }
+
+            async init() {
+                try {
+                    console.log('🔧 Initialisation système hybride v2.7');
+                    this.updateStatus('Connexion Grist...');
+                    
+                    await grist.ready({ requiredAccess: 'read table' });
+                    
+                    this.updateStatus('Chargement templates...');
+                    await this.loadTemplates();
+                    
+                    this.updateStatus('Configuration navigation...');
+                    this.setupNavigation();
+                    
+                    await this.loadDefaultTemplate();
+                    
+                    this.updateStatus('Système hybride prêt');
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    this.logSystemReport();
+                    
+                } catch (error) {
+                    console.error('Erreur initialisation:', error);
+                    this.showError('Erreur: ' + error.message);
+                }
+            }
+
+            async loadTemplates() {
+                try {
+                    const rawTemplates = await grist.docApi.fetchTable('Templates');
+                    console.log(`📊 ${rawTemplates.length} templates trouvés`);
+                    
+                    for (const rawTemplate of rawTemplates) {
+                        try {
+                            const processedTemplate = await this.processor.processTemplate(rawTemplate);
+                            this.templates.set(processedTemplate.id, processedTemplate);
+                            console.log(`✅ Template ${processedTemplate.id} (${processedTemplate.format}) traité`);
+                        } catch (error) {
+                            console.warn(`❌ Erreur template ${rawTemplate.template_id}:`, error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement templates:', error);
+                    throw error;
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                if (!nav) return;
+                
+                nav.innerHTML = '';
+                
+                // Compteur par format
+                const formats = {};
+                this.templates.forEach(template => {
+                    formats[template.format] = (formats[template.format] || 0) + 1;
+                });
+                
+                // Indicateur de formats
+                const indicator = document.createElement('span');
+                const formatText = Object.entries(formats)
+                    .map(([format, count]) => `${format.toUpperCase()}:${count}`)
+                    .join(' | ');
+                indicator.style.cssText = 'background: #8b5cf6; color: white; padding: 4px 8px; border-radius: 4px; font-size: 11px; margin-right: 10px;';
+                indicator.textContent = `HYBRID (${formatText})`;
+                nav.appendChild(indicator);
+                
+                // Boutons de navigation
+                this.templates.forEach(template => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = template.name;
+                    btn.title = `Format: ${template.format}`;
+                    btn.onclick = () => this.loadTemplate(template.id);
+                    nav.appendChild(btn);
+                });
+            }
+
+            async loadTemplate(templateId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const template = this.templates.get(templateId);
+                    if (!template) {
+                        throw new Error('Template non trouvé: ' + templateId);
+                    }
+                    
+                    console.log(`🔄 Chargement template ${templateId} (${template.format})`);
+                    this.updateStatus(`Rendu ${template.format}...`);
+                    
+                    const main = document.getElementById('main-content');
+                    await template.render(main);
+                    
+                    // Mise à jour navigation
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === template.name);
+                    });
+                    
+                    this.currentTemplate = templateId;
+                    this.updateStatus(`Template ${template.format} actif`);
+                    
+                } catch (error) {
+                    console.error('Erreur chargement template:', error);
+                    this.showError('Erreur: ' + error.message);
+                }
+            }
+
+            async loadDefaultTemplate() {
+                if (this.templates.size > 0) {
+                    const firstTemplate = Array.from(this.templates.keys())[0];
+                    await this.loadTemplate(firstTemplate);
+                }
+            }
+
             updateStatus(message) {
-                const statusElement = document.getElementById('status');
-                if (statusElement) {
-                    statusElement.textContent = message;
+                const status = document.getElementById('status');
+                if (status) status.textContent = message;
+                
+                const loadingText = document.getElementById('loading-text');
+                if (loadingText) loadingText.textContent = message;
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(message) {
+                const main = document.getElementById('main-content');
+                if (main) {
+                    main.innerHTML = `<div style="padding: 20px; background: #fee2e2; color: #dc2626; border-radius: 8px; margin: 20px;"><h2>🚨 Erreur</h2><p>${message}</p></div>`;
+                }
+            }
+
+            logSystemReport() {
+                const formatStats = {};
+                this.templates.forEach(template => {
+                    formatStats[template.format] = (formatStats[template.format] || 0) + 1;
+                });
+                
+                console.log('🔧 RAPPORT SYSTÈME HYBRIDE v2.7');
+                console.log('   Templates total:', this.templates.size);
+                console.log('   Formats supportés:', Object.keys(formatStats).join(', '));
+                Object.entries(formatStats).forEach(([format, count]) => {
+                    console.log(`   ${format.toUpperCase()}:`, count);
+                });
+                console.log('   Status: OPÉRATIONNEL');
+            }
+
+            // MIGRATION AUTOMATIQUE Base64
+            async migrateToBase64() {
+                console.log('🔄 Début migration vers Base64...');
+                let migrated = 0;
+                
+                try {
+                    for (const [templateId, template] of this.templates) {
+                        if (template.format === 'legacy') {
+                            console.log(`🔄 Migration ${templateId}...`);
+                            
+                            const updates = {};
+                            if (template.html) updates.html_base64 = btoa(template.html);
+                            if (template.css) updates.css_base64 = btoa(template.css);
+                            if (template.js) updates.js_base64 = btoa(template.js);
+                            
+                            // Trouver l'ID du record
+                            const allTemplates = await grist.docApi.fetchTable('Templates');
+                            const record = allTemplates.find(t => t.template_id === templateId);
+                            
+                            if (record && Object.keys(updates).length > 0) {
+                                await grist.docApi.applyUserActions([
+                                    ['UpdateRecord', 'Templates', record.id, updates]
+                                ]);
+                                migrated++;
+                                console.log(`✅ Template ${templateId} migré`);
+                            }
+                        }
+                    }
+                    
+                    alert(`✅ Migration réussie: ${migrated} templates migrés vers Base64`);
+                    location.reload(); // Recharger pour voir les changements
+                    
+                } catch (error) {
+                    console.error('Erreur migration:', error);
+                    alert('❌ Erreur migration: ' + error.message);
                 }
             }
         }
 
-        // INITIALISATION IMMÉDIATE
+        // INITIALISATION
         document.addEventListener('DOMContentLoaded', () => {
-            window.smartLoader = new SmartDashboardLoader();
-            window.smartLoader.init();
+            window.dashboard = new HybridGristDashboard();
+            window.dashboard.init();
         });
 
-        // Gestion des boutons de contrôle
+        // GESTIONNAIRES D'ÉVÉNEMENTS
         window.toggleDebug = function() {
-            console.log('🚀 Smart Dashboard v2.6 active');
+            console.log('🔧 Système Hybride v2.7 - Formats supportés: Legacy, Base64, Component');
         };
 
-        window.toggleSecurity = function() {
-            console.log('🔒 Sécurité: Mode intelligent');
-        };
-
-        // Communication avec les templates
-        window.addEventListener('message', (event) => {
-            if (event.data && event.data.type === 'NAVIGATE' && window.smartLoader) {
-                window.smartLoader.loadTemplate(event.data.templateId);
+        window.startMigration = function() {
+            if (confirm('Migrer tous les templates legacy vers Base64 ?')) {
+                window.dashboard.migrateToBase64();
             }
-        });
+        };
 
+        // Configuration des boutons
         setTimeout(() => {
             const debugBtn = document.getElementById('debug-btn');
-            const securityBtn = document.getElementById('security-btn');
+            const migrateBtn = document.getElementById('migrate-btn');
             
             if (debugBtn) debugBtn.addEventListener('click', window.toggleDebug);
-            if (securityBtn) securityBtn.addEventListener('click', window.toggleSecurity);
+            if (migrateBtn) migrateBtn.addEventListener('click', window.startMigration);
         }, 100);
     </script>
 </body>
