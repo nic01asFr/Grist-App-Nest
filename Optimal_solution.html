@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v3.2 Format Columnar</title>
+    <title>Grist Dynamic Dashboard - v3.3 Debug Columnar</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -143,7 +143,7 @@
 </head>
 <body>
     <header class="header">
-        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.2 COLUMNAR-FIX</span></h1>
+        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.3 DEBUG</span></h1>
         <nav class="nav" id="navigation"></nav>
     </header>
     
@@ -155,7 +155,7 @@
     </main>
 
     <script>
-        // SOLUTION OPTIMALE v3.2 : Gestion du format columnar de Grist
+        // SOLUTION OPTIMALE v3.3 : Debug format columnar
         class OptimalGristDashboard {
             constructor() {
                 this.components = new Map();
@@ -166,7 +166,7 @@
 
             async init() {
                 try {
-                    console.log('🚀 Initialisation système optimal v3.2 (format columnar)');
+                    console.log('🚀 Initialisation système optimal v3.3 (debug columnar)');
                     
                     // Initialiser Grist API
                     await grist.ready({ requiredAccess: 'read table' });
@@ -193,48 +193,76 @@
             }
 
             setupGristAPI() {
-                // API simplifiée pour les composants avec gestion du format columnar
+                // API simplifiée pour les composants avec debug columnar
                 this.gristAPI = {
-                    // Récupérer des données avec gestion du format columnar de Grist
+                    // Récupérer des données avec debug du format columnar de Grist
                     getData: async (tableName) => {
                         try {
                             const result = await grist.docApi.fetchTable(tableName);
-                            console.log(`Données brutes pour ${tableName}:`, result);
+                            console.log(`🔍 Données brutes pour ${tableName}:`, result);
                             
                             // Grist retourne un format columnar : {id: [1,2,3], name: ['a','b','c']}
                             if (result && typeof result === 'object' && !Array.isArray(result)) {
-                                // Convertir format columnar en array d'objets
+                                // Vérifier si c'est vraiment du format columnar (au moins une propriété est un array)
                                 const columns = Object.keys(result);
-                                if (columns.length === 0) return [];
+                                const isColumnar = columns.length > 0 && columns.some(col => Array.isArray(result[col]));
                                 
-                                const rowCount = result[columns[0]]?.length || 0;
-                                const rows = [];
+                                console.log(`🔧 Analyse format ${tableName}:`, {
+                                    columns,
+                                    isColumnar,
+                                    columnTypes: columns.map(col => ({ [col]: Array.isArray(result[col]) ? 'array' : typeof result[col] }))
+                                });
                                 
-                                for (let i = 0; i < rowCount; i++) {
-                                    const row = {};
-                                    columns.forEach(col => {
-                                        row[col] = result[col][i];
+                                if (isColumnar) {
+                                    // Convertir format columnar en array d'objets
+                                    const firstArrayCol = columns.find(col => Array.isArray(result[col]));
+                                    const rowCount = result[firstArrayCol]?.length || 0;
+                                    
+                                    console.log(`🔧 Conversion columnar ${tableName}:`, {
+                                        columns,
+                                        firstArrayCol,
+                                        rowCount,
+                                        sampleData: result[firstArrayCol]?.slice(0, 2)
                                     });
-                                    rows.push(row);
+                                    
+                                    const rows = [];
+                                    
+                                    for (let i = 0; i < rowCount; i++) {
+                                        const row = {};
+                                        columns.forEach(col => {
+                                            if (Array.isArray(result[col])) {
+                                                row[col] = result[col][i];
+                                            } else {
+                                                row[col] = result[col]; // Valeur scalaire
+                                            }
+                                        });
+                                        rows.push(row);
+                                    }
+                                    
+                                    console.log(`✅ Données converties pour ${tableName}:`, rows.slice(0, 2));
+                                    return rows;
+                                } else {
+                                    console.log(`❌ Format non-columnar détecté pour ${tableName}:`, result);
+                                    return [];
                                 }
-                                
-                                console.log(`Données converties pour ${tableName}:`, rows);
-                                return rows;
                             }
                             
                             // Fallback pour autres formats
                             if (Array.isArray(result)) {
+                                console.log(`📋 Format array détecté pour ${tableName}`);
                                 return result;
                             } else if (result && Array.isArray(result.records)) {
+                                console.log(`📋 Format .records détecté pour ${tableName}`);
                                 return result.records;
                             } else if (result && result.data && Array.isArray(result.data)) {
+                                console.log(`📋 Format .data détecté pour ${tableName}`);
                                 return result.data;
                             } else {
-                                console.warn(`Format non géré pour table ${tableName}:`, result);
+                                console.warn(`🔄 Format columnar détecté pour table ${tableName}:`, result);
                                 return [];
                             }
                         } catch (error) {
-                            console.warn(`Table ${tableName} non trouvée:`, error);
+                            console.warn(`❌ Table ${tableName} non trouvée:`, error);
                             return [];
                         }
                     },
@@ -293,7 +321,7 @@
                     // Maintenant templatesData est déjà un array d'objets grâce à la conversion columnar
                     const templates = Array.isArray(templatesData) ? templatesData : [];
                     
-                    console.log('Templates trouvés:', templates);
+                    console.log('📊 Templates trouvés:', templates);
                     
                     if (!templates || templates.length === 0) {
                         console.log('🔄 Aucun composant Grist trouvé, chargement des composants par défaut');
@@ -433,14 +461,14 @@
                                     const loadData = async () => {
                                         try {
                                             const clients = await gristAPI.getData('Clients');
-                                            console.log('Clients data:', clients);
+                                            console.log('🔍 Dashboard - Clients data:', clients);
                                             
                                             // Charger les ventes et calculer le CA
                                             let ventesCount = 0;
                                             let chiffreAffaires = 0;
                                             try {
                                                 const ventes = await gristAPI.getData('Ventes');
-                                                console.log('Ventes data:', ventes);
+                                                console.log('🔍 Dashboard - Ventes data:', ventes);
                                                 if (Array.isArray(ventes)) {
                                                     ventesCount = ventes.length;
                                                     chiffreAffaires = ventes.reduce((sum, vente) => {
@@ -479,10 +507,10 @@
                                                 🚀 Dashboard Dynamique
                                             </h1>
                                             <p style={{ fontSize: '1.2rem', opacity: '0.9' }}>
-                                                Système optimal de composants React (v3.2 format columnar)
+                                                Système optimal de composants React (v3.3 debug)
                                             </p>
                                             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '20px', display: 'inline-block', marginTop: '10px' }}>
-                                                ✅ Gestion format columnar Grist
+                                                🔍 Debug format columnar actif
                                             </div>
                                         </div>
                                         
@@ -557,12 +585,12 @@
                                 const loadClients = async () => {
                                     try {
                                         const data = await gristAPI.getData('Clients');
-                                        console.log('Raw clients data:', data);
+                                        console.log('🔍 Clients - Raw data:', data);
                                         
                                         // S'assurer que c'est un array
                                         const clientsArray = Array.isArray(data) ? data : [];
                                         setClients(clientsArray);
-                                        console.log('Processed clients:', clientsArray);
+                                        console.log('🔍 Clients - Processed:', clientsArray);
                                     } catch (error) {
                                         console.error('Erreur chargement clients:', error);
                                         setClients([]);
@@ -627,6 +655,9 @@
                                             {clients.length === 0 ? (
                                                 <div style={{ padding: '40px', textAlign: 'center', color: '#6b7280' }}>
                                                     Aucun client trouvé. Créez la table 'Clients' ou ajoutez des données.
+                                                    <div style={{ fontSize: '0.8rem', marginTop: '10px', opacity: '0.7' }}>
+                                                        Vérifiez la console pour les logs de debug.
+                                                    </div>
                                                 </div>
                                             ) : (
                                                 <div>
@@ -697,7 +728,7 @@
                     font-size: 11px;
                     margin-right: 10px;
                 `;
-                indicator.textContent = this.components.size > 0 ? 'READY' : 'LOADING';
+                indicator.textContent = this.components.size > 0 ? 'DEBUG' : 'LOADING';
                 nav.appendChild(indicator);
                 
                 // Boutons de navigation
