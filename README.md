@@ -355,7 +355,7 @@ const memoizedCallback = useCallback(() => { /* callback */ }, [deps]);
 ### **Ressources**
 - 📖 **[Documentation Grist](https://docs.getgrist.com)**
 - 💬 **[Issues GitHub](https://github.com/nic01asFr/grist-dynamic-dashboard/issues)**
-- 🎮 **[Document Démo](https://docs.getgrist.com/doc/eNzYJgDJvkQYdTozF8BCoB)**
+- 🎮 **[Document Démo](https://grist.numerique.gouv.fr/doc/eNzYJgDJvkQYdTozF8BCoB)**
 
 ### **Contact**
 Pour toute question technique ou amélioration, créez une issue GitHub ou contribuez directement !
