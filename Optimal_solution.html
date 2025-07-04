@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - Solution Optimale Corrigée</title>
+    <title>Grist Dynamic Dashboard - v3.2 Format Columnar</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -143,7 +143,7 @@
 </head>
 <body>
     <header class="header">
-        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.1 FIXED</span></h1>
+        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.2 COLUMNAR-FIX</span></h1>
         <nav class="nav" id="navigation"></nav>
     </header>
     
@@ -155,7 +155,7 @@
     </main>
 
     <script>
-        // SOLUTION OPTIMALE CORRIGÉE : Gestion robuste des données Grist
+        // SOLUTION OPTIMALE v3.2 : Gestion du format columnar de Grist
         class OptimalGristDashboard {
             constructor() {
                 this.components = new Map();
@@ -166,7 +166,7 @@
 
             async init() {
                 try {
-                    console.log('🚀 Initialisation système optimal v3.1 (corrigé)');
+                    console.log('🚀 Initialisation système optimal v3.2 (format columnar)');
                     
                     // Initialiser Grist API
                     await grist.ready({ requiredAccess: 'read table' });
@@ -193,15 +193,36 @@
             }
 
             setupGristAPI() {
-                // API simplifiée pour les composants avec gestion robuste
+                // API simplifiée pour les composants avec gestion du format columnar
                 this.gristAPI = {
-                    // Récupérer des données avec gestion de différents formats
+                    // Récupérer des données avec gestion du format columnar de Grist
                     getData: async (tableName) => {
                         try {
                             const result = await grist.docApi.fetchTable(tableName);
                             console.log(`Données brutes pour ${tableName}:`, result);
                             
-                            // Grist peut retourner différents formats
+                            // Grist retourne un format columnar : {id: [1,2,3], name: ['a','b','c']}
+                            if (result && typeof result === 'object' && !Array.isArray(result)) {
+                                // Convertir format columnar en array d'objets
+                                const columns = Object.keys(result);
+                                if (columns.length === 0) return [];
+                                
+                                const rowCount = result[columns[0]]?.length || 0;
+                                const rows = [];
+                                
+                                for (let i = 0; i < rowCount; i++) {
+                                    const row = {};
+                                    columns.forEach(col => {
+                                        row[col] = result[col][i];
+                                    });
+                                    rows.push(row);
+                                }
+                                
+                                console.log(`Données converties pour ${tableName}:`, rows);
+                                return rows;
+                            }
+                            
+                            // Fallback pour autres formats
                             if (Array.isArray(result)) {
                                 return result;
                             } else if (result && Array.isArray(result.records)) {
@@ -209,7 +230,7 @@
                             } else if (result && result.data && Array.isArray(result.data)) {
                                 return result.data;
                             } else {
-                                console.warn(`Format inattendu pour table ${tableName}:`, result);
+                                console.warn(`Format non géré pour table ${tableName}:`, result);
                                 return [];
                             }
                         } catch (error) {
@@ -269,9 +290,8 @@
                     // Charger les composants depuis la table Templates
                     const templatesData = await this.gristAPI.getData('Templates');
                     
-                    // Grist peut retourner un objet avec une propriété records ou directement un array
-                    const templates = Array.isArray(templatesData) ? templatesData : 
-                                    (templatesData && templatesData.records ? templatesData.records : []);
+                    // Maintenant templatesData est déjà un array d'objets grâce à la conversion columnar
+                    const templates = Array.isArray(templatesData) ? templatesData : [];
                     
                     console.log('Templates trouvés:', templates);
                     
@@ -407,7 +427,7 @@
                         type: 'functional',
                         code: `
                             const Component = () => {
-                                const [data, setData] = useState({ clients: 0, ventes: 0 });
+                                const [data, setData] = useState({ clients: 0, ventes: 0, ca: 0 });
                                 
                                 useEffect(() => {
                                     const loadData = async () => {
@@ -415,22 +435,31 @@
                                             const clients = await gristAPI.getData('Clients');
                                             console.log('Clients data:', clients);
                                             
-                                            // Essayer de charger les ventes, mais ne pas échouer si la table n'existe pas
+                                            // Charger les ventes et calculer le CA
                                             let ventesCount = 0;
+                                            let chiffreAffaires = 0;
                                             try {
                                                 const ventes = await gristAPI.getData('Ventes');
-                                                ventesCount = Array.isArray(ventes) ? ventes.length : 0;
+                                                console.log('Ventes data:', ventes);
+                                                if (Array.isArray(ventes)) {
+                                                    ventesCount = ventes.length;
+                                                    chiffreAffaires = ventes.reduce((sum, vente) => {
+                                                        const montant = parseFloat(vente.montant) || 0;
+                                                        return sum + montant;
+                                                    }, 0);
+                                                }
                                             } catch (e) {
                                                 console.log('Table Ventes non disponible');
                                             }
                                             
                                             setData({ 
                                                 clients: Array.isArray(clients) ? clients.length : 0, 
-                                                ventes: ventesCount 
+                                                ventes: ventesCount,
+                                                ca: chiffreAffaires
                                             });
                                         } catch (error) {
                                             console.error('Erreur chargement données:', error);
-                                            setData({ clients: 0, ventes: 0 });
+                                            setData({ clients: 0, ventes: 0, ca: 0 });
                                         }
                                     };
                                     loadData();
@@ -450,16 +479,16 @@
                                                 🚀 Dashboard Dynamique
                                             </h1>
                                             <p style={{ fontSize: '1.2rem', opacity: '0.9' }}>
-                                                Système optimal de composants React (v3.1 corrigé)
+                                                Système optimal de composants React (v3.2 format columnar)
                                             </p>
                                             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '20px', display: 'inline-block', marginTop: '10px' }}>
-                                                ✅ Gestion robuste des données Grist
+                                                ✅ Gestion format columnar Grist
                                             </div>
                                         </div>
                                         
                                         <div style={{ 
                                             display: 'grid',
-                                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                                             gap: '20px'
                                         }}>
                                             <div style={{ 
@@ -489,6 +518,21 @@
                                                 </div>
                                                 <div style={{ color: '#6b7280', fontSize: '1.1rem' }}>
                                                     Total Ventes
+                                                </div>
+                                            </div>
+                                            
+                                            <div style={{ 
+                                                background: 'white',
+                                                padding: '25px',
+                                                borderRadius: '8px',
+                                                boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+                                                textAlign: 'center'
+                                            }}>
+                                                <div style={{ fontSize: '2.5rem', color: '#8b5cf6', marginBottom: '10px' }}>
+                                                    {data.ca.toLocaleString()}€
+                                                </div>
+                                                <div style={{ color: '#6b7280', fontSize: '1.1rem' }}>
+                                                    Chiffre d'Affaires
                                                 </div>
                                             </div>
                                         </div>
