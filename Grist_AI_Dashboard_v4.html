@@ -1,0 +1,2131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard - v4.0 Agent IA Intégré</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            transition: grid-template-rows 0.3s ease;
+        }
+        
+        body.chat-collapsed {
+            grid-template-rows: 60px 1fr 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+        
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+        
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        
+        /* Agent IA Chat Styles */
+        .ai-chat-container {
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-chat-header {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .ai-chat-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+        
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .ai-message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .ai-message.user .ai-message-avatar {
+            background: #3b82f6;
+        }
+        
+        .ai-message.ai .ai-message-avatar {
+            background: #10b981;
+        }
+        
+        .ai-message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .ai-message.user .ai-message-content {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .ai-chat-input {
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .ai-chat-input button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .ai-chat-input button:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .ai-chat-input button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .ai-mode-selector {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .ai-mode-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .ai-mode-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .welcome-container {
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .welcome-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px;
+            margin: 20px 0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.0 AGENT-IA</span></h1>
+        <nav class="nav" id="navigation"></nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Initialisation du système IA...</div>
+        </div>
+    </main>
+
+    <!-- Agent IA Chat -->
+    <div class="ai-chat-container" id="ai-chat">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>🤖 Agent IA Albert</span>
+                <div class="ai-mode-selector">
+                    <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
+                        🛠️ Dev
+                    </button>
+                    <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
+                        📊 Analyst
+                    </button>
+                </div>
+            </div>
+            <span id="chat-toggle">🔽</span>
+        </div>
+        
+        <div class="ai-chat-content" id="ai-chat-content">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div class="ai-message-avatar">🤖</div>
+                    <div class="ai-message-content">
+                        Bonjour ! Je suis Albert, votre agent IA spécialisé en création d'applications Grist. 
+                        Décrivez-moi votre besoin ou uploadez un fichier Excel, et je créerai automatiquement 
+                        votre application complète !
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-chat-input">
+                <input 
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Décrivez votre besoin ou tapez /help pour l'aide..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
+                />
+                <input 
+                    type="file" 
+                    id="file-input" 
+                    accept=".xlsx,.xls,.csv,.json" 
+                    style="display: none"
+                    onchange="handleFileUpload(event)"
+                />
+                <button onclick="document.getElementById('file-input').click()">📎</button>
+                <button onclick="sendMessage()" id="send-btn">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GRIST AI DASHBOARD v4.0 : Agent IA Intégré avec Albert
+        class GristAIDashboard {
+            constructor() {
+                this.components = new Map();
+                this.currentComponent = null;
+                this.isReady = false;
+                this.gristAPI = null;
+                this.isDocumentEmpty = false;
+                this.aiMode = 'dev'; // 'dev' ou 'analyst'
+                this.chatCollapsed = false;
+                this.apiKeyRequested = false;
+                this.conversationHistory = [];
+            }
+
+            async init() {
+                try {
+                    console.log('🤖 Initialisation Grist AI Dashboard v4.0');
+                    
+                    // Initialiser Grist API
+                    await grist.ready({ requiredAccess: 'read table' });
+                    this.setupGristAPI();
+                    
+                    // Vérifier si le document est vide
+                    await this.checkIfDocumentEmpty();
+                    
+                    if (this.isDocumentEmpty) {
+                        console.log('📋 Document vide détecté - Mode configuration');
+                        this.showWelcomeScreen();
+                    } else {
+                        console.log('📊 Document existant - Mode application');
+                        await this.loadComponents();
+                        this.setupNavigation();
+                        await this.loadDefaultComponent();
+                    }
+                    
+                    // Initialiser le chat IA
+                    this.initializeAIChat();
+                    
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    console.log('✅ Grist AI Dashboard prêt');
+                    
+                } catch (error) {
+                    console.error('❌ Erreur initialisation:', error);
+                    this.showError('Erreur initialisation', error.message);
+                }
+            }
+
+            setupGristAPI() {
+                const self = this;
+                
+                this.gristAPI = {
+                    // API existante
+                    getData: async (tableName) => {
+                        try {
+                            const result = await grist.docApi.fetchTable(tableName);
+                            console.log(`🔍 Données brutes pour ${tableName}:`, result);
+                            
+                            if (result && typeof result === 'object' && !Array.isArray(result)) {
+                                const columns = Object.keys(result);
+                                const isColumnar = columns.length > 0 && columns.some(col => Array.isArray(result[col]));
+                                
+                                if (isColumnar) {
+                                    const firstArrayCol = columns.find(col => Array.isArray(result[col]));
+                                    const rowCount = result[firstArrayCol]?.length || 0;
+                                    const rows = [];
+                                    
+                                    for (let i = 0; i < rowCount; i++) {
+                                        const row = {};
+                                        columns.forEach(col => {
+                                            if (Array.isArray(result[col])) {
+                                                row[col] = result[col][i];
+                                            } else {
+                                                row[col] = result[col];
+                                            }
+                                        });
+                                        rows.push(row);
+                                    }
+                                    
+                                    return rows;
+                                }
+                            }
+                            
+                            if (Array.isArray(result)) return result;
+                            if (result && Array.isArray(result.records)) return result.records;
+                            if (result && result.data && Array.isArray(result.data)) return result.data;
+                            
+                            return [];
+                        } catch (error) {
+                            console.warn(`❌ Table ${tableName} non trouvée:`, error);
+                            return [];
+                        }
+                    },
+                    
+                    addRecord: async (tableName, record) => {
+                        try {
+                            const result = await grist.docApi.applyUserActions([
+                                ['AddRecord', tableName, null, record]
+                            ]);
+                            return result[0];
+                        } catch (error) {
+                            console.error('Erreur ajout:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    updateRecord: async (tableName, recordId, updates) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['UpdateRecord', tableName, recordId, updates]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur modification:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    deleteRecord: async (tableName, recordId) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['RemoveRecord', tableName, recordId]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur suppression:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    navigate: (componentId) => {
+                        self.loadComponent(componentId);
+                    },
+                    
+                    getChildComponent: async (templateId) => {
+                        const templates = await self.gristAPI.getData('Templates');
+                        const template = templates.find(t => t.template_id === templateId);
+                        
+                        if (!template) {
+                            console.warn(`Composant enfant ${templateId} non trouvé`);
+                            return null;
+                        }
+                        
+                        return self.createChildComponent(template);
+                    },
+                    
+                    createChildComponent: (template) => {
+                        return self.createChildComponent(template);
+                    },
+                    
+                    // NOUVELLES API pour l'IA
+                    createTable: async (tableName, columns = []) => {
+                        try {
+                            // Créer la table
+                            await grist.docApi.applyUserActions([
+                                ['AddTable', tableName, []]
+                            ]);
+                            
+                            // Ajouter les colonnes si spécifiées
+                            for (const col of columns) {
+                                await grist.docApi.applyUserActions([
+                                    ['AddColumn', tableName, col.id || null, {
+                                        type: col.type || 'Text',
+                                        label: col.label || col.id
+                                    }]
+                                ]);
+                            }
+                            
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur création table:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    createTemplate: async (templateData) => {
+                        try {
+                            return await self.gristAPI.addRecord('Templates', {
+                                template_id: templateData.id,
+                                template_name: templateData.name,
+                                component_code: templateData.code,
+                                component_type: templateData.type || 'functional'
+                            });
+                        } catch (error) {
+                            console.error('Erreur création template:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    getDocumentStructure: async () => {
+                        try {
+                            const tables = await grist.docApi.getDocAPI().listTables();
+                            const structure = {};
+                            
+                            for (const table of tables) {
+                                const data = await self.gristAPI.getData(table.id);
+                                structure[table.id] = {
+                                    columns: table.columns || [],
+                                    rowCount: Array.isArray(data) ? data.length : 0,
+                                    sampleData: Array.isArray(data) ? data.slice(0, 3) : []
+                                };
+                            }
+                            
+                            return structure;
+                        } catch (error) {
+                            console.error('Erreur structure document:', error);
+                            return {};
+                        }
+                    }
+                };
+            }
+
+            async checkIfDocumentEmpty() {
+                try {
+                    const templates = await this.gristAPI.getData('Templates');
+                    this.isDocumentEmpty = !Array.isArray(templates) || templates.length === 0;
+                } catch (error) {
+                    // Si la table Templates n'existe pas, le document est vide
+                    this.isDocumentEmpty = true;
+                }
+            }
+
+            showWelcomeScreen() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="welcome-container">
+                        <div class="welcome-hero">
+                            <h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Bienvenue dans Grist AI</h1>
+                            <p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">
+                                Créez votre application personnalisée en quelques clics
+                            </p>
+                            <p style="font-size: 1.1rem; opacity: 0.8;">
+                                Décrivez simplement votre besoin ou uploadez vos données, 
+                                notre IA créera automatiquement votre application complète !
+                            </p>
+                        </div>
+                        
+                        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <h3 style="color: #1f2937; margin-bottom: 20px; text-align: center;">
+                                💡 Comment commencer ?
+                            </h3>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">💬</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Décrivez votre besoin</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
+                                        Utilisez le chat IA en bas pour décrire votre projet : 
+                                        "Je veux gérer mes clients", "Suivi des stocks", etc.
+                                    </p>
+                                </div>
+                                
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">📄</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Uploadez vos données</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
+                                        Déposez un fichier Excel/CSV et l'IA créera automatiquement 
+                                        l'application adaptée à vos données.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                class="upload-area" 
+                                id="upload-area"
+                                ondrop="handleDrop(event)" 
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                onclick="document.getElementById('file-input').click()"
+                            >
+                                <div style="font-size: 48px; margin-bottom: 15px;">📎</div>
+                                <h4 style="color: #374151; margin-bottom: 10px;">Glissez vos fichiers ici</h4>
+                                <p style="color: #6b7280;">
+                                    Formats supportés : Excel (.xlsx, .xls), CSV (.csv), JSON (.json)
+                                </p>
+                                <p style="color: #6b7280; font-size: 12px; margin-top: 10px;">
+                                    Ou cliquez pour parcourir vos fichiers
+                                </p>
+                            </div>
+                            
+                            <div style="text-align: center; margin-top: 30px;">
+                                <button 
+                                    onclick="startWithExample()" 
+                                    style="
+                                        background: #10b981; 
+                                        color: white; 
+                                        border: none; 
+                                        padding: 15px 30px; 
+                                        border-radius: 8px; 
+                                        font-size: 16px; 
+                                        cursor: pointer;
+                                        margin-right: 15px;
+                                    "
+                                >
+                                    🚀 Commencer avec un exemple
+                                </button>
+                                
+                                <button 
+                                    onclick="focusAIChat()" 
+                                    style="
+                                        background: #3b82f6; 
+                                        color: white; 
+                                        border: none; 
+                                        padding: 15px 30px; 
+                                        border-radius: 8px; 
+                                        font-size: 16px; 
+                                        cursor: pointer;
+                                    "
+                                >
+                                    💬 Parler à l'IA
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            initializeAIChat() {
+                // Configurer le mode par défaut
+                this.setAIMode('dev');
+                
+                // Ajouter le message d'accueil selon le contexte
+                if (this.isDocumentEmpty) {
+                    this.addAIMessage(
+                        "Je peux créer votre application complète ! Décrivez-moi votre besoin (ex: 'gestion des stocks', 'suivi clients') ou uploadez un fichier Excel.", 
+                        'ai'
+                    );
+                } else {
+                    this.addAIMessage(
+                        "Votre application est prête ! Je peux vous aider à l'améliorer, ajouter des fonctionnalités, ou analyser vos données.", 
+                        'ai'
+                    );
+                }
+            }
+
+            async sendAIMessage(message, attachedFile = null) {
+                try {
+                    // Gérer les commandes spéciales
+                    if (message.startsWith('/')) {
+                        return this.handleSpecialCommand(message);
+                    }
+                    
+                    // Ajouter le message utilisateur
+                    this.addAIMessage(message, 'user');
+                    
+                    // Ajouter un indicateur de traitement
+                    const processingId = this.addAIMessage('⏳ Albert réfléchit...', 'ai');
+                    
+                    // Préparer le contexte selon le mode
+                    let context = {
+                        mode: this.aiMode,
+                        isDocumentEmpty: this.isDocumentEmpty,
+                        message: message
+                    };
+                    
+                    if (this.aiMode === 'dev') {
+                        // Mode développement : accès complet
+                        context.documentStructure = await this.gristAPI.getDocumentStructure();
+                        context.existingTemplates = await this.gristAPI.getData('Templates');
+                    } else {
+                        // Mode analyst : données métier uniquement
+                        context.businessData = await this.getBusinessDataSummary();
+                    }
+                    
+                    if (attachedFile) {
+                        context.attachedFile = {
+                            name: attachedFile.name,
+                            type: attachedFile.type,
+                            size: attachedFile.size
+                        };
+                        
+                        // Traiter le fichier si nécessaire
+                        if (attachedFile.type.includes('excel') || attachedFile.type.includes('csv')) {
+                            context.fileContent = await this.parseUploadedFile(attachedFile);
+                        }
+                    }
+                    
+                    // Appeler Albert IA
+                    const aiResponse = await this.callAIAPI(context);
+                    
+                    // Supprimer l'indicateur de traitement
+                    this.removeAIMessage(processingId);
+                    
+                    // Ajouter la réponse de l'IA
+                    this.addAIMessage(aiResponse.message, 'ai');
+                    
+                    // Exécuter les actions si nécessaire
+                    if (aiResponse.actions) {
+                        await this.executeAIActions(aiResponse.actions);
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur IA:', error);
+                    this.addAIMessage(
+                        "😕 Désolé, j'ai rencontré une erreur technique. Pouvez-vous reformuler votre demande ?", 
+                        'ai'
+                    );
+                }
+            }
+
+            async callAIAPI(context) {
+                console.log('🤖 Contexte envoyé à Albert IA:', context);
+                
+                try {
+                    // Configuration Albert API
+                    const albertConfig = {
+                        baseURL: 'https://albert.api.numerique.gouv.fr',
+                        apiKey: this.getAlbertAPIKey(),
+                        model: 'AgentPublic-1.5' // ou le modèle approprié
+                    };
+
+                    if (!albertConfig.apiKey) {
+                        console.warn('⚠️ Clé API Albert manquante, mode simulation');
+                        return this.simulateAIResponse(context);
+                    }
+
+                    // Construire le prompt selon le mode et contexte
+                    const systemPrompt = this.buildSystemPrompt(context);
+                    const userMessage = this.buildUserMessage(context);
+
+                    // Appel à l'API Albert Agents
+                    const response = await fetch(`${albertConfig.baseURL}/v1/agents/completions`, {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${albertConfig.apiKey}`,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            model: albertConfig.model,
+                            messages: [
+                                { role: 'system', content: systemPrompt },
+                                { role: 'user', content: userMessage }
+                            ],
+                            tools: [{ type: 'all' }], // Utiliser tous les outils MCP disponibles
+                            tool_choice: 'auto',
+                            temperature: 0.7,
+                            max_completion_tokens: 2000
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Erreur API Albert: ${response.status} ${response.statusText}`);
+                    }
+
+                    const data = await response.json();
+                    console.log('✅ Réponse Albert:', data);
+
+                    return this.parseAlbertResponse(data, context);
+
+                } catch (error) {
+                    console.error('❌ Erreur appel Albert API:', error);
+                    
+                    // Fallback en mode simulation
+                    this.addAIMessage('⚠️ Connexion Albert temporairement indisponible, passage en mode simulation.', 'ai');
+                    return this.simulateAIResponse(context);
+                }
+            }
+
+            getAlbertAPIKey() {
+                // Récupérer la clé API depuis différentes sources
+                // 1. Variable d'environnement (si disponible)
+                if (typeof process !== 'undefined' && process.env && process.env.ALBERT_API_KEY) {
+                    return process.env.ALBERT_API_KEY;
+                }
+                
+                // 2. LocalStorage du navigateur
+                try {
+                    const storedKey = localStorage.getItem('albert_api_key');
+                    if (storedKey) return storedKey;
+                } catch (e) {
+                    // LocalStorage non disponible
+                }
+                
+                // 3. Demander à l'utilisateur s'il n'y en a pas
+                if (!this.apiKeyRequested) {
+                    this.requestAPIKey();
+                }
+                
+                return null;
+            }
+
+            requestAPIKey() {
+                this.apiKeyRequested = true;
+                
+                setTimeout(() => {
+                    this.addAIMessage(
+                        "🔑 Pour utiliser Albert IA, j'ai besoin de votre clé API. " +
+                        "Vous pouvez la configurer en tapant: /config API_KEY votre_clé_ici", 
+                        'ai'
+                    );
+                }, 1000);
+            }
+
+            buildSystemPrompt(context) {
+                const basePrompt = `Tu es Albert, un agent IA spécialisé dans la création d'applications Grist Dynamic Dashboard.
+
+CONTEXTE:
+- Mode: ${context.mode} (${context.mode === 'dev' ? 'développement complet' : 'analyse de données uniquement'})
+- Document vide: ${context.isDocumentEmpty ? 'OUI' : 'NON'}
+- Système: Widget React avec API Grist intégrée
+
+CAPACITÉS SELON LE MODE:`;
+
+                if (context.mode === 'dev') {
+                    return basePrompt + `
+
+MODE DÉVELOPPEMENT - Tu peux:
+✅ Créer des tables Grist complètes avec colonnes typées
+✅ Générer des composants React fonctionnels avec CRUD complet  
+✅ Créer des dashboards interactifs et visualisations
+✅ Analyser des fichiers Excel/CSV et créer l'app correspondante
+✅ Modifier l'architecture et ajouter des fonctionnalités
+
+STRUCTURE DES DONNÉES ACTUELLES:
+${JSON.stringify(context.documentStructure || {}, null, 2)}
+
+TEMPLATES EXISTANTS:
+${JSON.stringify(context.existingTemplates || [], null, 2)}
+
+FORMAT DE RÉPONSE:
+Réponds TOUJOURS en JSON avec cette structure exacte:
+{
+  "message": "Message à afficher à l'utilisateur",
+  "actions": [
+    {
+      "type": "createTables",
+      "tables": [
+        {
+          "name": "NomTable",
+          "columns": [
+            {"id": "nom_colonne", "type": "Text|Numeric|Date|Bool", "label": "Label"}
+          ]
+        }
+      ]
+    },
+    {
+      "type": "createTemplates", 
+      "templates": [
+        {
+          "id": "ComponentId",
+          "name": "🎯 Nom Affiché",
+          "type": "functional|base|composite",
+          "code": "Code React JSX complet et fonctionnel"
+        }
+      ]
+    },
+    {
+      "type": "addSampleData",
+      "data": [
+        {
+          "table": "NomTable",
+          "records": [{"colonne": "valeur"}]
+        }
+      ]
+    }
+  ]
+}
+
+IMPORTANT: Le code React doit être complet, fonctionnel, avec gestion d'erreurs et styles inline CSS.`;
+
+                } else {
+                    return basePrompt + `
+
+MODE ANALYSTE - Tu peux uniquement:
+✅ Analyser les données métier existantes
+✅ Créer des rapports et visualisations
+✅ Calculer des statistiques et KPI
+✅ Identifier des tendances et insights
+❌ INTERDIT: Créer/modifier tables ou composants
+
+DONNÉES MÉTIER DISPONIBLES:
+${JSON.stringify(context.businessData || {}, null, 2)}
+
+FORMAT DE RÉPONSE:
+Réponds TOUJOURS en JSON:
+{
+  "message": "Analyse détaillée des données avec insights",
+  "actions": null
+}`;
+                }
+            }
+
+            buildUserMessage(context) {
+                let message = `Demande utilisateur: "${context.message}"`;
+                
+                if (context.attachedFile) {
+                    message += `\n\nFichier joint: ${context.attachedFile.name} (${context.attachedFile.type})`;
+                    // TODO: Analyser le contenu du fichier avec Albert
+                }
+                
+                if (context.isDocumentEmpty) {
+                    message += "\n\nNote: Le document Grist est vide, crée une application complète depuis zéro.";
+                }
+                
+                return message;
+            }
+
+            parseAlbertResponse(albertData, context) {
+                try {
+                    const choice = albertData.choices?.[0];
+                    if (!choice) {
+                        throw new Error('Réponse Albert invalide');
+                    }
+
+                    let responseContent = choice.message?.content || '';
+                    
+                    // Si Albert a utilisé des outils, les traiter
+                    if (choice.message?.tool_calls) {
+                        return this.handleAlbertToolCalls(choice.message.tool_calls, responseContent, context);
+                    }
+                    
+                    // Essayer de parser en JSON si possible
+                    try {
+                        const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+                        if (jsonMatch) {
+                            const jsonResponse = JSON.parse(jsonMatch[0]);
+                            return {
+                                message: jsonResponse.message || responseContent,
+                                actions: jsonResponse.actions || null
+                            };
+                        }
+                    } catch (e) {
+                        // Pas de JSON valide, utiliser la réponse text brute
+                    }
+                    
+                    return {
+                        message: responseContent,
+                        actions: null
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing réponse Albert:', error);
+                    return {
+                        message: "J'ai reçu votre demande mais j'ai eu un problème de traitement. Pouvez-vous reformuler ?",
+                        actions: null
+                    };
+                }
+            }
+
+            handleAlbertToolCalls(toolCalls, content, context) {
+                // Albert a utilisé des outils MCP - transformer en actions Grist
+                const actions = [];
+                
+                for (const toolCall of toolCalls) {
+                    const toolName = toolCall.function?.name;
+                    const toolArgs = JSON.parse(toolCall.function?.arguments || '{}');
+                    
+                    // Mapper les outils MCP vers nos actions Grist
+                    if (toolName === 'create_grist_table' || toolName === 'grist_create_table') {
+                        actions.push({
+                            type: 'createTables',
+                            tables: [{
+                                name: toolArgs.table_name || toolArgs.name,
+                                columns: toolArgs.columns || []
+                            }]
+                        });
+                    }
+                    
+                    if (toolName === 'create_grist_component' || toolName === 'grist_create_template') {
+                        actions.push({
+                            type: 'createTemplates',
+                            templates: [{
+                                id: toolArgs.component_id || toolArgs.id,
+                                name: toolArgs.component_name || toolArgs.name,
+                                type: toolArgs.component_type || 'functional',
+                                code: toolArgs.component_code || toolArgs.code
+                            }]
+                        });
+                    }
+                }
+                
+                return {
+                    message: content || "Actions préparées par Albert IA",
+                    actions: actions.length > 0 ? actions : null
+                };
+            }
+
+            // Simulation pour mode hors ligne ou erreur API
+            simulateAIResponse(context) {
+                if (context.isDocumentEmpty && context.message.toLowerCase().includes('maintenance')) {
+                    return {
+                        message: "✨ Parfait ! Je vais créer une application de gestion de maintenance complète avec équipements, techniciens et interventions. Création en cours...",
+                        actions: [
+                            {
+                                type: 'createTables',
+                                tables: [
+                                    {
+                                        name: 'Equipements',
+                                        columns: [
+                                            { id: 'nom', type: 'Text', label: 'Nom Équipement' },
+                                            { id: 'type', type: 'Text', label: 'Type' },
+                                            { id: 'localisation', type: 'Text', label: 'Localisation' },
+                                            { id: 'statut', type: 'Text', label: 'Statut' },
+                                            { id: 'date_installation', type: 'Date', label: 'Date Installation' },
+                                            { id: 'dernier_entretien', type: 'Date', label: 'Dernier Entretien' },
+                                            { id: 'prochain_entretien', type: 'Date', label: 'Prochain Entretien' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Techniciens',
+                                        columns: [
+                                            { id: 'nom', type: 'Text', label: 'Nom' },
+                                            { id: 'specialite', type: 'Text', label: 'Spécialité' },
+                                            { id: 'email', type: 'Text', label: 'Email' },
+                                            { id: 'telephone', type: 'Text', label: 'Téléphone' }
+                                        ]
+                                    },
+                                    {
+                                        name: 'Interventions',
+                                        columns: [
+                                            { id: 'equipement', type: 'Text', label: 'Équipement' },
+                                            { id: 'technicien', type: 'Text', label: 'Technicien' },
+                                            { id: 'type_intervention', type: 'Text', label: 'Type Intervention' },
+                                            { id: 'date_intervention', type: 'Date', label: 'Date Intervention' },
+                                            { id: 'description', type: 'Text', label: 'Description' },
+                                            { id: 'statut', type: 'Text', label: 'Statut' },
+                                            { id: 'duree', type: 'Numeric', label: 'Durée (heures)' }
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    };
+                }
+                
+                if (context.mode === 'analyst') {
+                    return {
+                        message: "📊 En mode analyste, je peux vous aider à analyser vos données. Que souhaitez-vous savoir sur vos données métier ?",
+                        actions: null
+                    };
+                }
+                
+                return {
+                    message: "💡 Je comprends votre demande. Pour une meilleure assistance, pouvez-vous me donner plus de détails ? Ou essayez des exemples comme 'créer une app de gestion de stock' ou 'application de suivi clients'.",
+                    actions: null
+                };
+            }
+
+            handleSpecialCommand(command) {
+                const parts = command.split(' ');
+                const cmd = parts[0].toLowerCase();
+                
+                switch (cmd) {
+                    case '/config':
+                        if (parts[1] === 'API_KEY' && parts[2]) {
+                            try {
+                                localStorage.setItem('albert_api_key', parts[2]);
+                                this.addAIMessage('✅ Clé API Albert configurée avec succès !', 'ai');
+                                this.addAIMessage('🚀 Je suis maintenant connecté à Albert IA. Comment puis-je vous aider ?', 'ai');
+                            } catch (e) {
+                                this.addAIMessage('❌ Impossible de sauvegarder la clé API.', 'ai');
+                            }
+                        } else {
+                            this.addAIMessage(
+                                '⚙️ Commandes de configuration:\n' +
+                                '• `/config API_KEY votre_clé` - Configurer la clé Albert IA\n' +
+                                '• `/config show` - Afficher la configuration actuelle\n' +
+                                '• `/help` - Aide complète', 
+                                'ai'
+                            );
+                        }
+                        break;
+                        
+                    case '/help':
+                        this.addAIMessage(
+                            '🔗 **Aide Albert IA pour Grist**\n\n' +
+                            '**Commandes spéciales:**\n' +
+                            '• `/config API_KEY votre_clé` - Configurer Albert\n' +
+                            '• `/mode dev` - Mode développement\n' +
+                            '• `/mode analyst` - Mode analyste\n' +
+                            '• `/clear` - Effacer la conversation\n\n' +
+                            '**Exemples de demandes:**\n' +
+                            '• "Créer une app de gestion de stock"\n' +
+                            '• "Dashboard pour suivi des ventes"\n' +
+                            '• "Analyser les tendances de mes données"\n' +
+                            '• Glisser un fichier Excel pour auto-génération\n\n' +
+                            '**Mode Dev:** Création complète d\'applications\n' +
+                            '**Mode Analyst:** Analyse de données uniquement',
+                            'ai'
+                        );
+                        break;
+                        
+                    case '/mode':
+                        if (parts[1] === 'dev' || parts[1] === 'analyst') {
+                            this.setAIMode(parts[1]);
+                        } else {
+                            this.addAIMessage('📋 Mode actuel: ' + this.aiMode + '\nUtilisez `/mode dev` ou `/mode analyst`', 'ai');
+                        }
+                        break;
+                        
+                    case '/clear':
+                        this.clearAIMessages();
+                        this.addAIMessage('💬 Conversation effacée. Comment puis-je vous aider ?', 'ai');
+                        break;
+                        
+                    case '/status':
+                        const hasKey = !!this.getAlbertAPIKey();
+                        this.addAIMessage(
+                            `📊 **Status Albert IA:**\n` +
+                            `• API Key: ${hasKey ? '✅ Configurée' : '❌ Manquante'}\n` +
+                            `• Mode: ${this.aiMode}\n` +
+                            `• Document: ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\n` +
+                            `• Composants: ${this.components.size}`,
+                            'ai'
+                        );
+                        break;
+                        
+                    default:
+                        this.addAIMessage(
+                            `❓ Commande inconnue: ${cmd}\nTapez \`/help\` pour voir les commandes disponibles.`,
+                            'ai'
+                        );
+                }
+            }
+
+            async parseUploadedFile(file) {
+                try {
+                    const text = await file.text();
+                    
+                    if (file.type.includes('csv')) {
+                        return this.parseCSV(text);
+                    }
+                    
+                    // Pour Excel, on pourrait utiliser une bibliothèque comme SheetJS
+                    // Pour l'instant, on retourne juste les métadonnées
+                    return {
+                        type: 'file',
+                        name: file.name,
+                        size: file.size,
+                        preview: text.substring(0, 500) + '...'
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing fichier:', error);
+                    return null;
+                }
+            }
+
+            parseCSV(text) {
+                const lines = text.split('\n').filter(line => line.trim());
+                if (lines.length === 0) return null;
+                
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const rows = lines.slice(1, 6).map(line => 
+                    line.split(',').map(cell => cell.trim().replace(/"/g, ''))
+                );
+                
+                return {
+                    type: 'csv',
+                    headers: headers,
+                    rowCount: lines.length - 1,
+                    sample: rows
+                };
+            }
+
+            addAIMessage(message, sender) {
+                const messagesContainer = document.getElementById('ai-messages');
+                const messageDiv = document.createElement('div');
+                const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                
+                messageDiv.id = messageId;
+                messageDiv.className = `ai-message ${sender}`;
+                
+                const avatar = sender === 'user' ? '👤' : '🤖';
+                
+                messageDiv.innerHTML = `
+                    <div class="ai-message-avatar">${avatar}</div>
+                    <div class="ai-message-content">${this.formatAIMessage(message)}</div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                return messageId;
+            }
+
+            removeAIMessage(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+            }
+
+            clearAIMessages() {
+                const messagesContainer = document.getElementById('ai-messages');
+                messagesContainer.innerHTML = '';
+            }
+
+            formatAIMessage(message) {
+                // Convertir le markdown simple en HTML
+                return message
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">$1</code>')
+                    .replace(/\n/g, '<br>');
+            }
+
+            async executeAIActions(actions) {
+                this.addAIMessage('⚙️ Exécution des actions Albert...', 'ai');
+                
+                for (const action of actions) {
+                    try {
+                        switch (action.type) {
+                            case 'createTables':
+                                await this.executeCreateTables(action.tables);
+                                break;
+                                
+                            case 'createTemplates':
+                                await this.executeCreateTemplates(action.templates);
+                                break;
+                                
+                            case 'addSampleData':
+                                await this.executeAddSampleData(action.data);
+                                break;
+                                
+                            case 'updateComponent':
+                                await this.executeUpdateComponent(action.component);
+                                break;
+                                
+                            default:
+                                console.warn(`Type d'action non supporté: ${action.type}`);
+                        }
+                    } catch (error) {
+                        console.error(`Erreur exécution action ${action.type}:`, error);
+                        this.addAIMessage(`❌ Erreur lors de ${action.type}: ${error.message}`, 'ai');
+                    }
+                }
+                
+                this.addAIMessage('✅ Actions terminées ! Votre application a été mise à jour.', 'ai');
+            }
+
+            async executeCreateTables(tables) {
+                for (const table of tables) {
+                    try {
+                        // Créer la table avec les colonnes
+                        await this.gristAPI.createTable(table.name, table.columns);
+                        console.log(`✅ Table ${table.name} créée avec ${table.columns.length} colonnes`);
+                        
+                        this.addAIMessage(`📋 Table "${table.name}" créée avec succès`, 'ai');
+                        
+                    } catch (error) {
+                        if (error.message.includes('already exists')) {
+                            console.log(`⚠️ Table ${table.name} existe déjà`);
+                            this.addAIMessage(`⚠️ Table "${table.name}" existe déjà`, 'ai');
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            }
+
+            async executeCreateTemplates(templates) {
+                // Créer la table Templates si elle n'existe pas
+                try {
+                    await this.gristAPI.createTable('Templates', [
+                        { id: 'template_id', type: 'Text', label: 'Template ID' },
+                        { id: 'template_name', type: 'Text', label: 'Template Name' },
+                        { id: 'component_code', type: 'Text', label: 'Component Code' },
+                        { id: 'component_type', type: 'Text', label: 'Component Type' }
+                    ]);
+                } catch (e) {
+                    // Table existe déjà
+                }
+                
+                for (const template of templates) {
+                    try {
+                        // Ajouter le composant avec validation
+                        const validatedCode = this.validateAndFixComponentCode(template.code, template.id);
+                        
+                        await this.gristAPI.createTemplate({
+                            id: template.id,
+                            name: template.name,
+                            type: template.type || 'functional',
+                            code: validatedCode
+                        });
+                        
+                        console.log(`✅ Template ${template.id} créé`);
+                        this.addAIMessage(`🎨 Composant "${template.name}" créé`, 'ai');
+                        
+                    } catch (error) {
+                        console.error(`Erreur création template ${template.id}:`, error);
+                        this.addAIMessage(`❌ Erreur composant "${template.name}": ${error.message}`, 'ai');
+                    }
+                }
+                
+                // Recharger l'application si des templates ont été ajoutés
+                if (templates.length > 0) {
+                    this.isDocumentEmpty = false;
+                    await this.loadComponents();
+                    this.setupNavigation();
+                    await this.loadDefaultComponent();
+                    
+                    this.addAIMessage('🔄 Application rechargée avec les nouveaux composants', 'ai');
+                }
+            }
+
+            async executeAddSampleData(dataActions) {
+                for (const dataAction of dataActions) {
+                    try {
+                        const tableName = dataAction.table;
+                        const records = dataAction.records;
+                        
+                        for (const record of records) {
+                            await this.gristAPI.addRecord(tableName, record);
+                        }
+                        
+                        console.log(`✅ ${records.length} enregistrements ajoutés à ${tableName}`);
+                        this.addAIMessage(`📊 ${records.length} exemples ajoutés à "${tableName}"`, 'ai');
+                        
+                    } catch (error) {
+                        console.error(`Erreur ajout données ${dataAction.table}:`, error);
+                        this.addAIMessage(`❌ Erreur données "${dataAction.table}": ${error.message}`, 'ai');
+                    }
+                }
+            }
+
+            async executeUpdateComponent(componentUpdate) {
+                try {
+                    // Mettre à jour un composant existant
+                    const templates = await this.gristAPI.getData('Templates');
+                    const existingTemplate = templates.find(t => t.template_id === componentUpdate.id);
+                    
+                    if (existingTemplate) {
+                        await this.gristAPI.updateRecord('Templates', existingTemplate.id, {
+                            template_name: componentUpdate.name || existingTemplate.template_name,
+                            component_code: this.validateAndFixComponentCode(
+                                componentUpdate.code || existingTemplate.component_code, 
+                                componentUpdate.id
+                            ),
+                            component_type: componentUpdate.type || existingTemplate.component_type
+                        });
+                        
+                        this.addAIMessage(`🔄 Composant "${componentUpdate.name}" mis à jour`, 'ai');
+                        
+                        // Recharger l'application
+                        await this.loadComponents();
+                        this.setupNavigation();
+                        
+                    } else {
+                        throw new Error(`Composant ${componentUpdate.id} non trouvé`);
+                    }
+                    
+                } catch (error) {
+                    console.error(`Erreur mise à jour composant:`, error);
+                    this.addAIMessage(`❌ Erreur mise à jour: ${error.message}`, 'ai');
+                }
+            }
+
+            validateAndFixComponentCode(code, componentId) {
+                // Validation et corrections automatiques du code React
+                try {
+                    // Vérifier que le code contient une variable Component
+                    if (!code.includes('const Component') && !code.includes('function Component')) {
+                        throw new Error('Le code doit définir une variable ou fonction Component');
+                    }
+                    
+                    // Ajouter des imports React si manquants dans le contexte
+                    let fixedCode = code;
+                    
+                    // Nettoyer le code
+                    fixedCode = fixedCode
+                        .replace(/import\s+.*?from\s+['"]react['"];?\s*/g, '') // Supprimer imports React
+                        .replace(/export\s+default\s+Component;?\s*/g, '') // Supprimer exports
+                        .trim();
+                    
+                    // Valider la syntaxe JSX basique
+                    if (fixedCode.includes('<') && !fixedCode.includes('React.createElement')) {
+                        // Le code semble contenir du JSX, c'est bon
+                    }
+                    
+                    return fixedCode;
+                    
+                } catch (error) {
+                    console.warn(`Code validation failed for ${componentId}:`, error);
+                    
+                    // Retourner un composant d'erreur de base
+                    return `
+                        const Component = () => {
+                            return React.createElement('div', {
+                                style: {
+                                    padding: '20px',
+                                    background: '#fee2e2',
+                                    color: '#dc2626',
+                                    borderRadius: '8px',
+                                    textAlign: 'center'
+                                }
+                            }, 
+                            React.createElement('h3', null, '⚠️ Erreur Composant: ${componentId}'),
+                            React.createElement('p', null, 'Code invalide: ${error.message}'),
+                            React.createElement('button', {
+                                onClick: () => alert('Contactez Albert IA pour corriger ce composant'),
+                                style: {
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 16px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    marginTop: '10px'
+                                }
+                            }, 'Signaler le problème')
+                            );
+                        };
+                    `;
+                }
+            }
+
+            async getBusinessDataSummary() {
+                // Récupérer un résumé des données métier (sans structure technique)
+                try {
+                    const structure = await this.gristAPI.getDocumentStructure();
+                    const summary = {};
+                    
+                    for (const [tableName, tableInfo] of Object.entries(structure)) {
+                        if (tableName !== 'Templates') {  // Exclure les tables techniques
+                            summary[tableName] = {
+                                rowCount: tableInfo.rowCount,
+                                sampleData: tableInfo.sampleData
+                            };
+                        }
+                    }
+                    
+                    return summary;
+                } catch (error) {
+                    return {};
+                }
+            }
+
+            // Méthodes existantes adaptées...
+            createChildComponent(template) {
+                try {
+                    const transformedCode = Babel.transform(template.component_code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+                    
+                    const componentFunction = new Function(
+                        'React',
+                        'useState',
+                        'useEffect',
+                        'useCallback',
+                        'gristAPI',
+                        `
+                        ${transformedCode}
+                        return Component;
+                        `
+                    );
+                    
+                    return componentFunction(
+                        React,
+                        React.useState,
+                        React.useEffect,
+                        React.useCallback,
+                        this.gristAPI
+                    );
+                    
+                } catch (error) {
+                    console.error(`Erreur création composant enfant ${template.template_id}:`, error);
+                    return () => React.createElement('div', { 
+                        style: { padding: '8px', background: '#fee2e2', color: '#dc2626', borderRadius: '4px', fontSize: '12px' } 
+                    }, `Erreur: ${template.template_id}`);
+                }
+            }
+
+            async loadComponents() {
+                try {
+                    const templatesData = await this.gristAPI.getData('Templates');
+                    const templates = Array.isArray(templatesData) ? templatesData : [];
+                    
+                    if (!templates || templates.length === 0) {
+                        this.loadDefaultComponents();
+                        return;
+                    }
+                    
+                    for (const template of templates) {
+                        try {
+                            const component = this.processComponent(template);
+                            this.components.set(component.id, component);
+                        } catch (error) {
+                            console.warn(`❌ Erreur composant ${template.template_id}:`, error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composants:', error);
+                    this.loadDefaultComponents();
+                }
+            }
+
+            processComponent(template) {
+                const componentData = {
+                    id: template.template_id,
+                    name: template.template_name,
+                    type: template.component_type || 'functional',
+                    code: template.component_code
+                };
+
+                if (!componentData.code || typeof componentData.code !== 'string') {
+                    throw new Error('Code composant manquant ou invalide');
+                }
+
+                const cleanCode = this.sanitizeCode(componentData.code);
+
+                return {
+                    id: componentData.id,
+                    name: componentData.name,
+                    type: componentData.type,
+                    code: cleanCode,
+                    render: async (container) => {
+                        await this.renderReactComponent(container, cleanCode, componentData.id);
+                    }
+                };
+            }
+
+            sanitizeCode(code) {
+                return code
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\u0000-\u001F/g, '')
+                    .trim();
+            }
+
+            async renderReactComponent(container, code, componentId) {
+                try {
+                    container.innerHTML = '';
+                    
+                    const reactContainer = document.createElement('div');
+                    reactContainer.id = `react-container-${componentId}`;
+                    reactContainer.className = 'component-container';
+                    container.appendChild(reactContainer);
+
+                    const transformedCode = Babel.transform(code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM', 
+                        'gristAPI',
+                        'container',
+                        `
+                        const { useState, useEffect, useCallback } = React;
+                        const { render } = ReactDOM;
+                        
+                        ${transformedCode}
+                        
+                        if (typeof Component !== 'undefined') {
+                            render(React.createElement(Component), container);
+                        } else {
+                            throw new Error('Composant non défini - assurez-vous de définir une variable Component');
+                        }
+                        `
+                    );
+
+                    componentFunction(React, ReactDOM, this.gristAPI, reactContainer);
+                    
+                } catch (error) {
+                    console.error('Erreur rendu composant:', error);
+                    this.showComponentError(container, error, componentId);
+                }
+            }
+
+            showComponentError(container, error, componentId) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 Erreur Composant: ${componentId}</h3>
+                        <p><strong>Message:</strong> ${error.message}</p>
+                        <pre>${error.stack || 'Pas de stack trace'}</pre>
+                    </div>
+                `;
+            }
+
+            loadDefaultComponents() {
+                // Composants par défaut basiques pour démonstration
+                const defaultComponents = [
+                    {
+                        id: 'dashboard',
+                        name: '📊 Dashboard',
+                        type: 'functional',
+                        code: `
+                            const Component = () => {
+                                return (
+                                    <div style={{ padding: '40px', textAlign: 'center' }}>
+                                        <h1 style={{ fontSize: '2.5rem', marginBottom: '20px' }}>
+                                            🚀 Votre Application est Prête !
+                                        </h1>
+                                        <p style={{ fontSize: '1.2rem', color: '#6b7280' }}>
+                                            L'IA a créé votre application personnalisée.
+                                        </p>
+                                    </div>
+                                );
+                            };
+                        `
+                    }
+                ];
+
+                for (const comp of defaultComponents) {
+                    this.components.set(comp.id, {
+                        id: comp.id,
+                        name: comp.name,
+                        type: comp.type,
+                        code: comp.code,
+                        render: async (container) => {
+                            await this.renderReactComponent(container, comp.code, comp.id);
+                        }
+                    });
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                nav.innerHTML = '';
+                
+                // Ajouter l'indicateur de statut
+                this.updateStatusIndicator();
+                
+                // Boutons de navigation pour les composants
+                this.components.forEach(component => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = component.name;
+                    btn.onclick = () => this.loadComponent(component.id);
+                    nav.appendChild(btn);
+                });
+                
+                // Bouton d'export si on a des composants
+                if (this.components.size > 0) {
+                    const exportBtn = document.createElement('button');
+                    exportBtn.className = 'nav-btn';
+                    exportBtn.style.background = 'rgba(16, 185, 129, 0.3)';
+                    exportBtn.textContent = '📥 Export';
+                    exportBtn.onclick = () => this.exportAppConfiguration();
+                    nav.appendChild(exportBtn);
+                }
+            }
+
+            async loadComponent(componentId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const component = this.components.get(componentId);
+                    if (!component) {
+                        throw new Error('Composant non trouvé: ' + componentId);
+                    }
+                    
+                    const main = document.getElementById('main-content');
+                    await component.render(main);
+                    
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === component.name);
+                    });
+                    
+                    this.currentComponent = componentId;
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composant:', error);
+                    this.showError('Erreur chargement composant', error.message);
+                }
+            }
+
+            async loadDefaultComponent() {
+                if (this.components.size > 0) {
+                    const firstComponent = Array.from(this.components.keys())[0];
+                    await this.loadComponent(firstComponent);
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(title, message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 ${title}</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+            }
+
+            setAIMode(mode) {
+                this.aiMode = mode;
+                
+                // Mettre à jour les boutons
+                document.getElementById('mode-dev').classList.toggle('active', mode === 'dev');
+                document.getElementById('mode-analyst').classList.toggle('active', mode === 'analyst');
+                
+                // Sauvegarder l'historique de conversation
+                this.conversationHistory.push({
+                    type: 'mode_change',
+                    mode: mode,
+                    timestamp: Date.now()
+                });
+                
+                // Mettre à jour le message d'aide
+                let helpMessage = '';
+                if (mode === 'dev') {
+                    helpMessage = "🛠️ **Mode Développement activé**\n\nJe peux maintenant :\n• Créer et modifier des tables\n• Générer des composants React\n• Restructurer l'application\n• Analyser vos fichiers pour créer des apps\n\nDemandez-moi de créer votre application !";
+                } else {
+                    helpMessage = "📊 **Mode Analyste activé**\n\nJe peux maintenant :\n• Analyser vos données métier\n• Créer des rapports et statistiques\n• Identifier des tendances\n• Générer des insights\n\n*Note: Je ne peux pas modifier la structure de l'app dans ce mode.*";
+                }
+                
+                this.addAIMessage(helpMessage, 'ai');
+                
+                // Mettre à jour l'indicateur dans la navigation
+                this.updateStatusIndicator();
+            }
+
+            updateStatusIndicator() {
+                const nav = document.getElementById('navigation');
+                const existingIndicator = nav.querySelector('.status-indicator');
+                if (existingIndicator) existingIndicator.remove();
+                
+                const indicator = document.createElement('span');
+                indicator.className = 'status-indicator';
+                
+                const hasApiKey = !!this.getAlbertAPIKey();
+                const statusColor = hasApiKey ? '#10b981' : '#f59e0b';
+                const statusText = hasApiKey ? 'ALBERT-CONNECTED' : 'SIMULATION-MODE';
+                
+                indicator.style.cssText = `
+                    background: ${statusColor};
+                    color: white;
+                    padding: 4px 8px;
+                    border-radius: 4px;
+                    font-size: 11px;
+                    margin-right: 10px;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                `;
+                
+                indicator.innerHTML = `
+                    <span style="font-size: 8px;">●</span>
+                    ${statusText}
+                    <span style="font-size: 10px;">[${this.aiMode.toUpperCase()}]</span>
+                `;
+                
+                nav.insertBefore(indicator, nav.firstChild);
+            }
+
+            async saveConversationToGrist() {
+                // Sauvegarder l'historique de conversation dans Grist pour référence future
+                try {
+                    // Créer une table de conversations si elle n'existe pas
+                    try {
+                        await this.gristAPI.createTable('AI_Conversations', [
+                            { id: 'session_id', type: 'Text', label: 'Session ID' },
+                            { id: 'timestamp', type: 'DateTime', label: 'Timestamp' },
+                            { id: 'mode', type: 'Text', label: 'Mode' },
+                            { id: 'user_message', type: 'Text', label: 'Message Utilisateur' },
+                            { id: 'ai_response', type: 'Text', label: 'Réponse Albert' },
+                            { id: 'actions_executed', type: 'Text', label: 'Actions Exécutées' }
+                        ]);
+                    } catch (e) {
+                        // Table existe déjà
+                    }
+                    
+                    // Ajouter l'entrée de conversation
+                    const sessionId = 'session-' + Date.now();
+                    for (const entry of this.conversationHistory) {
+                        if (entry.type === 'conversation') {
+                            await this.gristAPI.addRecord('AI_Conversations', {
+                                session_id: sessionId,
+                                timestamp: entry.timestamp,
+                                mode: entry.mode,
+                                user_message: entry.userMessage,
+                                ai_response: entry.aiResponse,
+                                actions_executed: JSON.stringify(entry.actions || [])
+                            });
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.warn('Impossible de sauvegarder la conversation:', error);
+                }
+            }
+
+            // Méthode pour exporter la configuration de l'app créée
+            async exportAppConfiguration() {
+                try {
+                    const config = {
+                        metadata: {
+                            created_by: 'Albert IA',
+                            created_at: new Date().toISOString(),
+                            grist_dashboard_version: '4.0',
+                            mode_used: this.aiMode
+                        },
+                        tables: await this.gristAPI.getDocumentStructure(),
+                        templates: await this.gristAPI.getData('Templates'),
+                        conversation_summary: this.conversationHistory.filter(h => h.type === 'conversation')
+                    };
+                    
+                    // Créer un blob pour téléchargement
+                    const blob = new Blob([JSON.stringify(config, null, 2)], { 
+                        type: 'application/json' 
+                    });
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `grist-app-config-${Date.now()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    this.addAIMessage('📥 Configuration de l\'application exportée !', 'ai');
+                    
+                } catch (error) {
+                    console.error('Erreur export:', error);
+                    this.addAIMessage('❌ Erreur lors de l\'export de la configuration.', 'ai');
+                }
+            }
+        }
+
+        // Fonctions globales pour l'interface
+        let dashboard = null;
+
+        async function sendMessage() {
+            const input = document.getElementById('ai-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            input.value = '';
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳';
+            
+            try {
+                // Sauvegarder dans l'historique
+                dashboard.conversationHistory.push({
+                    type: 'conversation',
+                    timestamp: Date.now(),
+                    mode: dashboard.aiMode,
+                    userMessage: message
+                });
+                
+                await dashboard.sendAIMessage(message);
+                
+                // Sauvegarder périodiquement la conversation
+                if (dashboard.conversationHistory.length % 5 === 0) {
+                    dashboard.saveConversationToGrist();
+                }
+                
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Envoyer';
+                input.focus();
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                // Vérifier la taille du fichier (max 10MB)
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    return;
+                }
+                
+                // Vérifier le type de fichier
+                const allowedTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/csv',
+                    'application/json'
+                ];
+                
+                if (!allowedTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+                    dashboard.addAIMessage('❌ Type de fichier non supporté. Utilisez Excel (.xlsx), CSV ou JSON.', 'ai');
+                    return;
+                }
+                
+                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier et créer une application adaptée ?`;
+                dashboard.sendAIMessage(message, file);
+            }
+            
+            // Reset du input file
+            event.target.value = '';
+        }
+
+        function startWithExample() {
+            // Proposer différents exemples selon le contexte
+            const examples = [
+                "Créé-moi une application de gestion de maintenance avec équipements, techniciens et interventions",
+                "Application de suivi des stocks avec produits, fournisseurs et mouvements",
+                "Dashboard de gestion des ventes avec clients, commandes et analyses",
+                "Système de gestion de projet avec tâches, équipes et planning",
+                "Application RH avec employés, congés et évaluations"
+            ];
+            
+            const randomExample = examples[Math.floor(Math.random() * examples.length)];
+            
+            // Pré-remplir le champ de saisie
+            const input = document.getElementById('ai-input');
+            input.value = randomExample;
+            
+            // Focus et scroll vers le chat
+            focusAIChat();
+            
+            // Envoyer automatiquement après un court délai
+            setTimeout(() => {
+                dashboard.addAIMessage(
+                    '💡 Voici un exemple d\'application que je peux créer. Vous pouvez modifier cette demande ou valider directement :', 
+                    'ai'
+                );
+            }, 100);
+        }
+
+        function focusAIChat() {
+            // Développer le chat s'il est réduit
+            if (document.body.classList.contains('chat-collapsed')) {
+                toggleChat();
+            }
+            
+            // Scroll vers le chat et focus
+            const chatContainer = document.getElementById('ai-chat');
+            chatContainer.scrollIntoView({ behavior: 'smooth' });
+            
+            setTimeout(() => {
+                document.getElementById('ai-input').focus();
+            }, 300);
+        }
+
+        function toggleChat() {
+            const body = document.body;
+            const chatContent = document.getElementById('ai-chat-content');
+            const toggle = document.getElementById('chat-toggle');
+            
+            body.classList.toggle('chat-collapsed');
+            dashboard.chatCollapsed = body.classList.contains('chat-collapsed');
+            
+            if (dashboard.chatCollapsed) {
+                chatContent.style.display = 'none';
+                toggle.textContent = '🔼';
+            } else {
+                chatContent.style.display = 'flex';
+                toggle.textContent = '🔽';
+                
+                // Auto-scroll vers le bas des messages
+                setTimeout(() => {
+                    const messages = document.getElementById('ai-messages');
+                    messages.scrollTop = messages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function setAIMode(mode) {
+            if (dashboard) {
+                dashboard.setAIMode(mode);
+            }
+        }
+
+        // Fonctions de gestion des fichiers drag & drop améliorées
+        function handleDrop(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                
+                // Validation du fichier
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    return;
+                }
+                
+                const message = `📎 J'ai glissé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données.`;
+                dashboard.sendAIMessage(message, file);
+                
+                // Focus sur le chat pour voir la réponse
+                focusAIChat();
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+        }
+
+        // Initialisation avec gestion d'erreurs améliorée
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                dashboard = new GristAIDashboard();
+                dashboard.init().catch(error => {
+                    console.error('Erreur critique d\'initialisation:', error);
+                    
+                    // Afficher une erreur utilisateur friendly
+                    const main = document.getElementById('main-content');
+                    main.innerHTML = `
+                        <div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">
+                            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d'Initialisation</h2>
+                            <p style="color: #6b7280; margin-bottom: 20px;">
+                                Le système n'a pas pu s'initialiser correctement. 
+                                Cela peut être dû à un problème de connexion à Grist.
+                            </p>
+                            <button 
+                                onclick="location.reload()" 
+                                style="
+                                    background: #3b82f6; 
+                                    color: white; 
+                                    border: none; 
+                                    padding: 12px 24px; 
+                                    border-radius: 6px; 
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                "
+                            >
+                                🔄 Recharger la page
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                // Ajouter des raccourcis clavier
+                document.addEventListener('keydown', (event) => {
+                    // Ctrl/Cmd + Enter pour envoyer le message
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                        const input = document.getElementById('ai-input');
+                        if (input && input.value.trim()) {
+                            sendMessage();
+                        }
+                    }
+                    
+                    // Escape pour fermer/ouvrir le chat
+                    if (event.key === 'Escape') {
+                        toggleChat();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erreur lors de la création du dashboard:', error);
+            }
+        });
+    </script>
+</body>
+</html>
