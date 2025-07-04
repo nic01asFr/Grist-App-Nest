@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v4.0 Agent IA Intégré</title>
+    <title>Grist Dynamic Dashboard - v4.2 Agent IA Intégré</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -571,36 +571,51 @@
                     
                     getDocumentStructure: async () => {
                         try {
-                            // CORRECTION : Utiliser directement grist.docApi sans getDocAPI()
-                            const docInfo = await grist.docApi.getDocInfo();
+                            // CORRECTION : L'API Grist ne propose pas getDocInfo()
+                            // On va découvrir les tables en essayant des noms connus
                             const structure = {};
                             
-                            // Si getDocInfo ne contient pas les tables, essayer une autre approche
-                            if (docInfo && docInfo.tables) {
-                                for (const table of docInfo.tables) {
-                                    const data = await self.gristAPI.getData(table.id);
-                                    structure[table.id] = {
-                                        columns: table.columns || [],
-                                        rowCount: Array.isArray(data) ? data.length : 0,
-                                        sampleData: Array.isArray(data) ? data.slice(0, 3) : []
-                                    };
-                                }
-                            } else {
-                                // Fallback : essayer de récupérer quelques tables connues
-                                const knownTables = ['Templates'];
-                                for (const tableName of knownTables) {
-                                    try {
-                                        const data = await self.gristAPI.getData(tableName);
-                                        if (data && data.length > 0) {
-                                            structure[tableName] = {
-                                                columns: Object.keys(data[0] || {}).map(key => ({ id: key, label: key })),
-                                                rowCount: data.length,
-                                                sampleData: data.slice(0, 3)
-                                            };
-                                        }
-                                    } catch (e) {
-                                        // Table n'existe pas
+                            // Tables connues à essayer
+                            const knownTables = ['Templates', 'Data', 'Users', 'Config', 'Logs'];
+                            
+                            for (const tableName of knownTables) {
+                                try {
+                                    const data = await self.gristAPI.getData(tableName);
+                                    if (data && data.length > 0) {
+                                        // Extraire les colonnes du premier enregistrement
+                                        const columns = Object.keys(data[0] || {}).map(key => ({ 
+                                            id: key, 
+                                            label: key,
+                                            type: self.inferColumnType(data, key)
+                                        }));
+                                        
+                                        structure[tableName] = {
+                                            columns: columns,
+                                            rowCount: data.length,
+                                            sampleData: data.slice(0, 3)
+                                        };
+                
+                // Nouvelle méthode pour inférer le type des colonnes
+                self.inferColumnType = (data, columnName) => {
+                    if (!data || data.length === 0) return 'Text';
+                    
+                    const sample = data[0][columnName];
+                    if (typeof sample === 'number') return 'Numeric';
+                    if (typeof sample === 'boolean') return 'Bool';
+                    if (sample instanceof Date) return 'Date';
+                    if (typeof sample === 'string') {
+                        // Vérifier si c'est une date au format string
+                        if (sample.match(/^\d{4}-\d{2}-\d{2}/)) return 'Date';
+                        // Vérifier si c'est un nombre au format string
+                        if (!isNaN(parseFloat(sample))) return 'Numeric';
+                    }
+                    return 'Text';
+                };
+                                        
+                                        console.log(`📋 Table découverte: ${tableName} (${data.length} lignes)`);
                                     }
+                                } catch (e) {
+                                    // Table n'existe pas, continuer
                                 }
                             }
                             
@@ -609,6 +624,23 @@
                             console.error('Erreur structure document:', error);
                             return {};
                         }
+                    },
+                    
+                    // Nouvelle méthode pour inférer le type des colonnes
+                    inferColumnType: (data, columnName) => {
+                        if (!data || data.length === 0) return 'Text';
+                        
+                        const sample = data[0][columnName];
+                        if (typeof sample === 'number') return 'Numeric';
+                        if (typeof sample === 'boolean') return 'Bool';
+                        if (sample instanceof Date) return 'Date';
+                        if (typeof sample === 'string') {
+                            // Vérifier si c'est une date au format string
+                            if (sample.match(/^\d{4}-\d{2}-\d{2}/)) return 'Date';
+                            // Vérifier si c'est un nombre au format string
+                            if (!isNaN(parseFloat(sample))) return 'Numeric';
+                        }
+                        return 'Text';
                     }
                 };
             }
@@ -805,59 +837,63 @@
                 console.log('🤖 Contexte envoyé à Albert IA:', context);
                 
                 try {
-                    // CORRECTION : Utiliser window.claude.complete si disponible
+                    // PRIORITÉ 1: Utiliser Claude AI si disponible
                     if (typeof window !== 'undefined' && window.claude && window.claude.complete) {
+                        console.log('🎯 Utilisation de Claude AI');
                         return await this.callClaudeAI(context);
                     }
                     
-                    // Configuration Albert API (CORRECTION de l'URL)
+                    // PRIORITÉ 2: Tenter Albert API (avec gestion CORS)
                     const albertConfig = {
-                        baseURL: 'https://albert.api.etalab.gouv.fr',  // URL corrigée
-                        apiKey: this.getAlbertAPIKey(),
-                        model: 'albert-large'
+                        baseURL: 'https://albert.api.etalab.gouv.fr',
+                        apiKey: this.getAlbertAPIKey()
                     };
 
-                    if (!albertConfig.apiKey) {
-                        console.warn('⚠️ Clé API Albert manquante, mode simulation');
-                        return this.simulateAIResponse(context);
+                    if (albertConfig.apiKey) {
+                        try {
+                            console.log('🤖 Tentative connexion Albert API...');
+                            
+                            const systemPrompt = this.buildSystemPrompt(context);
+                            const userMessage = this.buildUserMessage(context);
+
+                            const response = await fetch(`${albertConfig.baseURL}/v1/chat/completions`, {
+                                method: 'POST',
+                                headers: {
+                                    'Authorization': `Bearer ${albertConfig.apiKey}`,
+                                    'Content-Type': 'application/json'
+                                },
+                                body: JSON.stringify({
+                                    model: 'albert-large',
+                                    messages: [
+                                        { role: 'system', content: systemPrompt },
+                                        { role: 'user', content: userMessage }
+                                    ],
+                                    temperature: 0.7,
+                                    max_tokens: 2000
+                                })
+                            });
+
+                            if (!response.ok) {
+                                throw new Error(`Erreur API Albert: ${response.status}`);
+                            }
+
+                            const data = await response.json();
+                            console.log('✅ Réponse Albert:', data);
+                            return this.parseAlbertResponse(data, context);
+                            
+                        } catch (error) {
+                            console.warn('⚠️ Albert API inaccessible (CORS/Network):', error.message);
+                            // Continuer vers la simulation
+                        }
                     }
-
-                    // Construire le prompt selon le mode et contexte
-                    const systemPrompt = this.buildSystemPrompt(context);
-                    const userMessage = this.buildUserMessage(context);
-
-                    // Appel à l'API Albert Agents
-                    const response = await fetch(`${albertConfig.baseURL}/v1/chat/completions`, {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${albertConfig.apiKey}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            model: albertConfig.model,
-                            messages: [
-                                { role: 'system', content: systemPrompt },
-                                { role: 'user', content: userMessage }
-                            ],
-                            temperature: 0.7,
-                            max_tokens: 2000
-                        })
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`Erreur API Albert: ${response.status} ${response.statusText}`);
-                    }
-
-                    const data = await response.json();
-                    console.log('✅ Réponse Albert:', data);
-
-                    return this.parseAlbertResponse(data, context);
-
-                } catch (error) {
-                    console.error('❌ Erreur appel Albert API:', error);
                     
-                    // Fallback en mode simulation
-                    this.addAIMessage('⚠️ Connexion Albert temporairement indisponible, passage en mode simulation.', 'ai');
+                    // PRIORITÉ 3: Mode simulation intelligent
+                    console.log('🎭 Passage en mode simulation avancée');
+                    this.addAIMessage('🎭 Mode simulation activé - Albert IA non disponible (CORS/API)', 'ai');
+                    return this.simulateAIResponse(context);
+                    
+                } catch (error) {
+                    console.error('❌ Erreur générale callAIAPI:', error);
                     return this.simulateAIResponse(context);
                 }
             }
@@ -1071,64 +1107,291 @@ Réponds TOUJOURS en JSON:
                 }
             }
 
-            // Simulation pour mode hors ligne ou erreur API
+            // Simulation intelligente pour mode hors ligne ou erreur API
             simulateAIResponse(context) {
-                if (context.isDocumentEmpty && context.message.toLowerCase().includes('maintenance')) {
-                    return {
-                        message: "✨ Parfait ! Je vais créer une application de gestion de maintenance complète avec équipements, techniciens et interventions. Création en cours...",
-                        actions: [
-                            {
-                                type: 'createTables',
-                                tables: [
-                                    {
-                                        name: 'Equipements',
-                                        columns: [
-                                            { id: 'nom', type: 'Text', label: 'Nom Équipement' },
-                                            { id: 'type', type: 'Text', label: 'Type' },
-                                            { id: 'localisation', type: 'Text', label: 'Localisation' },
-                                            { id: 'statut', type: 'Text', label: 'Statut' },
-                                            { id: 'date_installation', type: 'Date', label: 'Date Installation' },
-                                            { id: 'dernier_entretien', type: 'Date', label: 'Dernier Entretien' },
-                                            { id: 'prochain_entretien', type: 'Date', label: 'Prochain Entretien' }
-                                        ]
-                                    },
-                                    {
-                                        name: 'Techniciens',
-                                        columns: [
-                                            { id: 'nom', type: 'Text', label: 'Nom' },
-                                            { id: 'specialite', type: 'Text', label: 'Spécialité' },
-                                            { id: 'email', type: 'Text', label: 'Email' },
-                                            { id: 'telephone', type: 'Text', label: 'Téléphone' }
-                                        ]
-                                    },
-                                    {
-                                        name: 'Interventions',
-                                        columns: [
-                                            { id: 'equipement', type: 'Text', label: 'Équipement' },
-                                            { id: 'technicien', type: 'Text', label: 'Technicien' },
-                                            { id: 'type_intervention', type: 'Text', label: 'Type Intervention' },
-                                            { id: 'date_intervention', type: 'Date', label: 'Date Intervention' },
-                                            { id: 'description', type: 'Text', label: 'Description' },
-                                            { id: 'statut', type: 'Text', label: 'Statut' },
-                                            { id: 'duree', type: 'Numeric', label: 'Durée (heures)' }
-                                        ]
-                                    }
-                                ]
-                            }
-                        ]
-                    };
-                }
+                const message = context.message.toLowerCase();
                 
-                if (context.mode === 'analyst') {
+                // 1. SALUTATIONS ET MESSAGES SIMPLES
+                if (message.match(/^(bonjour|hello|salut|hi|hey|bonsoir)/)) {
                     return {
-                        message: "📊 En mode analyste, je peux vous aider à analyser vos données. Que souhaitez-vous savoir sur vos données métier ?",
+                        message: "👋 Bonjour ! Je suis Albert, votre assistant IA pour Grist. Je peux vous aider à créer des applications complètes, analyser vos données, ou améliorer votre workflow. Que souhaitez-vous faire aujourd'hui ?",
                         actions: null
                     };
                 }
                 
+                if (message.match(/comment ça va|ça va|how are you/)) {
+                    return {
+                        message: "😊 Je vais très bien, merci ! Je suis là pour vous aider avec vos projets Grist. Avez-vous une application à créer ou des données à analyser ?",
+                        actions: null
+                    };
+                }
+                
+                // 2. DEMANDES D'AIDE
+                if (message.match(/aide|help|assistance|que peux-tu faire/)) {
+                    const capabilities = context.mode === 'dev' ? 
+                        "• Créer des tables Grist avec colonnes typées\n• Générer des composants React interactifs\n• Analyser vos fichiers Excel/CSV\n• Construire des dashboards complets\n• Modifier l'architecture de votre app" :
+                        "• Analyser vos données existantes\n• Créer des rapports statistiques\n• Identifier des tendances\n• Calculer des KPIs\n• Générer des insights métier";
+                        
+                    return {
+                        message: `💡 **Mode ${context.mode.toUpperCase()} activé** - Voici ce que je peux faire :\n\n${capabilities}\n\n**Exemples de demandes :**\n• "Créer une app de gestion de stock"\n• "Dashboard pour suivi des ventes"\n• "Analyser les tendances de mes données"\n• Uploadez un fichier Excel pour auto-génération`,
+                        actions: null
+                    };
+                }
+                
+                // 3. CRÉATION D'APPLICATIONS (Mode Dev uniquement)
+                if (context.mode === 'dev' && context.isDocumentEmpty) {
+                    if (message.includes('maintenance')) {
+                        return this.generateMaintenanceApp();
+                    }
+                    
+                    if (message.match(/stock|inventaire|produit/)) {
+                        return this.generateStockApp();
+                    }
+                    
+                    if (message.match(/client|vente|commercial|crm/)) {
+                        return this.generateCRMApp();
+                    }
+                    
+                    if (message.match(/projet|tâche|planning|équipe/)) {
+                        return this.generateProjectApp();
+                    }
+                    
+                    if (message.match(/rh|employé|congé|ressources humaines/)) {
+                        return this.generateHRApp();
+                    }
+                    
+                    // Demande générale de création d'app
+                    if (message.match(/créer|application|app|dashboard/)) {
+                        return {
+                            message: "🚀 Parfait ! Je peux créer une application personnalisée pour vous. Précisez-moi le domaine :\n\n📦 **Exemples populaires :**\n• Gestion de maintenance\n• Suivi des stocks\n• CRM clients\n• Gestion de projets\n• RH et employés\n\nOu décrivez-moi votre besoin spécifique !",
+                            actions: null
+                        };
+                    }
+                }
+                
+                // 4. ANALYSE DE DONNÉES (Mode Analyst)
+                if (context.mode === 'analyst') {
+                    const businessData = context.businessData || {};
+                    const tableNames = Object.keys(businessData);
+                    
+                    if (tableNames.length > 0) {
+                        return {
+                            message: `📊 **Analyse de vos données disponibles :**\n\n${tableNames.map(table => `• **${table}** : ${businessData[table].rowCount} entrées`).join('\n')}\n\nQue souhaitez-vous analyser ? Je peux calculer des statistiques, identifier des tendances, ou créer des rapports.`,
+                            actions: null
+                        };
+                    } else {
+                        return {
+                            message: "📊 En mode analyste, je peux examiner vos données. Il semble qu'aucune donnée métier ne soit encore disponible. Passez en mode développement pour créer votre première application !",
+                            actions: null
+                        };
+                    }
+                }
+                
+                // 5. QUESTIONS SUR L'ÉTAT DU SYSTÈME
+                if (message.match(/status|état|statut/)) {
+                    const hasClaudeAPI = !!(typeof window !== 'undefined' && window.claude && window.claude.complete);
+                    const hasAlbertKey = !!this.getAlbertAPIKey();
+                    
+                    return {
+                        message: `📊 **État du système :**\n• Mode : ${context.mode} (${context.mode === 'dev' ? 'développement' : 'analyse'})\n• Document : ${context.isDocumentEmpty ? 'vide' : 'avec données'}\n• Claude API : ${hasClaudeAPI ? '✅ disponible' : '❌ non disponible'}\n• Albert API : ${hasAlbertKey ? '⚠️ configurée (CORS)' : '❌ non configurée'}\n• Composants : ${this.components.size}\n\n💡 Mode simulation intelligent activé.`,
+                        actions: null
+                    };
+                }
+                
+                // 6. RÉPONSE GÉNÉRALE POUR DEMANDES NON RECONNUES
                 return {
-                    message: "💡 Je comprends votre demande. Pour une meilleure assistance, pouvez-vous me donner plus de détails ? Ou essayez des exemples comme 'créer une app de gestion de stock' ou 'application de suivi clients'.",
+                    message: "🤔 Je n'ai pas bien saisi votre demande. Voici ce que vous pouvez essayer :\n\n**💬 Commandes utiles :**\n• `aide` - Voir mes capacités\n• `status` - État du système\n• `/help` - Aide complète\n\n**🚀 Exemples concrets :**\n• \"Créer une app de gestion de stock\"\n• \"Analyser mes données de ventes\"\n• \"Dashboard pour suivi des projets\"\n\nOu décrivez-moi simplement votre besoin !",
                     actions: null
+                };
+            }
+            
+            // Générateurs d'applications spécialisées
+            generateMaintenanceApp() {
+                return {
+                    message: "✨ Parfait ! Je vais créer une application de gestion de maintenance complète avec équipements, techniciens et interventions. Création en cours...",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Equipements',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Équipement' },
+                                        { id: 'type', type: 'Text', label: 'Type' },
+                                        { id: 'localisation', type: 'Text', label: 'Localisation' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'date_installation', type: 'Date', label: 'Date Installation' },
+                                        { id: 'dernier_entretien', type: 'Date', label: 'Dernier Entretien' },
+                                        { id: 'prochain_entretien', type: 'Date', label: 'Prochain Entretien' }
+                                    ]
+                                },
+                                {
+                                    name: 'Techniciens',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom' },
+                                        { id: 'specialite', type: 'Text', label: 'Spécialité' },
+                                        { id: 'email', type: 'Text', label: 'Email' },
+                                        { id: 'telephone', type: 'Text', label: 'Téléphone' }
+                                    ]
+                                },
+                                {
+                                    name: 'Interventions',
+                                    columns: [
+                                        { id: 'equipement', type: 'Text', label: 'Équipement' },
+                                        { id: 'technicien', type: 'Text', label: 'Technicien' },
+                                        { id: 'type_intervention', type: 'Text', label: 'Type Intervention' },
+                                        { id: 'date_intervention', type: 'Date', label: 'Date Intervention' },
+                                        { id: 'description', type: 'Text', label: 'Description' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'duree', type: 'Numeric', label: 'Durée (heures)' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+            
+            generateStockApp() {
+                return {
+                    message: "📦 Excellente idée ! Je crée une application de gestion de stock avec produits, fournisseurs et mouvements.",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Produits',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Produit' },
+                                        { id: 'reference', type: 'Text', label: 'Référence' },
+                                        { id: 'categorie', type: 'Text', label: 'Catégorie' },
+                                        { id: 'stock_actuel', type: 'Numeric', label: 'Stock Actuel' },
+                                        { id: 'stock_minimum', type: 'Numeric', label: 'Stock Minimum' },
+                                        { id: 'prix_unitaire', type: 'Numeric', label: 'Prix Unitaire' },
+                                        { id: 'fournisseur', type: 'Text', label: 'Fournisseur' }
+                                    ]
+                                },
+                                {
+                                    name: 'Mouvements',
+                                    columns: [
+                                        { id: 'produit', type: 'Text', label: 'Produit' },
+                                        { id: 'type_mouvement', type: 'Text', label: 'Type' },
+                                        { id: 'quantite', type: 'Numeric', label: 'Quantité' },
+                                        { id: 'date_mouvement', type: 'Date', label: 'Date' },
+                                        { id: 'commentaire', type: 'Text', label: 'Commentaire' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+            
+            generateCRMApp() {
+                return {
+                    message: "👥 Parfait ! Je crée un CRM complet avec clients, contacts et opportunités commerciales.",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Clients',
+                                    columns: [
+                                        { id: 'nom_entreprise', type: 'Text', label: 'Entreprise' },
+                                        { id: 'secteur', type: 'Text', label: 'Secteur' },
+                                        { id: 'taille', type: 'Text', label: 'Taille' },
+                                        { id: 'chiffre_affaires', type: 'Numeric', label: 'CA Estimé' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'date_creation', type: 'Date', label: 'Date Création' }
+                                    ]
+                                },
+                                {
+                                    name: 'Contacts',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom' },
+                                        { id: 'prenom', type: 'Text', label: 'Prénom' },
+                                        { id: 'poste', type: 'Text', label: 'Poste' },
+                                        { id: 'email', type: 'Text', label: 'Email' },
+                                        { id: 'telephone', type: 'Text', label: 'Téléphone' },
+                                        { id: 'client', type: 'Text', label: 'Client' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+            
+            generateProjectApp() {
+                return {
+                    message: "📋 Excellent choix ! Je crée une application de gestion de projets avec tâches, équipes et planning.",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Projets',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Projet' },
+                                        { id: 'description', type: 'Text', label: 'Description' },
+                                        { id: 'chef_projet', type: 'Text', label: 'Chef de Projet' },
+                                        { id: 'date_debut', type: 'Date', label: 'Date Début' },
+                                        { id: 'date_fin', type: 'Date', label: 'Date Fin' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'budget', type: 'Numeric', label: 'Budget' }
+                                    ]
+                                },
+                                {
+                                    name: 'Taches',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Tâche' },
+                                        { id: 'projet', type: 'Text', label: 'Projet' },
+                                        { id: 'assignee', type: 'Text', label: 'Assigné à' },
+                                        { id: 'priorite', type: 'Text', label: 'Priorité' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'date_debut', type: 'Date', label: 'Début' },
+                                        { id: 'date_fin', type: 'Date', label: 'Fin' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+            
+            generateHRApp() {
+                return {
+                    message: "👨‍💼 Super ! Je crée une application RH complète avec employés, congés et évaluations.",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Employes',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom' },
+                                        { id: 'prenom', type: 'Text', label: 'Prénom' },
+                                        { id: 'poste', type: 'Text', label: 'Poste' },
+                                        { id: 'departement', type: 'Text', label: 'Département' },
+                                        { id: 'manager', type: 'Text', label: 'Manager' },
+                                        { id: 'date_embauche', type: 'Date', label: 'Date Embauche' },
+                                        { id: 'salaire', type: 'Numeric', label: 'Salaire' }
+                                    ]
+                                },
+                                {
+                                    name: 'Conges',
+                                    columns: [
+                                        { id: 'employe', type: 'Text', label: 'Employé' },
+                                        { id: 'type_conge', type: 'Text', label: 'Type Congé' },
+                                        { id: 'date_debut', type: 'Date', label: 'Date Début' },
+                                        { id: 'date_fin', type: 'Date', label: 'Date Fin' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'motif', type: 'Text', label: 'Motif' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
                 };
             }
 
@@ -1820,12 +2083,12 @@ Réponds TOUJOURS en JSON:
                 let statusColor, statusText;
                 if (hasClaudeAPI) {
                     statusColor = '#10b981';
-                    statusText = 'CLAUDE-CONNECTED';
+                    statusText = 'CLAUDE-READY';
                 } else if (hasApiKey) {
-                    statusColor = '#10b981';
-                    statusText = 'ALBERT-CONNECTED';
-                } else {
                     statusColor = '#f59e0b';
+                    statusText = 'ALBERT-CORS-BLOCKED';
+                } else {
+                    statusColor = '#6b7280';
                     statusText = 'SIMULATION-MODE';
                 }
                 
@@ -1846,6 +2109,12 @@ Réponds TOUJOURS en JSON:
                     ${statusText}
                     <span style="font-size: 10px;">[${this.aiMode.toUpperCase()}]</span>
                 `;
+                
+                indicator.title = hasClaudeAPI ? 
+                    "Claude AI détecté et prêt" : 
+                    hasApiKey ? 
+                        "Albert API configurée mais bloquée par CORS" : 
+                        "Mode simulation - aucune API externe";
                 
                 nav.insertBefore(indicator, nav.firstChild);
             }
