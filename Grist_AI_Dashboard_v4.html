@@ -786,9 +786,9 @@
                 try {
                     // Configuration Albert API
                     const albertConfig = {
-                        baseURL: 'https://albert.api.numerique.gouv.fr',
+                        baseURL: 'https://albert.api.etalab.gouv.fr',
                         apiKey: this.getAlbertAPIKey(),
-                        model: 'AgentPublic-1.5' // ou le modèle approprié
+                        model: 'albert-large' // ou le modèle approprié
                     };
 
                     if (!albertConfig.apiKey) {
