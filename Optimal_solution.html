@@ -193,6 +193,9 @@
             }
 
             setupGristAPI() {
+                // Référence à l'instance pour utilisation dans les méthodes
+                const self = this;
+                
                 // API simplifiée pour les composants avec support composants enfants
                 this.gristAPI = {
                     // Récupérer des données avec debug du format columnar de Grist
@@ -308,12 +311,12 @@
                     
                     // Navigation
                     navigate: (componentId) => {
-                        this.loadComponent(componentId);
+                        self.loadComponent(componentId);
                     },
                     
                     // Composants enfants - NOUVEAU
                     getChildComponent: async (templateId) => {
-                        const templates = await this.getData('Templates');
+                        const templates = await self.gristAPI.getData('Templates');
                         const template = templates.find(t => t.template_id === templateId);
                         
                         if (!template) {
@@ -322,54 +325,59 @@
                         }
                         
                         console.log(`🧩 Chargement composant enfant: ${templateId}`);
-                        return this.gristAPI.createChildComponent(template);
-                    }.bind(this),
+                        return self.createChildComponent(template);
+                    },
                     
                     // Créer un composant React à partir du template
                     createChildComponent: (template) => {
-                        try {
-                            // Transformer le code JSX avec Babel
-                            const transformedCode = Babel.transform(template.component_code, {
-                                presets: ['react'],
-                                plugins: ['proposal-class-properties']
-                            }).code;
-                            
-                            // Créer la fonction composant
-                            const componentFunction = new Function(
-                                'React',
-                                'useState',
-                                'useEffect',
-                                'useCallback',
-                                'gristAPI',
-                                `
-                                ${transformedCode}
-                                return Component;
-                                `
-                            );
-                            
-                            // Retourner le composant React
-                            return componentFunction(
-                                React,
-                                React.useState,
-                                React.useEffect,
-                                React.useCallback,
-                                this.gristAPI
-                            );
-                            
-                        } catch (error) {
-                            console.error(`Erreur création composant enfant ${template.template_id}:`, error);
-                            return () => React.createElement('div', { 
-                                style: { 
-                                    padding: '8px', 
-                                    background: '#fee2e2', 
-                                    color: '#dc2626', 
-                                    borderRadius: '4px',
-                                    fontSize: '12px'
-                                } 
-                            }, `Erreur: ${template.template_id}`);
-                        }
-                    }.bind(this)
+                        return self.createChildComponent(template);
+                    }
                 };
+            }
+
+            // Méthode pour créer un composant enfant
+            createChildComponent(template) {
+                try {
+                    // Transformer le code JSX avec Babel
+                    const transformedCode = Babel.transform(template.component_code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+                    
+                    // Créer la fonction composant
+                    const componentFunction = new Function(
+                        'React',
+                        'useState',
+                        'useEffect',
+                        'useCallback',
+                        'gristAPI',
+                        `
+                        ${transformedCode}
+                        return Component;
+                        `
+                    );
+                    
+                    // Retourner le composant React
+                    return componentFunction(
+                        React,
+                        React.useState,
+                        React.useEffect,
+                        React.useCallback,
+                        this.gristAPI
+                    );
+                    
+                } catch (error) {
+                    console.error(`Erreur création composant enfant ${template.template_id}:`, error);
+                    return () => React.createElement('div', { 
+                        style: { 
+                            padding: '8px', 
+                            background: '#fee2e2', 
+                            color: '#dc2626', 
+                            borderRadius: '4px',
+                            fontSize: '12px'
+                        } 
+                    }, `Erreur: ${template.template_id}`);
+                }
             }
 
             async loadComponents() {
