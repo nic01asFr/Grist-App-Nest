@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v3.3 Debug Columnar</title>
+    <title>Grist Dynamic Dashboard - v3.4 Composants Enfants</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -143,7 +143,7 @@
 </head>
 <body>
     <header class="header">
-        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.3 DEBUG</span></h1>
+        <h1>🚀 Grist Dynamic Dashboard <span class="version-badge">v3.4 CHILD-COMPONENTS</span></h1>
         <nav class="nav" id="navigation"></nav>
     </header>
     
@@ -155,7 +155,7 @@
     </main>
 
     <script>
-        // SOLUTION OPTIMALE v3.3 : Debug format columnar
+        // SOLUTION OPTIMALE v3.4 : Support des composants enfants
         class OptimalGristDashboard {
             constructor() {
                 this.components = new Map();
@@ -166,7 +166,7 @@
 
             async init() {
                 try {
-                    console.log('🚀 Initialisation système optimal v3.3 (debug columnar)');
+                    console.log('🚀 Initialisation système optimal v3.4 (composants enfants)');
                     
                     // Initialiser Grist API
                     await grist.ready({ requiredAccess: 'read table' });
@@ -184,7 +184,7 @@
                     this.hideLoading();
                     this.isReady = true;
                     
-                    console.log('✅ Système optimal prêt');
+                    console.log('✅ Système optimal prêt avec support composants enfants');
                     
                 } catch (error) {
                     console.error('❌ Erreur initialisation:', error);
@@ -193,7 +193,7 @@
             }
 
             setupGristAPI() {
-                // API simplifiée pour les composants avec debug columnar
+                // API simplifiée pour les composants avec support composants enfants
                 this.gristAPI = {
                     // Récupérer des données avec debug du format columnar de Grist
                     getData: async (tableName) => {
@@ -309,7 +309,66 @@
                     // Navigation
                     navigate: (componentId) => {
                         this.loadComponent(componentId);
-                    }
+                    },
+                    
+                    // Composants enfants - NOUVEAU
+                    getChildComponent: async (templateId) => {
+                        const templates = await this.getData('Templates');
+                        const template = templates.find(t => t.template_id === templateId);
+                        
+                        if (!template) {
+                            console.warn(`Composant enfant ${templateId} non trouvé`);
+                            return null;
+                        }
+                        
+                        console.log(`🧩 Chargement composant enfant: ${templateId}`);
+                        return this.gristAPI.createChildComponent(template);
+                    }.bind(this),
+                    
+                    // Créer un composant React à partir du template
+                    createChildComponent: (template) => {
+                        try {
+                            // Transformer le code JSX avec Babel
+                            const transformedCode = Babel.transform(template.component_code, {
+                                presets: ['react'],
+                                plugins: ['proposal-class-properties']
+                            }).code;
+                            
+                            // Créer la fonction composant
+                            const componentFunction = new Function(
+                                'React',
+                                'useState',
+                                'useEffect',
+                                'useCallback',
+                                'gristAPI',
+                                `
+                                ${transformedCode}
+                                return Component;
+                                `
+                            );
+                            
+                            // Retourner le composant React
+                            return componentFunction(
+                                React,
+                                React.useState,
+                                React.useEffect,
+                                React.useCallback,
+                                this.gristAPI
+                            );
+                            
+                        } catch (error) {
+                            console.error(`Erreur création composant enfant ${template.template_id}:`, error);
+                            return () => React.createElement('div', { 
+                                style: { 
+                                    padding: '8px', 
+                                    background: '#fee2e2', 
+                                    color: '#dc2626', 
+                                    borderRadius: '4px',
+                                    fontSize: '12px'
+                                } 
+                            }, `Erreur: ${template.template_id}`);
+                        }
+                    }.bind(this)
                 };
             }
 
@@ -507,10 +566,10 @@
                                                 🚀 Dashboard Dynamique
                                             </h1>
                                             <p style={{ fontSize: '1.2rem', opacity: '0.9' }}>
-                                                Système optimal de composants React (v3.3 debug)
+                                                Système optimal de composants React (v3.4 composants enfants)
                                             </p>
                                             <div style={{ background: 'rgba(255,255,255,0.2)', padding: '8px 16px', borderRadius: '20px', display: 'inline-block', marginTop: '10px' }}>
-                                                🔍 Debug format columnar actif
+                                                🧩 Support composants enfants actif
                                             </div>
                                         </div>
                                         
@@ -728,7 +787,7 @@
                     font-size: 11px;
                     margin-right: 10px;
                 `;
-                indicator.textContent = this.components.size > 0 ? 'DEBUG' : 'LOADING';
+                indicator.textContent = this.components.size > 0 ? 'CHILD-COMP' : 'LOADING';
                 nav.appendChild(indicator);
                 
                 // Boutons de navigation
