@@ -1,0 +1,555 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard - v4.6 Enhanced Debug</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        /* Styles existants conservés... */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            transition: grid-template-rows 0.3s ease;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .ai-chat-container {
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-chat-header {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .ai-message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .ai-message.user .ai-message-content {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .debug-panel {
+            background: #1e293b;
+            color: #e2e8f0;
+            font-family: monospace;
+            font-size: 12px;
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+            border-top: 2px solid #475569;
+            display: none;
+        }
+        
+        .debug-panel.visible {
+            display: block;
+        }
+        
+        .debug-entry {
+            margin-bottom: 8px;
+            padding: 4px;
+            border-left: 3px solid #10b981;
+            padding-left: 8px;
+        }
+        
+        .debug-entry.error {
+            border-left-color: #ef4444;
+            background: rgba(239, 68, 68, 0.1);
+        }
+        
+        .debug-entry.warning {
+            border-left-color: #f59e0b;
+            background: rgba(245, 158, 11, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🤖 Grist AI Dashboard <span style="background: rgba(255,255,255,0.2); padding: 2px 8px; border-radius: 12px; font-size: 11px;">v4.6 Enhanced Debug</span></h1>
+        <nav style="margin-left: auto; display: flex; gap: 10px; align-items: center;">
+            <span id="documentIdBadge">Document: ...</span>
+            <span id="webhookStatusBadge">Webhook non configuré</span>
+            <button id="configButton" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer;">⚙️</button>
+            <button id="debugToggle" onclick="toggleDebugPanel()" style="background: rgba(255,255,255,0.2); border: none; color: white; padding: 8px 16px; border-radius: 6px; cursor: pointer;">🔍 Debug</button>
+        </nav>
+    </header>
+    
+    <main id="main-content" style="position: relative; overflow: hidden; background: white; padding: 20px;">
+        <div style="text-align: center; margin-top: 100px;">
+            <h1 style="font-size: 2.5rem; margin-bottom: 20px;">🚀 Enhanced Debug Mode</h1>
+            <p style="color: #6b7280; font-size: 1.2rem;">Widget prêt avec diagnostic avancé N8N</p>
+        </div>
+    </main>
+
+    <div class="ai-chat-container">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <span>🤖 Agent IA Enhanced Debug</span>
+            <span id="chat-toggle">🔽</span>
+        </div>
+        
+        <div id="ai-chat-content" style="flex: 1; display: flex; flex-direction: column; height: 250px;">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: #10b981; display: flex; align-items: center; justify-content: center;">🤖</div>
+                    <div class="ai-message-content">
+                        <strong>Enhanced Debug v4.6 !</strong><br>
+                        ✅ <strong>Diagnostic N8N avancé</strong> : Détection précise des problèmes<br>
+                        ✅ <strong>Debug panel</strong> : Logs en temps réel (cliquez 🔍 Debug)<br>
+                        ✅ <strong>Response analysis</strong> : Analyse détaillée des réponses<br><br>
+                        <strong>Problème détecté :</strong> N8N retourne une réponse vide. Utilisez les commandes de diagnostic ci-dessous.
+                    </div>
+                </div>
+            </div>
+            
+            <div style="background: white; padding: 15px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px;">
+                <input 
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Tapez /diagnose pour diagnostic N8N, ou votre message..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
+                    style="flex: 1; padding: 10px 15px; border: 1px solid #d1d5db; border-radius: 25px; outline: none;"
+                />
+                <button onclick="sendMessage()" id="send-btn" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 25px; cursor: pointer;">Envoyer</button>
+            </div>
+        </div>
+        
+        <div id="debug-panel" class="debug-panel">
+            <strong>🔍 DEBUG LOGS - Real Time</strong><br>
+            <div id="debug-logs"></div>
+        </div>
+    </div>
+
+    <div id="webhookModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+        <div style="background: white; padding: 30px; border-radius: 12px; max-width: 500px; width: 90%;">
+            <h3>Configuration Webhook N8N</h3>
+            <div style="margin: 20px 0;">
+                <label>URL du Webhook N8N</label>
+                <input type="url" id="webhookUrl" placeholder="https://votre-n8n.com/webhook/..." style="width: 100%; padding: 10px; margin-top: 5px; border: 1px solid #d1d5db; border-radius: 6px;">
+            </div>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button onclick="closeModal()" style="background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Fermer</button>
+                <button onclick="saveWebhook()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer;">Sauvegarder</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class EnhancedGristAIDashboard {
+            constructor() {
+                this.webhookUrl = '';
+                this.documentId = 'eNzYJgDJvkQYdTozF8BCoB';
+                this.debugLogs = [];
+                this.maxDebugLogs = 50;
+                
+                // Charger config
+                this.loadConfig();
+                this.updateBadges();
+                
+                // Message d'accueil
+                this.addMessage("Widget Enhanced Debug prêt ! Utilisez /diagnose pour tester N8N en détail.", 'ai');
+            }
+            
+            loadConfig() {
+                try {
+                    this.webhookUrl = localStorage.getItem('grist_ai_n8n_webhook_url') || '';
+                } catch (e) {
+                    console.warn('Erreur chargement config:', e);
+                }
+            }
+            
+            saveConfig() {
+                try {
+                    localStorage.setItem('grist_ai_n8n_webhook_url', this.webhookUrl);
+                } catch (e) {
+                    console.warn('Erreur sauvegarde config:', e);
+                }
+            }
+            
+            updateBadges() {
+                document.getElementById('documentIdBadge').textContent = 'Doc: ' + this.documentId.substring(0, 8) + '...';
+                document.getElementById('webhookStatusBadge').textContent = this.webhookUrl ? 'N8N Configuré' : 'N8N Non configuré';
+            }
+            
+            addDebugLog(type, message, data = null) {
+                const timestamp = new Date().toLocaleTimeString();
+                const logEntry = {
+                    timestamp,
+                    type, // 'info', 'warning', 'error'
+                    message,
+                    data
+                };
+                
+                this.debugLogs.unshift(logEntry);
+                if (this.debugLogs.length > this.maxDebugLogs) {
+                    this.debugLogs.pop();
+                }
+                
+                // Afficher dans le panel si visible
+                this.updateDebugPanel();
+                
+                // Log console
+                console.log(`🔍 [${type.toUpperCase()}] ${message}`, data);
+            }
+            
+            updateDebugPanel() {
+                const logsContainer = document.getElementById('debug-logs');
+                if (!logsContainer) return;
+                
+                logsContainer.innerHTML = this.debugLogs.map(log => 
+                    `<div class="debug-entry ${log.type}">
+                        <strong>${log.timestamp}</strong> [${log.type.toUpperCase()}] ${log.message}
+                        ${log.data ? '<br><pre>' + JSON.stringify(log.data, null, 2).substring(0, 200) + (JSON.stringify(log.data).length > 200 ? '...' : '') + '</pre>' : ''}
+                    </div>`
+                ).join('');
+            }
+            
+            addMessage(message, sender) {
+                const messagesContainer = document.getElementById('ai-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'ai-message ' + sender;
+                
+                const avatar = sender === 'user' ? '👤' : '🤖';
+                const avatarBg = sender === 'user' ? '#3b82f6' : '#10b981';
+                
+                messageDiv.innerHTML = `
+                    <div style="width: 32px; height: 32px; border-radius: 50%; background: ${avatarBg}; display: flex; align-items: center; justify-content: center;">${avatar}</div>
+                    <div class="ai-message-content">${message}</div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            async sendMessage(message) {
+                if (!message.trim()) return;
+                
+                this.addMessage(message, 'user');
+                
+                // Commandes spéciales
+                if (message.startsWith('/')) {
+                    return this.handleCommand(message);
+                }
+                
+                if (!this.webhookUrl) {
+                    this.addMessage("⚠️ Configurez d'abord le webhook N8N avec ⚙️", 'ai');
+                    return;
+                }
+                
+                // Appel N8N standard
+                await this.callN8N(message);
+            }
+            
+            async handleCommand(command) {
+                const [cmd, ...args] = command.split(' ');
+                
+                switch (cmd) {
+                    case '/diagnose':
+                        await this.runDiagnostic();
+                        break;
+                        
+                    case '/test':
+                        await this.testWebhook();
+                        break;
+                        
+                    case '/debug':
+                        this.toggleDebugPanel();
+                        break;
+                        
+                    case '/clear':
+                        this.debugLogs = [];
+                        this.updateDebugPanel();
+                        this.addMessage("🗑️ Logs debug effacés", 'ai');
+                        break;
+                        
+                    case '/webhook':
+                        if (args[0] && args[0].startsWith('http')) {
+                            this.webhookUrl = args[0];
+                            this.saveConfig();
+                            this.updateBadges();
+                            this.addMessage("✅ Webhook configuré: " + args[0], 'ai');
+                        } else {
+                            this.addMessage("📋 Webhook actuel: " + (this.webhookUrl || 'Non configuré'), 'ai');
+                        }
+                        break;
+                        
+                    case '/help':
+                        this.addMessage(`
+                            <strong>🔧 Commandes de diagnostic :</strong><br>
+                            • <code>/diagnose</code> - Diagnostic complet N8N<br>
+                            • <code>/test</code> - Test simple du webhook<br>
+                            • <code>/debug</code> - Activer/désactiver le panel debug<br>
+                            • <code>/clear</code> - Effacer les logs<br>
+                            • <code>/webhook URL</code> - Configurer webhook<br>
+                            • <code>/help</code> - Cette aide
+                        `, 'ai');
+                        break;
+                        
+                    default:
+                        this.addMessage("❓ Commande inconnue. Tapez /help pour l'aide.", 'ai');
+                }
+            }
+            
+            async runDiagnostic() {
+                this.addMessage("🔍 Démarrage diagnostic N8N complet...", 'ai');
+                
+                if (!this.webhookUrl) {
+                    this.addMessage("❌ Aucun webhook configuré. Configurez d'abord avec /webhook URL", 'ai');
+                    return;
+                }
+                
+                // Test 1: Connectivité
+                this.addDebugLog('info', 'Test 1: Connectivité N8N', { url: this.webhookUrl });
+                try {
+                    const response = await fetch(this.webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ test: 'connectivity' })
+                    });
+                    
+                    this.addDebugLog('info', 'Connectivité OK', {
+                        status: response.status,
+                        statusText: response.statusText,
+                        headers: Object.fromEntries(response.headers.entries())
+                    });
+                    
+                    // Test 2: Contenu de la réponse
+                    const textResponse = await response.text();
+                    this.addDebugLog('info', 'Contenu réponse', {
+                        length: textResponse.length,
+                        content: textResponse.substring(0, 500),
+                        isEmpty: textResponse.trim() === ''
+                    });
+                    
+                    if (textResponse.trim() === '') {
+                        this.addDebugLog('error', 'PROBLÈME DÉTECTÉ: Réponse vide', {
+                            issue: 'N8N retourne une réponse vide',
+                            solution: 'Vérifiez que votre workflow N8N contient un node "Respond to Webhook" avec responseBody configuré'
+                        });
+                        
+                        this.addMessage(`
+                            ❌ <strong>Problème identifié :</strong> N8N retourne une réponse vide<br><br>
+                            <strong>🔧 Solutions :</strong><br>
+                            1. Vérifiez que votre workflow N8N s'exécute complètement<br>
+                            2. Assurez-vous d'avoir un node "Respond to Webhook" final<br>
+                            3. Configurez le responseBody avec: <code>{{ JSON.stringify($json) }}</code><br>
+                            4. Vérifiez les logs d'exécution dans N8N
+                        `, 'ai');
+                    } else {
+                        // Test 3: Parsing JSON
+                        try {
+                            const jsonData = JSON.parse(textResponse);
+                            this.addDebugLog('info', 'JSON valide reçu', jsonData);
+                            this.addMessage("✅ Diagnostic réussi ! N8N retourne un JSON valide.", 'ai');
+                        } catch (e) {
+                            this.addDebugLog('warning', 'JSON invalide mais contenu présent', {
+                                error: e.message,
+                                content: textResponse.substring(0, 200)
+                            });
+                            this.addMessage("⚠️ N8N retourne du contenu mais ce n'est pas du JSON valide.", 'ai');
+                        }
+                    }
+                    
+                } catch (error) {
+                    this.addDebugLog('error', 'Erreur connectivité', {
+                        message: error.message,
+                        type: error.name
+                    });
+                    this.addMessage("❌ Impossible de se connecter à N8N: " + error.message, 'ai');
+                }
+            }
+            
+            async testWebhook() {
+                if (!this.webhookUrl) {
+                    this.addMessage("❌ Configurez d'abord le webhook avec /webhook URL", 'ai');
+                    return;
+                }
+                
+                this.addMessage("🧪 Test webhook simple...", 'ai');
+                
+                try {
+                    const response = await fetch(this.webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: 'test simple',
+                            documentId: this.documentId,
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+                    
+                    const text = await response.text();
+                    
+                    if (response.ok) {
+                        if (text.trim()) {
+                            this.addMessage(`✅ Test réussi ! Réponse reçue (${text.length} caractères)`, 'ai');
+                        } else {
+                            this.addMessage("⚠️ N8N répond mais retourne une réponse vide", 'ai');
+                        }
+                    } else {
+                        this.addMessage(`❌ Erreur ${response.status}: ${response.statusText}`, 'ai');
+                    }
+                    
+                } catch (error) {
+                    this.addMessage("❌ Erreur test: " + error.message, 'ai');
+                }
+            }
+            
+            async callN8N(message) {
+                this.addDebugLog('info', 'Appel N8N standard', { message });
+                
+                try {
+                    const response = await fetch(this.webhookUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            message: message,
+                            documentId: this.documentId,
+                            mode: 'dev',
+                            timestamp: new Date().toISOString()
+                        })
+                    });
+                    
+                    const text = await response.text();
+                    
+                    this.addDebugLog('info', 'Réponse N8N reçue', {
+                        status: response.status,
+                        contentLength: text.length,
+                        isEmpty: text.trim() === ''
+                    });
+                    
+                    if (text.trim() === '') {
+                        this.addMessage("⚠️ N8N a retourné une réponse vide. Utilisez /diagnose pour plus de détails.", 'ai');
+                    } else {
+                        try {
+                            const json = JSON.parse(text);
+                            this.addMessage(json.message || "Réponse reçue de N8N", 'ai');
+                        } catch (e) {
+                            this.addMessage("Réponse de N8N (non-JSON): " + text.substring(0, 200), 'ai');
+                        }
+                    }
+                    
+                } catch (error) {
+                    this.addDebugLog('error', 'Erreur appel N8N', error);
+                    this.addMessage("❌ Erreur communication N8N: " + error.message, 'ai');
+                }
+            }
+            
+            toggleDebugPanel() {
+                const panel = document.getElementById('debug-panel');
+                panel.classList.toggle('visible');
+                this.updateDebugPanel();
+            }
+        }
+        
+        // Instance globale
+        let dashboard = null;
+        
+        // Fonctions globales
+        function sendMessage() {
+            const input = document.getElementById('ai-input');
+            const message = input.value.trim();
+            if (message && dashboard) {
+                input.value = '';
+                dashboard.sendMessage(message);
+            }
+        }
+        
+        function toggleChat() {
+            const content = document.getElementById('ai-chat-content');
+            const toggle = document.getElementById('chat-toggle');
+            const isVisible = content.style.display !== 'none';
+            
+            content.style.display = isVisible ? 'none' : 'flex';
+            toggle.textContent = isVisible ? '🔼' : '🔽';
+        }
+        
+        function toggleDebugPanel() {
+            if (dashboard) dashboard.toggleDebugPanel();
+        }
+        
+        function openModal() {
+            document.getElementById('webhookModal').style.display = 'flex';
+        }
+        
+        function closeModal() {
+            document.getElementById('webhookModal').style.display = 'none';
+        }
+        
+        function saveWebhook() {
+            const url = document.getElementById('webhookUrl').value.trim();
+            if (dashboard) {
+                dashboard.webhookUrl = url;
+                dashboard.saveConfig();
+                dashboard.updateBadges();
+                dashboard.addMessage("✅ Webhook configuré: " + url, 'ai');
+            }
+            closeModal();
+        }
+        
+        // Initialisation
+        document.addEventListener('DOMContentLoaded', () => {
+            dashboard = new EnhancedGristAIDashboard();
+            
+            // Event listeners
+            document.getElementById('configButton').onclick = openModal;
+            document.getElementById('webhookModal').onclick = (e) => {
+                if (e.target.id === 'webhookModal') closeModal();
+            };
+        });
+    </script>
+</body>
+</html>
