@@ -2351,23 +2351,3 @@ Je peux analyser vos données via N8N et Albert IA.\";
                 });
                 
                 // Ajouter des raccourcis clavier
-                document.addEventListener('keydown', (event) => {
-                    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
-                        const input = document.getElementById('ai-input');
-                        if (input && input.value.trim()) {
-                            sendMessage();
-                        }
-                    }
-                    
-                    if (event.key === 'Escape') {
-                        toggleChat();
-                    }
-                });
-                
-            } catch (error) {
-                console.error('Erreur lors de la création du dashboard N8N:', error);
-            }
-        });
-    </script>
-</body>
-</html>
