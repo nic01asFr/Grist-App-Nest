@@ -1,0 +1,1974 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard - v4.6 Agent IA via N8N (Fixed)</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            transition: grid-template-rows 0.3s ease;
+        }
+        
+        body.chat-collapsed {
+            grid-template-rows: 60px 1fr 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+        
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+        
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        
+        /* Agent IA Chat Styles */
+        .ai-chat-container {
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-chat-header {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .ai-chat-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+        
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .ai-message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .ai-message.user .ai-message-avatar {
+            background: #3b82f6;
+        }
+        
+        .ai-message.ai .ai-message-avatar {
+            background: #10b981;
+        }
+        
+        .ai-message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .ai-message.user .ai-message-content {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .ai-chat-input {
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .ai-chat-input button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .ai-chat-input button:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .ai-chat-input button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .ai-mode-selector {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .ai-mode-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .ai-mode-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .welcome-container {
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .welcome-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px;
+            margin: 20px 0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close-modal:hover {
+            color: #374151;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .webhook-status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .webhook-status.configured {
+            background: #10b981;
+            color: white;
+        }
+        
+        .webhook-status.not-configured {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .debug-info {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #374151;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.6 N8N-CLEAN</span></h1>
+        <nav class="nav" id="navigation">
+            <span id="documentIdBadge" class="webhook-status not-configured">Document: ...</span>
+            <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
+            <button class="nav-btn" id="configButton" title="Configurer le webhook N8N">⚙️</button>
+        </nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Initialisation du système IA N8N...</div>
+        </div>
+    </main>
+
+    <!-- Agent IA Chat -->
+    <div class="ai-chat-container" id="ai-chat">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>🤖 Agent IA Albert (via N8N - Clean)</span>
+                <div class="ai-mode-selector">
+                    <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
+                        🛠️ Dev
+                    </button>
+                    <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
+                        📊 Analyst
+                    </button>
+                </div>
+            </div>
+            <span id="chat-toggle">🔽</span>
+        </div>
+        
+        <div class="ai-chat-content" id="ai-chat-content">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div class="ai-message-avatar">🤖</div>
+                    <div class="ai-message-content">
+                        <strong>Version 4.6 CLEAN !</strong><br>
+                        ✅ DocumentId automatiquement transmis<br>
+                        ✅ Gestion erreurs JSON améliorée<br>
+                        ✅ Code allégé sans simulation<br><br>
+                        Configurez le webhook N8N avec ⚙️ puis décrivez votre besoin !
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-chat-input">
+                <input 
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Configurez d'abord le webhook N8N puis décrivez votre besoin..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
+                />
+                <input 
+                    type="file" 
+                    id="file-input" 
+                    accept=".xlsx,.xls,.csv,.json" 
+                    style="display: none"
+                    onchange="handleFileUpload(event)"
+                />
+                <button onclick="document.getElementById('file-input').click()">📎</button>
+                <button onclick="sendMessage()" id="send-btn">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de configuration du webhook -->
+    <div id="webhookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configuration Webhook N8N</h3>
+                <button id="closeModal" class="close-modal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="webhookUrl">URL du Webhook N8N</label>
+                <input 
+                    type="url" 
+                    id="webhookUrl" 
+                    placeholder="https://votre-n8n.com/webhook/grist-albert-pipeline"
+                />
+                <small style="color: #6b7280; margin-top: 5px; display: block;">
+                    L'URL de votre workflow N8N qui fait le proxy vers Albert API
+                </small>
+            </div>
+            
+            <div id="webhookStatus" style="margin-bottom: 20px;">
+                <div class="badge badge-warning">⚠ Aucun webhook configuré</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="testWebhook" class="btn btn-secondary">Tester</button>
+                <button id="saveWebhook" class="btn btn-success">Sauvegarder</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                <h4 style="margin-bottom: 10px;">✅ Version CLEAN :</h4>
+                <ul style="margin-left: 20px; color: #4b5563;">
+                    <li><strong>DocumentId automatique</strong> : Transmis dans chaque requête</li>
+                    <li><strong>Gestion JSON robuste</strong> : Fallback si réponse invalide</li>
+                    <li><strong>Code optimisé</strong> : Suppression des simulations inutiles</li>
+                    <li><strong>Debug amélioré</strong> : Logs essentiels uniquement</li>
+                </ul>
+            </div>
+            
+            <div id="debugInfo" class="debug-info" style="display: none;">
+                <strong>Debug Info:</strong><br>
+                <div id="debugContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // GRIST AI DASHBOARD v4.6 : Agent IA via N8N Proxy (CLEAN)
+        class GristAIDashboard {
+            constructor() {
+                this.components = new Map();
+                this.currentComponent = null;
+                this.isReady = false;
+                this.gristAPI = null;
+                this.isDocumentEmpty = false;
+                this.aiMode = 'dev';
+                this.chatCollapsed = false;
+                this.conversationHistory = [];
+                
+                // Configuration N8N Webhook
+                this.webhookUrl = '';
+                this.webhookConfigured = false;
+                
+                // NOUVEAU v4.6 : DocumentId auto-détecté
+                this.documentId = '';
+                
+                // Debug et retry
+                this.debugMode = true;
+                this.maxRetries = 3;
+                this.retryDelay = 1000;
+            }
+
+            async init() {
+                try {
+                    console.log('🤖 Initialisation Grist AI Dashboard v4.6 (N8N CLEAN)');
+                    
+                    // Initialiser Grist API
+                    await grist.ready({ requiredAccess: 'read table' });
+                    this.setupGristAPI();
+                    
+                    // NOUVEAU v4.6 : Auto-détecter documentId
+                    await this.autoDetectDocumentId();
+                    
+                    // Charger la configuration webhook
+                    this.loadWebhookConfig();
+                    
+                    // Vérifier si le document est vide
+                    await this.checkIfDocumentEmpty();
+                    
+                    if (this.isDocumentEmpty) {
+                        console.log('📋 Document vide détecté - Mode configuration');
+                        this.showWelcomeScreen();
+                    } else {
+                        console.log('📊 Document existant - Mode application');
+                        await this.loadComponents();
+                        this.setupNavigation();
+                        await this.loadDefaultComponent();
+                    }
+                    
+                    // Initialiser le chat IA
+                    this.initializeAIChat();
+                    
+                    // Configurer les événements
+                    this.setupEventListeners();
+                    
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    console.log('✅ Grist AI Dashboard prêt (Mode N8N CLEAN v4.6)');
+                    
+                } catch (error) {
+                    console.error('❌ Erreur initialisation:', error);
+                    this.showError('Erreur initialisation', error.message);
+                }
+            }
+
+            // NOUVEAU v4.6 : Auto-détection du documentId
+            async autoDetectDocumentId() {
+                try {
+                    // Méthode 1 : Via l'URL actuelle
+                    const urlParams = new URLSearchParams(window.location.search);
+                    let docId = urlParams.get('docId') || urlParams.get('doc');
+                    
+                    // Méthode 2 : Via l'URL complète (pattern Grist)
+                    if (!docId) {
+                        const urlMatch = window.location.href.match(/\/doc\/([a-zA-Z0-9_-]+)/);
+                        if (urlMatch) {
+                            docId = urlMatch[1];
+                        }
+                    }
+                    
+                    // Méthode 3 : Valeur par défaut fournie
+                    if (!docId) {
+                        docId = 'eNzYJgDJvkQYdTozF8BCoB'; // ID par défaut fourni
+                        console.log('⚠️ DocumentId non détecté, utilisation de la valeur par défaut');
+                    }
+                    
+                    this.documentId = docId;
+                    console.log('📄 DocumentId détecté:', this.documentId);
+                    
+                    // Mettre à jour l'affichage
+                    const docBadge = document.getElementById('documentIdBadge');
+                    if (docBadge) {
+                        docBadge.textContent = 'Doc: ' + this.documentId.substring(0, 8) + '...';
+                        docBadge.className = 'webhook-status configured';
+                    }
+                    
+                } catch (error) {
+                    console.warn('⚠️ Erreur détection documentId:', error);
+                    this.documentId = 'eNzYJgDJvkQYdTozF8BCoB'; // Fallback
+                }
+            }
+
+            setupGristAPI() {
+                const self = this;
+                
+                this.gristAPI = {
+                    getData: async (tableName) => {
+                        try {
+                            const result = await grist.docApi.fetchTable(tableName);
+                            console.log('🔍 Données brutes pour ' + tableName + ':', result);
+                            
+                            if (result && typeof result === 'object' && !Array.isArray(result)) {
+                                const columns = Object.keys(result);
+                                const isColumnar = columns.length > 0 && columns.some(col => Array.isArray(result[col]));
+                                
+                                if (isColumnar) {
+                                    const firstArrayCol = columns.find(col => Array.isArray(result[col]));
+                                    const rowCount = result[firstArrayCol] ? result[firstArrayCol].length : 0;
+                                    const rows = [];
+                                    
+                                    for (let i = 0; i < rowCount; i++) {
+                                        const row = {};
+                                        columns.forEach(col => {
+                                            if (Array.isArray(result[col])) {
+                                                row[col] = result[col][i];
+                                            } else {
+                                                row[col] = result[col];
+                                            }
+                                        });
+                                        rows.push(row);
+                                    }
+                                    
+                                    return rows;
+                                }
+                            }
+                            
+                            if (Array.isArray(result)) return result;
+                            if (result && Array.isArray(result.records)) return result.records;
+                            if (result && result.data && Array.isArray(result.data)) return result.data;
+                            
+                            return [];
+                        } catch (error) {
+                            console.warn('❌ Table ' + tableName + ' non trouvée:', error);
+                            return [];
+                        }
+                    },
+                    
+                    addRecord: async (tableName, record) => {
+                        try {
+                            const result = await grist.docApi.applyUserActions([
+                                ['AddRecord', tableName, null, record]
+                            ]);
+                            return result[0];
+                        } catch (error) {
+                            console.error('Erreur ajout:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    updateRecord: async (tableName, recordId, updates) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['UpdateRecord', tableName, recordId, updates]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur modification:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    deleteRecord: async (tableName, recordId) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['RemoveRecord', tableName, recordId]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur suppression:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    navigate: (componentId) => {
+                        self.loadComponent(componentId);
+                    },
+                    
+                    createTable: async (tableName, columns) => {
+                        if (!columns) columns = [];
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['AddTable', tableName, []]
+                            ]);
+                            
+                            for (const col of columns) {
+                                await grist.docApi.applyUserActions([
+                                    ['AddColumn', tableName, col.id || null, {
+                                        type: col.type || 'Text',
+                                        label: col.label || col.id
+                                    }]
+                                ]);
+                            }
+                            
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur création table:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    createTemplate: async (templateData) => {
+                        try {
+                            return await self.gristAPI.addRecord('Templates', {
+                                template_id: templateData.id,
+                                template_name: templateData.name,
+                                component_code: templateData.code,
+                                component_type: templateData.type || 'functional'
+                            });
+                        } catch (error) {
+                            console.error('Erreur création template:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    getDocumentStructure: async () => {
+                        try {
+                            const structure = {};
+                            const knownTables = ['Templates', 'Data', 'Users', 'Config', 'Logs'];
+                            
+                            for (const tableName of knownTables) {
+                                try {
+                                    const data = await self.gristAPI.getData(tableName);
+                                    if (data && data.length > 0) {
+                                        const columns = Object.keys(data[0] || {}).map(key => ({ 
+                                            id: key, 
+                                            label: key,
+                                            type: self.inferColumnType(data, key)
+                                        }));
+                                        
+                                        structure[tableName] = {
+                                            columns: columns,
+                                            rowCount: data.length,
+                                            sampleData: data.slice(0, 3)
+                                        };
+                                        
+                                        console.log('📋 Table découverte: ' + tableName + ' (' + data.length + ' lignes)');
+                                    }
+                                } catch (e) {
+                                    // Table n'existe pas, continuer
+                                }
+                            }
+                            
+                            return structure;
+                        } catch (error) {
+                            console.error('Erreur structure document:', error);
+                            return {};
+                        }
+                    }
+                };
+                
+                // Nouvelle méthode pour inférer le type des colonnes
+                self.inferColumnType = (data, columnName) => {
+                    if (!data || data.length === 0) return 'Text';
+                    
+                    const sample = data[0][columnName];
+                    if (typeof sample === 'number') return 'Numeric';
+                    if (typeof sample === 'boolean') return 'Bool';
+                    if (sample instanceof Date) return 'Date';
+                    if (typeof sample === 'string') {
+                        if (sample.match(/^\d{4}-\d{2}-\d{2}/)) return 'Date';
+                        if (!isNaN(parseFloat(sample))) return 'Numeric';
+                    }
+                    return 'Text';
+                };
+            }
+
+            async checkIfDocumentEmpty() {
+                try {
+                    const templates = await this.gristAPI.getData('Templates');
+                    this.isDocumentEmpty = !Array.isArray(templates) || templates.length === 0;
+                } catch (error) {
+                    this.isDocumentEmpty = true;
+                }
+            }
+
+            showWelcomeScreen() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = '<div class="welcome-container">' +
+                    '<div class="welcome-hero">' +
+                        '<h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Grist AI v4.6 CLEAN</h1>' +
+                        '<p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">Agent Albert optimisé sans simulation</p>' +
+                        '<p style="font-size: 1.1rem; opacity: 0.8;">Configurez votre webhook N8N puis décrivez votre besoin. L\'IA créera automatiquement votre application complète !</p>' +
+                    '</div>' +
+                    '<div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">' +
+                        '<h3 style="color: #1f2937; margin-bottom: 20px; text-align: center;">🔧 Configuration requise</h3>' +
+                        '<div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin-bottom: 30px;">' +
+                            '<h4 style="color: #065f46; margin-bottom: 10px;">✅ Version CLEAN - Optimisations</h4>' +
+                            '<ul style="color: #065f46; margin-left: 20px;">' +
+                                '<li><strong>DocumentId automatique</strong> : ' + this.documentId + '</li>' +
+                                '<li><strong>Gestion JSON robuste</strong> avec fallback</li>' +
+                                '<li><strong>Code allégé</strong> : Suppression des simulations</li>' +
+                                '<li><strong>Performance améliorée</strong> : Moins de code inutile</li>' +
+                            '</ul>' +
+                            '<button onclick="document.getElementById(\'configButton\').click()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; margin-top: 15px;">⚙️ Configurer le Webhook N8N</button>' +
+                        '</div>' +
+                        '<div class="upload-area" id="upload-area" ondrop="handleDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)" onclick="document.getElementById(\'file-input\').click()">' +
+                            '<div style="font-size: 48px; margin-bottom: 15px;">📎</div>' +
+                            '<h4 style="color: #374151; margin-bottom: 10px;">Glissez vos fichiers ici</h4>' +
+                            '<p style="color: #6b7280;">Formats supportés : Excel (.xlsx, .xls), CSV (.csv), JSON (.json)</p>' +
+                            '<p style="color: #6b7280; font-size: 12px; margin-top: 10px;">Ou cliquez pour parcourir vos fichiers</p>' +
+                        '</div>' +
+                    '</div>' +
+                '</div>';
+            }
+
+            initializeAIChat() {
+                this.setAIMode('dev');
+                
+                if (this.isDocumentEmpty) {
+                    this.addAIMessage("Je peux créer votre application complète via N8N ! Version CLEAN optimisée sans simulations.", 'ai');
+                } else {
+                    this.addAIMessage("Votre application est prête ! Version CLEAN - code optimisé pour N8N.", 'ai');
+                }
+            }
+
+            async sendAIMessage(message, attachedFile) {
+                if (!attachedFile) attachedFile = null;
+                
+                try {
+                    // Vérifier que le webhook est configuré
+                    if (!this.webhookUrl) {
+                        this.addAIMessage("⚠️ Aucun webhook N8N configuré. Configurez-le avec ⚙️ pour accéder à Albert IA.", 'ai');
+                        return;
+                    }
+
+                    // Gérer les commandes spéciales
+                    if (message.startsWith('/')) {
+                        return this.handleSpecialCommand(message);
+                    }
+                    
+                    // Ajouter le message utilisateur
+                    this.addAIMessage(message, 'user');
+                    
+                    // Ajouter un indicateur de traitement
+                    const processingId = this.addAIMessage('⏳ Albert réfléchit via N8N (CLEAN)...', 'ai');
+                    
+                    // Préparer le contexte selon le mode
+                    let context = {
+                        mode: this.aiMode,
+                        isDocumentEmpty: this.isDocumentEmpty,
+                        message: message,
+                        documentId: this.documentId, // NOUVEAU v4.6 : DocumentId inclus
+                        sessionId: 'session_' + Date.now(),
+                        hasData: !this.isDocumentEmpty
+                    };
+                    
+                    if (this.aiMode === 'dev') {
+                        context.documentStructure = await this.gristAPI.getDocumentStructure();
+                        context.existingTemplates = await this.gristAPI.getData('Templates');
+                    } else {
+                        context.businessData = await this.getBusinessDataSummary();
+                    }
+                    
+                    if (attachedFile) {
+                        context.attachedFile = {
+                            name: attachedFile.name,
+                            type: attachedFile.type,
+                            size: attachedFile.size
+                        };
+                        
+                        if (attachedFile.type.includes('excel') || attachedFile.type.includes('csv')) {
+                            context.fileContent = await this.parseUploadedFile(attachedFile);
+                        }
+                    }
+                    
+                    // Appeler Albert IA via N8N avec retry
+                    const aiResponse = await this.callAlbertViaN8NWithRetry(context);
+                    
+                    // Supprimer l'indicateur de traitement
+                    this.removeAIMessage(processingId);
+                    
+                    // Ajouter la réponse de l'IA
+                    this.addAIMessage(aiResponse.message, 'ai');
+                    
+                    // Exécuter les actions si nécessaire
+                    if (aiResponse.actions) {
+                        await this.executeAIActions(aiResponse.actions);
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur IA via N8N:', error);
+                    this.addAIMessage("😕 Erreur de communication avec N8N. Vérifiez la configuration du webhook.", 'ai');
+                    this.showDebugInfo(error);
+                }
+            }
+
+            // NOUVEAU v4.6 : Appel avec retry automatique
+            async callAlbertViaN8NWithRetry(context) {
+                let lastError = null;
+                
+                for (let attempt = 1; attempt <= this.maxRetries; attempt++) {
+                    try {
+                        console.log('🔄 Tentative ' + attempt + '/' + this.maxRetries + ' - Appel N8N');
+                        return await this.callAlbertViaN8N(context);
+                    } catch (error) {
+                        lastError = error;
+                        console.warn('⚠️ Échec tentative ' + attempt + ':', error.message);
+                        
+                        if (attempt < this.maxRetries) {
+                            console.log('⏳ Retry dans ' + this.retryDelay + 'ms...');
+                            await new Promise(resolve => setTimeout(resolve, this.retryDelay));
+                            this.retryDelay *= 1.5; // Backoff exponentiel
+                        }
+                    }
+                }
+                
+                throw lastError;
+            }
+
+            // AMÉLIORÉ v4.6 : Gestion robuste des réponses JSON
+            async callAlbertViaN8N(context) {
+                console.log('🔗 Appel Albert IA via N8N (CLEAN):', context);
+                
+                try {
+                    // Construire l'URL avec l'action albert_chat
+                    const chatUrl = this.webhookUrl.includes('?') 
+                        ? this.webhookUrl + '&action=albert_chat'
+                        : this.webhookUrl + '?action=albert_chat';
+                    
+                    // AMÉLIORATION v4.6 : Données enrichies avec documentId
+                    const webhookData = {
+                        messageId: 'ai_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+                        message: context.message,
+                        mode: context.mode,
+                        
+                        // NOUVEAU v4.6 : DocumentId automatiquement inclus
+                        documentId: this.documentId,
+                        
+                        isDocumentEmpty: context.isDocumentEmpty,
+                        sessionId: context.sessionId || 'session_' + Date.now(),
+                        hasData: context.hasData || false,
+                        
+                        documentStructure: context.documentStructure || {},
+                        existingTemplates: context.existingTemplates || [],
+                        businessData: context.businessData || {},
+                        attachedFile: context.attachedFile || null,
+                        
+                        timestamp: new Date().toISOString(),
+                        source: 'grist-ai-dashboard',
+                        version: '4.6-clean'
+                    };
+                    
+                    console.log('📤 Envoi vers N8N (CLEAN):', chatUrl);
+                    this.debugLog('Request Data', webhookData);
+                    
+                    const response = await fetch(chatUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'User-Agent': 'Grist-AI-Dashboard-v4.6-Clean'
+                        },
+                        body: JSON.stringify(webhookData)
+                    });
+                    
+                    // AMÉLIORATION v4.6 : Vérification robuste de la réponse
+                    if (!response.ok) {
+                        throw new Error('Erreur N8N: ' + response.status + ' ' + response.statusText);
+                    }
+                    
+                    // Vérifier le Content-Type
+                    const contentType = response.headers.get('content-type');
+                    this.debugLog('Response Headers', { 
+                        status: response.status, 
+                        statusText: response.statusText,
+                        contentType: contentType 
+                    });
+                    
+                    let data;
+                    
+                    // NOUVEAU v4.6 : Gestion flexible du parsing
+                    if (contentType && contentType.includes('application/json')) {
+                        // Réponse JSON standard
+                        data = await response.json();
+                    } else {
+                        // Fallback : tenter de parser comme texte puis JSON
+                        const textResponse = await response.text();
+                        console.log('📄 Réponse texte brute:', textResponse);
+                        
+                        if (!textResponse || textResponse.trim() === '') {
+                            throw new Error('Réponse vide du webhook N8N');
+                        }
+                        
+                        try {
+                            // Tenter de parser comme JSON
+                            data = JSON.parse(textResponse);
+                        } catch (jsonError) {
+                            console.warn('⚠️ Impossible de parser comme JSON, traitement comme texte');
+                            
+                            // Créer une réponse structurée à partir du texte
+                            data = {
+                                success: true,
+                                message: textResponse,
+                                source: 'n8n-text-fallback'
+                            };
+                        }
+                    }
+                    
+                    console.log('✅ Réponse N8N (CLEAN):', data);
+                    this.debugLog('Response Data', data);
+                    
+                    return this.parseN8NResponse(data, context);
+                    
+                } catch (error) {
+                    console.error('❌ Erreur appel N8N:', error);
+                    this.debugLog('Error', { message: error.message, stack: error.stack });
+                    throw error;
+                }
+            }
+
+            // NOUVEAU v4.6 : Debug avancé
+            debugLog(title, data) {
+                if (!this.debugMode) return;
+                
+                console.log('🔍 [DEBUG] ' + title + ':', data);
+                
+                const debugContent = document.getElementById('debugContent');
+                if (debugContent) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    debugContent.innerHTML += '<div><strong>' + timestamp + ' - ' + title + ':</strong></div>' +
+                        '<div style="margin-left: 10px; margin-bottom: 10px;">' +
+                            (typeof data === 'object' ? JSON.stringify(data, null, 2) : data) +
+                        '</div>';
+                    debugContent.scrollTop = debugContent.scrollHeight;
+                }
+            }
+
+            showDebugInfo(error) {
+                const debugInfo = document.getElementById('debugInfo');
+                const debugContent = document.getElementById('debugContent');
+                
+                if (debugInfo && debugContent) {
+                    this.debugLog('Fatal Error', error.message);
+                    debugInfo.style.display = 'block';
+                }
+            }
+
+            parseN8NResponse(n8nData, context) {
+                try {
+                    // La réponse peut être directement la réponse d'Albert
+                    // ou encapsulée dans un objet N8N
+                    let albertResponse = n8nData;
+                    
+                    // Si N8N encapsule la réponse
+                    if (n8nData.albertResponse) {
+                        albertResponse = n8nData.albertResponse;
+                    } else if (n8nData.data && n8nData.data.albertResponse) {
+                        albertResponse = n8nData.data.albertResponse;
+                    } else if (n8nData.results) {
+                        albertResponse = n8nData.results;
+                    }
+                    
+                    // Essayer de parser en JSON si c'est une string
+                    if (typeof albertResponse === 'string') {
+                        try {
+                            const jsonMatch = albertResponse.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                albertResponse = JSON.parse(jsonMatch[0]);
+                            } else {
+                                // Si pas de JSON, créer une réponse simple
+                                return {
+                                    message: albertResponse,
+                                    actions: null
+                                };
+                            }
+                        } catch (e) {
+                            return {
+                                message: albertResponse,
+                                actions: null
+                            };
+                        }
+                    }
+                    
+                    return {
+                        message: albertResponse.message || "Réponse reçue d'Albert via N8N (CLEAN)",
+                        actions: albertResponse.actions || null
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing réponse N8N:', error);
+                    return {
+                        message: "Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration N8N.",
+                        actions: null
+                    };
+                }
+            }
+
+            handleSpecialCommand(command) {
+                const parts = command.split(' ');
+                const cmd = parts[0].toLowerCase();
+                
+                switch (cmd) {
+                    case '/webhook':
+                        if (parts[1] && parts[1].startsWith('http')) {
+                            this.webhookUrl = parts[1];
+                            this.saveWebhookConfig(parts[1]);
+                            this.updateWebhookStatusBadge();
+                            this.addAIMessage('✅ Webhook N8N configuré via commande (CLEAN) !', 'ai');
+                        } else {
+                            this.addAIMessage('🔗 Webhook actuel: ' + (this.webhookUrl || 'Non configuré') + '<br>DocumentId: ' + this.documentId + '<br>Utilisation: /webhook https://votre-n8n.com/webhook/albert', 'ai');
+                        }
+                        break;
+                        
+                    case '/debug':
+                        const debugInfo = document.getElementById('debugInfo');
+                        if (debugInfo) {
+                            debugInfo.style.display = debugInfo.style.display === 'none' ? 'block' : 'none';
+                            this.addAIMessage('🔍 Debug ' + (debugInfo.style.display === 'block' ? 'activé' : 'désactivé'), 'ai');
+                        }
+                        break;
+                        
+                    case '/help':
+                        this.addAIMessage(
+                            '🔗 <strong>Aide Grist AI Dashboard v4.6 CLEAN</strong><br><br>' +
+                            '<strong>Version CLEAN :</strong><br>' +
+                            '• DocumentId automatique: ' + this.documentId + '<br>' +
+                            '• Code optimisé sans simulation<br>' +
+                            '• Gestion JSON robuste<br><br>' +
+                            '<strong>Commandes :</strong><br>' +
+                            '• <code>/webhook URL</code> - Configurer N8N<br>' +
+                            '• <code>/debug</code> - Logs debug<br>' +
+                            '• <code>/status</code> - État système<br>' +
+                            '• <code>/clear</code> - Effacer conversation',
+                            'ai'
+                        );
+                        break;
+                        
+                    case '/mode':
+                        if (parts[1] === 'dev' || parts[1] === 'analyst') {
+                            this.setAIMode(parts[1]);
+                        } else {
+                            this.addAIMessage('📋 Mode actuel: ' + this.aiMode + '<br>Utilisez <code>/mode dev</code> ou <code>/mode analyst</code>', 'ai');
+                        }
+                        break;
+                        
+                    case '/clear':
+                        this.clearAIMessages();
+                        this.addAIMessage('💬 Conversation effacée. N8N CLEAN prêt !', 'ai');
+                        break;
+                        
+                    case '/status':
+                        const hasWebhook = !!this.webhookUrl;
+                        this.addAIMessage(
+                            '📊 <strong>Status Grist AI CLEAN :</strong><br>' +
+                            '• <strong>Webhook N8N :</strong> ' + (hasWebhook ? '✅ Configuré' : '❌ Non configuré') + '<br>' +
+                            '• <strong>DocumentId :</strong> ' + this.documentId + '<br>' +
+                            '• <strong>Mode :</strong> ' + this.aiMode.toUpperCase() + '<br>' +
+                            '• <strong>Version :</strong> 4.6 CLEAN<br><br>' +
+                            (hasWebhook ? '✅ Prêt pour Albert' : '💡 Configurez le webhook avec ⚙️'),
+                            'ai'
+                        );
+                        break;
+                        
+                    default:
+                        this.addAIMessage('❓ Commande inconnue: ' + cmd + '<br>Tapez <code>/help</code> pour l\'aide.', 'ai');
+                }
+            }
+
+            setupEventListeners() {
+                console.log('🎯 Configuration des event listeners N8N CLEAN');
+                
+                // Configuration du webhook modal
+                const configButton = document.getElementById('configButton');
+                const modal = document.getElementById('webhookModal');
+                const closeModal = document.getElementById('closeModal');
+                const saveWebhook = document.getElementById('saveWebhook');
+                const testWebhook = document.getElementById('testWebhook');
+                const webhookUrlInput = document.getElementById('webhookUrl');
+                
+                configButton.addEventListener('click', () => {
+                    webhookUrlInput.value = this.webhookUrl || '';
+                    this.updateWebhookStatusDisplay();
+                    modal.style.display = 'flex';
+                });
+                
+                closeModal.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+                
+                window.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+                
+                saveWebhook.addEventListener('click', () => {
+                    const url = webhookUrlInput.value.trim();
+                    this.webhookUrl = url;
+                    this.saveWebhookConfig(url);
+                    this.updateWebhookStatusDisplay();
+                    this.updateWebhookStatusBadge();
+                    
+                    if (url) {
+                        this.showSuccessMessage('Webhook N8N configuré avec succès (CLEAN)');
+                    } else {
+                        this.showSuccessMessage('Configuration webhook effacée');
+                    }
+                    
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 1500);
+                });
+                
+                testWebhook.addEventListener('click', async () => {
+                    const url = webhookUrlInput.value.trim();
+                    if (!url) {
+                        this.showError('Veuillez saisir une URL de webhook N8N');
+                        return;
+                    }
+                    
+                    testWebhook.disabled = true;
+                    testWebhook.textContent = 'Test...';
+                    
+                    try {
+                        const testUrl = url.includes('?') ? url + '&action=test' : url + '?action=test';
+                        
+                        const response = await fetch(testUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                test: true,
+                                message: 'Test configuration webhook N8N CLEAN',
+                                documentId: this.documentId,
+                                timestamp: new Date().toISOString(),
+                                version: '4.6-clean'
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const webhookStatus = document.getElementById('webhookStatus');
+                            webhookStatus.innerHTML = '<div class="badge badge-success">✓ Test N8N CLEAN réussi !</div>';
+                            this.debugLog('Test Success', { status: response.status, url: testUrl });
+                        } else {
+                            const webhookStatus = document.getElementById('webhookStatus');
+                            webhookStatus.innerHTML = '<div class="badge badge-warning">⚠ Erreur ' + response.status + ': ' + response.statusText + '</div>';
+                            this.debugLog('Test Error', { status: response.status, statusText: response.statusText });
+                        }
+                    } catch (error) {
+                        const webhookStatus = document.getElementById('webhookStatus');
+                        webhookStatus.innerHTML = '<div class="badge badge-warning">⚠ Erreur N8N: ' + error.message + '</div>';
+                        this.debugLog('Test Exception', error.message);
+                    } finally {
+                        testWebhook.disabled = false;
+                        testWebhook.textContent = 'Tester';
+                    }
+                });
+                
+                console.log('✅ Event listeners N8N CLEAN configurés');
+            }
+
+            // Gestion de la configuration du webhook
+            loadWebhookConfig() {
+                try {
+                    const savedUrl = localStorage.getItem('grist_ai_n8n_webhook_url');
+                    if (savedUrl) {
+                        this.webhookUrl = savedUrl;
+                        this.webhookConfigured = true;
+                        console.log('URL webhook N8N chargée:', this.webhookUrl);
+                        this.updateWebhookStatusBadge();
+                    } else {
+                        console.log('Aucun webhook N8N configuré');
+                    }
+                } catch (error) {
+                    console.warn('Erreur chargement config webhook N8N:', error.message);
+                }
+            }
+            
+            saveWebhookConfig(url) {
+                try {
+                    localStorage.setItem('grist_ai_n8n_webhook_url', url);
+                    this.webhookConfigured = !!url;
+                    console.log('URL webhook N8N sauvegardée:', url);
+                } catch (error) {
+                    console.warn('Erreur sauvegarde config webhook N8N:', error.message);
+                }
+            }
+
+            updateWebhookStatusDisplay() {
+                const webhookStatus = document.getElementById('webhookStatus');
+                if (this.webhookUrl) {
+                    webhookStatus.innerHTML = '<div class="badge badge-success">✓ Webhook N8N configuré (CLEAN)</div>';
+                } else {
+                    webhookStatus.innerHTML = '<div class="badge badge-warning">⚠ Aucun webhook N8N configuré</div>';
+                }
+            }
+            
+            updateWebhookStatusBadge() {
+                const webhookStatusBadge = document.getElementById('webhookStatusBadge');
+                if (this.webhookUrl) {
+                    webhookStatusBadge.textContent = 'N8N CLEAN configuré';
+                    webhookStatusBadge.className = 'webhook-status configured';
+                } else {
+                    webhookStatusBadge.textContent = 'Webhook non configuré';
+                    webhookStatusBadge.className = 'webhook-status not-configured';
+                }
+            }
+
+            showSuccessMessage(message) {
+                const webhookStatus = document.getElementById('webhookStatus');
+                webhookStatus.innerHTML = '<div class="badge badge-success">✓ ' + message + '</div>';
+            }
+
+            showError(message) {
+                this.addAIMessage('❌ ' + message, 'ai');
+            }
+
+            // Gestion des messages AI
+            addAIMessage(message, sender) {
+                const messagesContainer = document.getElementById('ai-messages');
+                const messageDiv = document.createElement('div');
+                const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                
+                messageDiv.id = messageId;
+                messageDiv.className = 'ai-message ' + sender;
+                
+                const avatar = sender === 'user' ? '👤' : '🤖';
+                
+                messageDiv.innerHTML = '<div class="ai-message-avatar">' + avatar + '</div>' +
+                    '<div class="ai-message-content">' + this.formatAIMessage(message) + '</div>';
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                return messageId;
+            }
+
+            removeAIMessage(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+            }
+
+            clearAIMessages() {
+                const messagesContainer = document.getElementById('ai-messages');
+                messagesContainer.innerHTML = '';
+            }
+
+            formatAIMessage(message) {
+                return message
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">$1</code>');
+            }
+
+            setAIMode(mode) {
+                this.aiMode = mode;
+                
+                document.getElementById('mode-dev').classList.toggle('active', mode === 'dev');
+                document.getElementById('mode-analyst').classList.toggle('active', mode === 'analyst');
+                
+                let helpMessage = '';
+                if (mode === 'dev') {
+                    helpMessage = '🛠️ <strong>Mode Développement CLEAN activé</strong><br><br>Optimisé pour N8N avec documentId automatique (' + this.documentId + ').';
+                } else {
+                    helpMessage = '📊 <strong>Mode Analyste CLEAN activé</strong><br><br>Analyse de données via N8N optimisée.';
+                }
+                
+                this.addAIMessage(helpMessage, 'ai');
+            }
+
+            // ================================
+            // GESTION DES COMPOSANTS SIMPLIFIÉE
+            // ================================
+
+            async executeAIActions(actions) {
+                this.addAIMessage('⚙️ Exécution des actions Albert via N8N CLEAN...', 'ai');
+                
+                for (const action of actions) {
+                    try {
+                        switch (action.type) {
+                            case 'createTables':
+                                await this.executeCreateTables(action.tables);
+                                break;
+                                
+                            case 'createTemplates':
+                                await this.executeCreateTemplates(action.templates);
+                                break;
+                                
+                            case 'addSampleData':
+                                await this.executeAddSampleData(action.data);
+                                break;
+                                
+                            default:
+                                console.warn('Type d\'action non supporté: ' + action.type);
+                        }
+                    } catch (error) {
+                        console.error('Erreur exécution action ' + action.type + ':', error);
+                        this.addAIMessage('❌ Erreur lors de ' + action.type + ': ' + error.message, 'ai');
+                    }
+                }
+                
+                this.addAIMessage('✅ Actions terminées via N8N CLEAN !', 'ai');
+            }
+
+            async executeCreateTables(tables) {
+                for (const table of tables) {
+                    try {
+                        await this.gristAPI.createTable(table.name, table.columns);
+                        console.log('✅ Table ' + table.name + ' créée');
+                        this.addAIMessage('📋 Table "' + table.name + '" créée avec succès', 'ai');
+                    } catch (error) {
+                        if (error.message.includes('already exists')) {
+                            this.addAIMessage('⚠️ Table "' + table.name + '" existe déjà', 'ai');
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            }
+
+            async executeCreateTemplates(templates) {
+                try {
+                    await this.gristAPI.createTable('Templates', [
+                        { id: 'template_id', type: 'Text', label: 'Template ID' },
+                        { id: 'template_name', type: 'Text', label: 'Template Name' },
+                        { id: 'component_code', type: 'Text', label: 'Component Code' },
+                        { id: 'component_type', type: 'Text', label: 'Component Type' }
+                    ]);
+                } catch (e) {
+                    // Table existe déjà
+                }
+                
+                for (const template of templates) {
+                    try {
+                        await this.gristAPI.createTemplate({
+                            id: template.id,
+                            name: template.name,
+                            type: template.type || 'functional',
+                            code: template.code
+                        });
+                        
+                        console.log('✅ Template ' + template.id + ' créé');
+                        this.addAIMessage('🎨 Composant "' + template.name + '" créé', 'ai');
+                    } catch (error) {
+                        console.error('Erreur création template ' + template.id + ':', error);
+                        this.addAIMessage('❌ Erreur composant "' + template.name + '": ' + error.message, 'ai');
+                    }
+                }
+                
+                if (templates.length > 0) {
+                    this.isDocumentEmpty = false;
+                    await this.loadComponents();
+                    this.setupNavigation();
+                    await this.loadDefaultComponent();
+                    
+                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants N8N CLEAN', 'ai');
+                }
+            }
+
+            async executeAddSampleData(dataActions) {
+                for (const dataAction of dataActions) {
+                    try {
+                        const tableName = dataAction.table;
+                        const records = dataAction.records;
+                        
+                        for (const record of records) {
+                            await this.gristAPI.addRecord(tableName, record);
+                        }
+                        
+                        this.addAIMessage('📊 ' + records.length + ' exemples ajoutés à "' + tableName + '"', 'ai');
+                    } catch (error) {
+                        this.addAIMessage('❌ Erreur données "' + dataAction.table + '": ' + error.message, 'ai');
+                    }
+                }
+            }
+
+            // Chargement et rendu des composants (version simplifiée)
+            async loadComponents() {
+                try {
+                    const templatesData = await this.gristAPI.getData('Templates');
+                    const templates = Array.isArray(templatesData) ? templatesData : [];
+                    
+                    if (!templates || templates.length === 0) {
+                        this.loadDefaultComponents();
+                        return;
+                    }
+                    
+                    for (const template of templates) {
+                        try {
+                            const component = this.processComponent(template);
+                            this.components.set(component.id, component);
+                        } catch (error) {
+                            console.warn('❌ Erreur composant ' + template.template_id + ':', error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composants:', error);
+                    this.loadDefaultComponents();
+                }
+            }
+
+            processComponent(template) {
+                const componentData = {
+                    id: template.template_id,
+                    name: template.template_name,
+                    type: template.component_type || 'functional',
+                    code: template.component_code
+                };
+
+                if (!componentData.code || typeof componentData.code !== 'string') {
+                    throw new Error('Code composant manquant ou invalide');
+                }
+
+                const cleanCode = this.sanitizeCode(componentData.code);
+
+                return {
+                    id: componentData.id,
+                    name: componentData.name,
+                    type: componentData.type,
+                    code: cleanCode,
+                    render: async (container) => {
+                        await this.renderReactComponent(container, cleanCode, componentData.id);
+                    }
+                };
+            }
+
+            sanitizeCode(code) {
+                return code
+                    .replace(/\r\n/g, '\n')
+                    .replace(/[\u0000-\u001F]/g, '')
+                    .trim();
+            }
+
+            async renderReactComponent(container, code, componentId) {
+                try {
+                    container.innerHTML = '';
+                    
+                    const reactContainer = document.createElement('div');
+                    reactContainer.id = 'react-container-' + componentId;
+                    reactContainer.className = 'component-container';
+                    container.appendChild(reactContainer);
+
+                    const transformedCode = Babel.transform(code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM', 
+                        'gristAPI',
+                        'container',
+                        'const { useState, useEffect, useCallback } = React;' +
+                        'const { render } = ReactDOM;' +
+                        transformedCode +
+                        'if (typeof Component !== "undefined") {' +
+                            'render(React.createElement(Component), container);' +
+                        '} else {' +
+                            'throw new Error("Composant non défini");' +
+                        '}'
+                    );
+
+                    componentFunction(React, ReactDOM, this.gristAPI, reactContainer);
+                    
+                } catch (error) {
+                    console.error('Erreur rendu composant:', error);
+                    this.showComponentError(container, error, componentId);
+                }
+            }
+
+            showComponentError(container, error, componentId) {
+                container.innerHTML = '<div class="error-container">' +
+                    '<h3>🚨 Erreur Composant: ' + componentId + '</h3>' +
+                    '<p><strong>Message:</strong> ' + error.message + '</p>' +
+                    '<p><strong>Version:</strong> CLEAN</p>' +
+                '</div>';
+            }
+
+            loadDefaultComponents() {
+                const defaultComponents = [
+                    {
+                        id: 'dashboard',
+                        name: '📊 Dashboard N8N CLEAN',
+                        type: 'functional',
+                        code: 'const Component = () => {' +
+                            'return React.createElement("div", { style: { padding: "40px", textAlign: "center" } },' +
+                                'React.createElement("h1", { style: { fontSize: "2.5rem", marginBottom: "20px" } }, "🚀 Grist AI CLEAN"),' +
+                                'React.createElement("p", { style: { fontSize: "1.2rem", color: "#6b7280" } }, "Version optimisée sans simulation - Prêt pour N8N")' +
+                            ');' +
+                        '};'
+                    }
+                ];
+
+                for (const comp of defaultComponents) {
+                    this.components.set(comp.id, {
+                        id: comp.id,
+                        name: comp.name,
+                        type: comp.type,
+                        code: comp.code,
+                        render: async (container) => {
+                            await this.renderReactComponent(container, comp.code, comp.id);
+                        }
+                    });
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                
+                // Garder les éléments existants (status et config)
+                const existingElements = Array.from(nav.children);
+                
+                // Ajouter les composants
+                this.components.forEach(component => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = component.name;
+                    btn.onclick = () => this.loadComponent(component.id);
+                    nav.insertBefore(btn, existingElements[0]);
+                });
+            }
+
+            async loadComponent(componentId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const component = this.components.get(componentId);
+                    if (!component) {
+                        throw new Error('Composant non trouvé: ' + componentId);
+                    }
+                    
+                    const main = document.getElementById('main-content');
+                    await component.render(main);
+                    
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === component.name);
+                    });
+                    
+                    this.currentComponent = componentId;
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composant:', error);
+                    this.showError('Erreur chargement composant', error.message);
+                }
+            }
+
+            async loadDefaultComponent() {
+                if (this.components.size > 0) {
+                    const firstComponent = Array.from(this.components.keys())[0];
+                    await this.loadComponent(firstComponent);
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(title, message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = '<div class="error-container">' +
+                    '<h3>🚨 ' + title + '</h3>' +
+                    '<p>' + message + '</p>' +
+                    '<p><strong>Version:</strong> CLEAN</p>' +
+                    '<p><strong>DocumentId:</strong> ' + this.documentId + '</p>' +
+                '</div>';
+            }
+
+            async parseUploadedFile(file) {
+                try {
+                    const text = await file.text();
+                    
+                    if (file.type.includes('csv')) {
+                        return this.parseCSV(text);
+                    }
+                    
+                    return {
+                        type: 'file',
+                        name: file.name,
+                        size: file.size,
+                        preview: text.substring(0, 500) + '...'
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing fichier:', error);
+                    return null;
+                }
+            }
+
+            parseCSV(text) {
+                const lines = text.split('\n').filter(line => line.trim());
+                if (lines.length === 0) return null;
+                
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const rows = lines.slice(1, 6).map(line => 
+                    line.split(',').map(cell => cell.trim().replace(/"/g, ''))
+                );
+                
+                return {
+                    type: 'csv',
+                    headers: headers,
+                    rowCount: lines.length - 1,
+                    sample: rows
+                };
+            }
+
+            async getBusinessDataSummary() {
+                try {
+                    const structure = await this.gristAPI.getDocumentStructure();
+                    const summary = {};
+                    
+                    for (const tableName in structure) {
+                        if (structure.hasOwnProperty(tableName) && tableName !== 'Templates') {
+                            const tableInfo = structure[tableName];
+                            summary[tableName] = {
+                                rowCount: tableInfo.rowCount,
+                                sampleData: tableInfo.sampleData
+                            };
+                        }
+                    }
+                    
+                    return summary;
+                } catch (error) {
+                    return {};
+                }
+            }
+        }
+
+        // Fonctions globales pour l'interface
+        let dashboard = null;
+
+        async function sendMessage() {
+            const input = document.getElementById('ai-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            input.value = '';
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳';
+            
+            try {
+                await dashboard.sendAIMessage(message);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Envoyer';
+                input.focus();
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    return;
+                }
+                
+                const allowedTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/csv',
+                    'application/json'
+                ];
+                
+                if (!allowedTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+                    dashboard.addAIMessage('❌ Type de fichier non supporté. Utilisez Excel, CSV ou JSON.', 'ai');
+                    return;
+                }
+                
+                const message = '📎 J\'ai uploadé le fichier "' + file.name + '" (' + (file.size / 1024).toFixed(1) + ' KB). Peux-tu analyser ce fichier via N8N et créer une application adaptée ?';
+                dashboard.sendAIMessage(message, file);
+            }
+            
+            // Reset du input file
+            event.target.value = '';
+        }
+
+        function toggleChat() {
+            const body = document.body;
+            const chatContent = document.getElementById('ai-chat-content');
+            const toggle = document.getElementById('chat-toggle');
+            
+            body.classList.toggle('chat-collapsed');
+            dashboard.chatCollapsed = body.classList.contains('chat-collapsed');
+            
+            if (dashboard.chatCollapsed) {
+                chatContent.style.display = 'none';
+                toggle.textContent = '🔼';
+            } else {
+                chatContent.style.display = 'flex';
+                toggle.textContent = '🔽';
+                
+                // Auto-scroll vers le bas des messages
+                setTimeout(() => {
+                    const messages = document.getElementById('ai-messages');
+                    messages.scrollTop = messages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function setAIMode(mode) {
+            if (dashboard) {
+                dashboard.setAIMode(mode);
+            }
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    return;
+                }
+                
+                const message = '📎 J\'ai glissé le fichier "' + file.name + '" (' + (file.size / 1024).toFixed(1) + ' KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via N8N.';
+                dashboard.sendAIMessage(message, file);
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+        }
+
+        // Initialisation avec gestion d'erreurs
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                dashboard = new GristAIDashboard();
+                dashboard.init().catch(error => {
+                    console.error('Erreur critique d\'initialisation:', error);
+                    
+                    const main = document.getElementById('main-content');
+                    main.innerHTML = '<div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">' +
+                        '<h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d\'Initialisation N8N CLEAN</h2>' +
+                        '<p style="color: #6b7280; margin-bottom: 20px;">Le système N8N n\'a pas pu s\'initialiser correctement.</p>' +
+                        '<button onclick="location.reload()" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">🔄 Recharger la page</button>' +
+                    '</div>';
+                });
+                
+                // Raccourcis clavier
+                document.addEventListener('keydown', (event) => {
+                    if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+                        const input = document.getElementById('ai-input');
+                        if (input && input.value.trim()) {
+                            sendMessage();
+                        }
+                    }
+                    
+                    if (event.key === 'Escape') {
+                        toggleChat();
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Erreur lors de la création du dashboard N8N CLEAN:', error);
+            }
+        });
+    </script>
+</body>
+</html>
