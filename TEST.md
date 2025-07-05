@@ -3,8 +3,8 @@
 ## 🎉 Ce qui a été créé et déployé
 
 ### 📊 **Document Grist Demo Fonctionnel**
-- **ID** : `x4CS33gr6zcqSx9wHwAGgH`
-- **URL** : [https://docs.getgrist.com/doc/x4CS33gr6zcqSx9wHwAGgH](https://docs.getgrist.com/doc/x4CS33gr6zcqSx9wHwAGgH)
+- **ID** : `5AL4y3QrB12BJdf48m7sr4`
+- **URL** : [https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4](https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4)
 - **Contenu** : Tables + Données + Templates personnalisés
 
 ### 🎮 **Widget GitHub Déployé**  
@@ -21,7 +21,7 @@
 ## 🚀 TEST IMMÉDIAT - 2 MINUTES
 
 ### **Étape 1** : Ouvrir le Document
-👉 **[Clic ici : Document Demo](https://docs.getgrist.com/doc/x4CS33gr6zcqSx9wHwAGgH)**
+👉 **[Clic ici : Document Demo](https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4)**
 
 ### **Étape 2** : Ajouter le Widget
 1. **Add New** → **Add Widget** → **Custom**
@@ -120,7 +120,7 @@
 ├── GRIST_TEMPLATES.md (Guide templates)
 └── TEST.md (Ce fichier)
 
-📊 Document Grist (x4CS33gr6zcqSx9wHwAGgH)
+📊 Document Grist (5AL4y3QrB12BJdf48m7sr4)
 ├── 👥 Clients (8 enregistrements d'exemple)
 ├── 💰 Ventes (14 ventes pour tests)
 ├── ⚙️ Apps (1 configuration CRM)
@@ -174,4 +174,4 @@ Vous avez maintenant un **système dashboard dynamique révolutionnaire** où :
 
 ---
 
-**⚡ TEST IMMÉDIAT : [Ouvrir le document](https://docs.getgrist.com/doc/x4CS33gr6zcqSx9wHwAGgH) → Ajouter le widget → Constater la magie ! ✨**
+**⚡ TEST IMMÉDIAT : [Ouvrir le document](https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4) → Ajouter le widget → Constater la magie ! ✨**
