@@ -1,13 +1,13 @@
 <!DOCTYPE html>
-<html lang=\"fr\">
+<html lang="fr">
 <head>
-    <meta charset=\"UTF-8\">
-    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Grist Dynamic Dashboard - v4.5 CORRECTED - Agent IA via N8N</title>
-    <script src=\"https://docs.getgrist.com/grist-plugin-api.js\"></script>
-    <script src=\"https://unpkg.com/react@18/umd/react.development.js\"></script>
-    <script src=\"https://unpkg.com/react-dom@18/umd/react-dom.development.js\"></script>
-    <script src=\"https://unpkg.com/@babel/standalone/babel.min.js\"></script>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -460,46 +460,94 @@
             background: #f59e0b;
             color: white;
         }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        .toast.warning {
+            background: #f59e0b;
+        }
+
+        /* Keyboard shortcuts indicator */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+        }
+
+        .keyboard-hint.show {
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
-    <header class=\"header\">
-        <h1>🤖 Grist AI Dashboard <span class=\"version-badge\">v4.5 CORRECTED</span></h1>
-        <nav class=\"nav\" id=\"navigation\">
-            <span id=\"webhookStatusBadge\" class=\"webhook-status not-configured\">Webhook non configuré</span>
-            <button class=\"nav-btn\" id=\"configButton\" title=\"Configurer le webhook N8N\">⚙️</button>
+    <header class="header">
+        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.5 CORRECTED</span></h1>
+        <nav class="nav" id="navigation">
+            <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
+            <button class="nav-btn" id="configButton" title="Configurer le webhook N8N">⚙️</button>
         </nav>
     </header>
     
-    <main class=\"main\" id=\"main-content\">
-        <div class=\"loading\" id=\"loading\">
-            <div class=\"spinner\"></div>
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
             <div>Initialisation du système IA N8N...</div>
         </div>
     </main>
 
     <!-- Agent IA Chat -->
-    <div class=\"ai-chat-container\" id=\"ai-chat\">
-        <div class=\"ai-chat-header\" onclick=\"toggleChat()\">
-            <div style=\"display: flex; align-items: center; gap: 10px;\">
+    <div class="ai-chat-container" id="ai-chat">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <div style="display: flex; align-items: center; gap: 10px;">
                 <span>🤖 Agent IA Albert (via N8N)</span>
-                <div class=\"ai-mode-selector\">
-                    <button class=\"ai-mode-btn active\" id=\"mode-dev\" onclick=\"setAIMode('dev')\">
+                <div class="ai-mode-selector">
+                    <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
                         🛠️ Dev
                     </button>
-                    <button class=\"ai-mode-btn\" id=\"mode-analyst\" onclick=\"setAIMode('analyst')\">
+                    <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
                         📊 Analyst
                     </button>
                 </div>
             </div>
-            <span id=\"chat-toggle\">🔽</span>
+            <span id="chat-toggle">🔽</span>
         </div>
         
-        <div class=\"ai-chat-content\" id=\"ai-chat-content\">
-            <div class=\"ai-chat-messages\" id=\"ai-messages\">
-                <div class=\"ai-message ai\">
-                    <div class=\"ai-message-avatar\">🤖</div>
-                    <div class=\"ai-message-content\">
+        <div class="ai-chat-content" id="ai-chat-content">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div class="ai-message-avatar">🤖</div>
+                    <div class="ai-message-content">
                         Bonjour ! Je suis Albert, votre agent IA spécialisé en création d'applications Grist. 
                         Je fonctionne maintenant via un proxy N8N pour contourner les restrictions CORS.<br><br>
                         <strong>Configurez d'abord le webhook N8N</strong> avec le bouton ⚙️ puis décrivez-moi votre besoin !
@@ -507,65 +555,73 @@
                 </div>
             </div>
             
-            <div class=\"ai-chat-input\">
+            <div class="ai-chat-input">
                 <input 
-                    type=\"text\" 
-                    id=\"ai-input\" 
-                    placeholder=\"Configurez d'abord le webhook N8N puis décrivez votre besoin...\"
-                    onkeypress=\"if(event.key==='Enter') sendMessage()\"
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Configurez d'abord le webhook N8N puis décrivez votre besoin..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
                 />
                 <input 
-                    type=\"file\" 
-                    id=\"file-input\" 
-                    accept=\".xlsx,.xls,.csv,.json\" 
-                    style=\"display: none\"
-                    onchange=\"handleFileUpload(event)\"
+                    type="file" 
+                    id="file-input" 
+                    accept=".xlsx,.xls,.csv,.json" 
+                    style="display: none"
+                    onchange="handleFileUpload(event)"
                 />
-                <button onclick=\"document.getElementById('file-input').click()\">📎</button>
-                <button onclick=\"sendMessage()\" id=\"send-btn\">Envoyer</button>
+                <button onclick="document.getElementById('file-input').click()">📎</button>
+                <button onclick="sendMessage()" id="send-btn">Envoyer</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de configuration du webhook -->
-    <div id=\"webhookModal\" class=\"modal\">
-        <div class=\"modal-content\">
-            <div class=\"modal-header\">
+    <div id="webhookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
                 <h3>Configuration Webhook N8N</h3>
-                <button id=\"closeModal\" class=\"close-modal\">&times;</button>
+                <button id="closeModal" class="close-modal">&times;</button>
             </div>
             
-            <div class=\"form-group\">
-                <label for=\"webhookUrl\">URL du Webhook N8N</label>
+            <div class="form-group">
+                <label for="webhookUrl">URL du Webhook N8N</label>
                 <input 
-                    type=\"url\" 
-                    id=\"webhookUrl\" 
-                    placeholder=\"https://votre-n8n.com/webhook/albert-proxy\"
+                    type="url" 
+                    id="webhookUrl" 
+                    placeholder="https://votre-n8n.com/webhook/albert-proxy"
                 />
-                <small style=\"color: #6b7280; margin-top: 5px; display: block;\">
+                <small style="color: #6b7280; margin-top: 5px; display: block;">
                     L'URL de votre workflow N8N qui fait le proxy vers Albert API
                 </small>
             </div>
             
-            <div id=\"webhookStatus\" style=\"margin-bottom: 20px;\">
-                <div class=\"badge badge-warning\">⚠ Aucun webhook configuré</div>
+            <div id="webhookStatus" style="margin-bottom: 20px;">
+                <div class="badge badge-warning">⚠ Aucun webhook configuré</div>
             </div>
             
-            <div style=\"display: flex; gap: 10px; justify-content: flex-end;\">
-                <button id=\"testWebhook\" class=\"btn btn-secondary\">Tester</button>
-                <button id=\"saveWebhook\" class=\"btn btn-success\">Sauvegarder</button>
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="testWebhook" class="btn btn-secondary">Tester</button>
+                <button id="saveWebhook" class="btn btn-success">Sauvegarder</button>
             </div>
             
-            <div style=\"margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;\">
-                <h4 style=\"margin-bottom: 10px;\">Configuration N8N requise :</h4>
-                <ul style=\"margin-left: 20px; color: #4b5563;\">
-                    <li>Webhook Trigger avec paramètre \"action\"</li>
+            <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                <h4 style="margin-bottom: 10px;">Configuration N8N requise :</h4>
+                <ul style="margin-left: 20px; color: #4b5563;">
+                    <li>Webhook Trigger avec paramètre "action"</li>
                     <li>Switch node pour router les actions</li>
                     <li>HTTP Request vers Albert API</li>
                     <li>Response node pour renvoyer la réponse</li>
                 </ul>
             </div>
         </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Keyboard hints -->
+    <div id="keyboard-hint" class="keyboard-hint">
+        <div>Raccourcis: Ctrl+Enter (envoyer), Ctrl+/ (aide), Ctrl+K (configurer)</div>
     </div>
 
     <script>
@@ -861,7 +917,7 @@
                     if (typeof sample === 'boolean') return 'Bool';
                     if (sample instanceof Date) return 'Date';
                     if (typeof sample === 'string') {
-                        if (sample.match(/^\\d{4}-\\d{2}-\\d{2}/)) return 'Date';
+                        if (sample.match(/^\d{4}-\d{2}-\d{2}/)) return 'Date';
                         if (!isNaN(parseFloat(sample))) return 'Numeric';
                     }
                     return 'Text';
@@ -980,32 +1036,32 @@
             showWelcomeScreen() {
                 const main = document.getElementById('main-content');
                 main.innerHTML = `
-                    <div class=\"welcome-container\">
-                        <div class=\"welcome-hero\">
-                            <h1 style=\"font-size: 3rem; margin-bottom: 20px;\">🤖✨ Grist AI via N8N</h1>
-                            <p style=\"font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;\">
+                    <div class="welcome-container">
+                        <div class="welcome-hero">
+                            <h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Grist AI via N8N</h1>
+                            <p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">
                                 Agent Albert accessible via proxy N8N
                             </p>
-                            <p style=\"font-size: 1.1rem; opacity: 0.8;\">
+                            <p style="font-size: 1.1rem; opacity: 0.8;">
                                 Configurez votre webhook N8N puis décrivez votre besoin. 
                                 L'IA créera automatiquement votre application complète !
                             </p>
                         </div>
                         
-                        <div style=\"background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);\">
-                            <h3 style=\"color: #1f2937; margin-bottom: 20px; text-align: center;\">
+                        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <h3 style="color: #1f2937; margin-bottom: 20px; text-align: center;">
                                 🔧 Configuration requise
                             </h3>
                             
-                            <div style=\"background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 30px;\">
-                                <h4 style=\"color: #92400e; margin-bottom: 10px;\">⚠️ Webhook N8N nécessaire</h4>
-                                <p style=\"color: #92400e; margin-bottom: 15px;\">
+                            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                                <h4 style="color: #92400e; margin-bottom: 10px;">⚠️ Webhook N8N nécessaire</h4>
+                                <p style="color: #92400e; margin-bottom: 15px;">
                                     Pour utiliser Albert IA, vous devez d'abord configurer un workflow N8N 
                                     qui fait le proxy vers Albert API.
                                 </p>
                                 <button 
-                                    onclick=\"document.getElementById('configButton').click()\" 
-                                    style=\"
+                                    onclick="document.getElementById('configButton').click()" 
+                                    style="
                                         background: #f59e0b; 
                                         color: white; 
                                         border: none; 
@@ -1013,26 +1069,26 @@
                                         border-radius: 6px; 
                                         cursor: pointer;
                                         font-weight: 500;
-                                    \"
+                                    "
                                 >
                                     ⚙️ Configurer le Webhook
                                 </button>
                             </div>
                             
-                            <div style=\"display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;\">
-                                <div style=\"text-align: center; padding: 20px;\">
-                                    <div style=\"font-size: 48px; margin-bottom: 15px;\">🔗</div>
-                                    <h4 style=\"color: #374151; margin-bottom: 10px;\">Workflow N8N</h4>
-                                    <p style=\"color: #6b7280; font-size: 14px;\">
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">🔗</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Workflow N8N</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
                                         Configurez un workflow qui reçoit les messages, 
                                         les transmet à Albert API et renvoie les réponses.
                                     </p>
                                 </div>
                                 
-                                <div style=\"text-align: center; padding: 20px;\">
-                                    <div style=\"font-size: 48px; margin-bottom: 15px;\">🤖</div>
-                                    <h4 style=\"color: #374151; margin-bottom: 10px;\">Albert IA</h4>
-                                    <p style=\"color: #6b7280; font-size: 14px;\">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">🤖</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Albert IA</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
                                         Une fois configuré, Albert créera des applications 
                                         complètes basées sur vos descriptions.
                                     </p>
@@ -1040,19 +1096,19 @@
                             </div>
                             
                             <div 
-                                class=\"upload-area\" 
-                                id=\"upload-area\"
-                                ondrop=\"handleDrop(event)\" 
-                                ondragover=\"handleDragOver(event)\"
-                                ondragleave=\"handleDragLeave(event)\"
-                                onclick=\"document.getElementById('file-input').click()\"
+                                class="upload-area" 
+                                id="upload-area"
+                                ondrop="handleDrop(event)" 
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                onclick="document.getElementById('file-input').click()"
                             >
-                                <div style=\"font-size: 48px; margin-bottom: 15px;\">📎</div>
-                                <h4 style=\"color: #374151; margin-bottom: 10px;\">Glissez vos fichiers ici</h4>
-                                <p style=\"color: #6b7280;\">
+                                <div style="font-size: 48px; margin-bottom: 15px;">📎</div>
+                                <h4 style="color: #374151; margin-bottom: 10px;">Glissez vos fichiers ici</h4>
+                                <p style="color: #6b7280;">
                                     Formats supportés : Excel (.xlsx, .xls), CSV (.csv), JSON (.json)
                                 </p>
-                                <p style=\"color: #6b7280; font-size: 12px; margin-top: 10px;\">
+                                <p style="color: #6b7280; font-size: 12px; margin-top: 10px;">
                                     Ou cliquez pour parcourir vos fichiers
                                 </p>
                             </div>
@@ -1066,12 +1122,12 @@
                 
                 if (this.isDocumentEmpty) {
                     this.addAIMessage(
-                        \"Je peux créer votre application complète via N8N ! Configurez d'abord le webhook puis décrivez-moi votre besoin.\", 
+                        "Je peux créer votre application complète via N8N ! Configurez d'abord le webhook puis décrivez-moi votre besoin.", 
                         'ai'
                     );
                 } else {
                     this.addAIMessage(
-                        \"Votre application est prête ! Je peux vous aider via N8N à l'améliorer ou analyser vos données.\", 
+                        "Votre application est prête ! Je peux vous aider via N8N à l'améliorer ou analyser vos données.", 
                         'ai'
                     );
                 }
@@ -1139,7 +1195,7 @@
                 } catch (error) {
                     console.error('Erreur IA via N8N:', error);
                     this.addAIMessage(
-                        \"😕 Erreur de communication avec N8N. Vérifiez la configuration du webhook.\", 
+                        "😕 Erreur de communication avec N8N. Vérifiez la configuration du webhook.", 
                         'ai'
                     );
                 }
@@ -1242,7 +1298,7 @@
                     // Essayer de parser en JSON si c'est une string
                     if (typeof albertResponse === 'string') {
                         try {
-                            const jsonMatch = albertResponse.match(/\\{[\\s\\S]*\\}/);
+                            const jsonMatch = albertResponse.match(/\{[\s\S]*\}/);
                             if (jsonMatch) {
                                 albertResponse = JSON.parse(jsonMatch[0]);
                             } else {
@@ -1261,14 +1317,14 @@
                     }
                     
                     return {
-                        message: albertResponse.message || \"Réponse reçue d'Albert via N8N\",
+                        message: albertResponse.message || "Réponse reçue d'Albert via N8N",
                         actions: albertResponse.actions || null
                     };
                     
                 } catch (error) {
                     console.error('Erreur parsing réponse N8N:', error);
                     return {
-                        message: \"Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration N8N.\",
+                        message: "Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration N8N.",
                         actions: null
                     };
                 }
@@ -1280,30 +1336,18 @@
                 
                 if (message.match(/^(bonjour|hello|salut|hi|hey|bonsoir)/)) {
                     return {
-                        message: \"👋 Bonjour ! Je suis Albert via N8N. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.\",
+                        message: "👋 Bonjour ! Je suis Albert via N8N. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.",
                         actions: null
                     };
                 }
                 
                 if (message.match(/aide|help|assistance/)) {
                     const capabilities = context.mode === 'dev' ? 
-                        \"• Créer des tables Grist\
-• Générer des composants React\
-• Analyser vos fichiers Excel/CSV\
-• Construire des dashboards complets\" :
-                        \"• Analyser vos données\
-• Créer des rapports\
-• Identifier des tendances\
-• Générer des insights\";
+                        "• Créer des tables Grist\n• Générer des composants React\n• Analyser vos fichiers Excel/CSV\n• Construire des dashboards complets" :
+                        "• Analyser vos données\n• Créer des rapports\n• Identifier des tendances\n• Générer des insights";
                         
                     return {
-                        message: `💡 **Mode ${context.mode.toUpperCase()} via N8N** :\
-\
-${capabilities}\
-\
-**Configuration :**\
-• Webhook N8N requis pour Albert complet\
-• Mode simulation actif pour démonstration`,
+                        message: `💡 **Mode ${context.mode.toUpperCase()} via N8N** :\n\n${capabilities}\n\n**Configuration :**\n• Webhook N8N requis pour Albert complet\n• Mode simulation actif pour démonstration`,
                         actions: null
                     };
                 }
@@ -1323,21 +1367,14 @@ ${capabilities}\
                 }
                 
                 return {
-                    message: \"🔗 **Mode simulation N8N**\
-\
-Pour accéder aux fonctionnalités complètes d'Albert :\
-1. Configurez le webhook N8N ⚙️\
-2. Créez un workflow avec action 'albert_chat'\
-3. Connectez à Albert API\
-\
-En attendant, testez avec 'créer une app de maintenance'.\",
+                    message: "🔗 **Mode simulation N8N**\n\nPour accéder aux fonctionnalités complètes d'Albert :\n1. Configurez le webhook N8N ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
                     actions: null
                 };
             }
 
             generateMaintenanceApp() {
                 return {
-                    message: \"✨ Application de maintenance créée ! (Mode simulation - configurez N8N pour Albert complet)\",
+                    message: "✨ Application de maintenance créée ! (Mode simulation - configurez N8N pour Albert complet)",
                     actions: [
                         {
                             type: 'createTables',
@@ -1371,7 +1408,7 @@ En attendant, testez avec 'créer une app de maintenance'.\",
 
             generateStockApp() {
                 return {
-                    message: \"📦 Application de stock créée ! (Mode simulation)\",
+                    message: "📦 Application de stock créée ! (Mode simulation)",
                     actions: [
                         {
                             type: 'createTables',
@@ -1395,7 +1432,7 @@ En attendant, testez avec 'créer une app de maintenance'.\",
 
             generateCRMApp() {
                 return {
-                    message: \"👥 CRM créé ! (Mode simulation)\",
+                    message: "👥 CRM créé ! (Mode simulation)",
                     actions: [
                         {
                             type: 'createTables',
@@ -1428,37 +1465,23 @@ En attendant, testez avec 'créer une app de maintenance'.\",
                             this.updateWebhookStatusBadge();
                             this.addAIMessage('✅ Webhook N8N configuré via commande !', 'ai');
                         } else {
-                            this.addAIMessage(`🔗 Webhook actuel: ${this.webhookUrl || 'Non configuré'}\
-Utilisation: /webhook https://votre-n8n.com/webhook/albert`, 'ai');
+                            this.addAIMessage(`🔗 Webhook actuel: ${this.webhookUrl || 'Non configuré'}\nUtilisation: /webhook https://votre-n8n.com/webhook/albert`, 'ai');
                         }
                         break;
                         
                     case '/help':
                         this.addAIMessage(
-                            '🔗 **Aide Grist AI Dashboard via N8N**\
-\
-' +
-                            '**Commandes spéciales :**\
-' +
-                            '• `/webhook URL` - Configurer le webhook N8N\
-' +
-                            '• `/mode dev` - Mode développement\
-' +
-                            '• `/mode analyst` - Mode analyste\
-' +
-                            '• `/status` - État du système\
-' +
-                            '• `/clear` - Effacer la conversation\
-\
-' +
-                            '**Configuration N8N requise :**\
-' +
-                            '• Webhook Trigger\
-' +
-                            '• Switch sur paramètre \"action\"\
-' +
-                            '• HTTP Request vers Albert API\
-' +
+                            '🔗 **Aide Grist AI Dashboard via N8N**\n\n' +
+                            '**Commandes spéciales :**\n' +
+                            '• `/webhook URL` - Configurer le webhook N8N\n' +
+                            '• `/mode dev` - Mode développement\n' +
+                            '• `/mode analyst` - Mode analyste\n' +
+                            '• `/status` - État du système\n' +
+                            '• `/clear` - Effacer la conversation\n\n' +
+                            '**Configuration N8N requise :**\n' +
+                            '• Webhook Trigger\n' +
+                            '• Switch sur paramètre "action"\n' +
+                            '• HTTP Request vers Albert API\n' +
                             '• Response avec résultat Albert',
                             'ai'
                         );
@@ -1468,8 +1491,7 @@ Utilisation: /webhook https://votre-n8n.com/webhook/albert`, 'ai');
                         if (parts[1] === 'dev' || parts[1] === 'analyst') {
                             this.setAIMode(parts[1]);
                         } else {
-                            this.addAIMessage('📋 Mode actuel: ' + this.aiMode + '\
-Utilisez `/mode dev` ou `/mode analyst`', 'ai');
+                            this.addAIMessage('📋 Mode actuel: ' + this.aiMode + '\nUtilisez `/mode dev` ou `/mode analyst`', 'ai');
                         }
                         break;
                         
@@ -1481,23 +1503,14 @@ Utilisez `/mode dev` ou `/mode analyst`', 'ai');
                     case '/status':
                         const hasWebhook = !!this.webhookUrl;
                         this.addAIMessage(
-                            `📊 **Status Grist AI via N8N :**\
-` +
-                            `• **Webhook N8N :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\
-` +
-                            `• **Mode :** ${this.aiMode.toUpperCase()}\
-` +
-                            `• **Document :** ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\
-` +
-                            `• **Composants :** ${this.components.size}\
-` +
-                            `• **URL :** ${this.webhookUrl || 'Non définie'}\
-` +
-                            `• **Support useRef :** ✅ Activé\
-` +
-                            `• **Composants enfants :** ✅ Réparés\
-\
-` +
+                            `📊 **Status Grist AI via N8N :**\n` +
+                            `• **Webhook N8N :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\n` +
+                            `• **Mode :** ${this.aiMode.toUpperCase()}\n` +
+                            `• **Document :** ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\n` +
+                            `• **Composants :** ${this.components.size}\n` +
+                            `• **URL :** ${this.webhookUrl || 'Non définie'}\n` +
+                            `• **Support useRef :** ✅ Activé\n` +
+                            `• **Composants enfants :** ✅ Réparés\n\n` +
                             `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert via N8N'}`,
                             'ai'
                         );
@@ -1505,8 +1518,7 @@ Utilisez `/mode dev` ou `/mode analyst`', 'ai');
                         
                     default:
                         this.addAIMessage(
-                            `❓ Commande inconnue: ${cmd}\
-Tapez \\`/help\\` pour les commandes N8N disponibles.`,
+                            `❓ Commande inconnue: ${cmd}\nTapez \`/help\` pour les commandes N8N disponibles.`,
                             'ai'
                         );
                 }
@@ -1548,8 +1560,10 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
                     
                     if (url) {
                         this.showSuccessMessage('Webhook N8N configuré avec succès');
+                        this.showToast('Webhook N8N configuré avec succès', 'success');
                     } else {
                         this.showSuccessMessage('Configuration webhook effacée');
+                        this.showToast('Configuration webhook effacée', 'warning');
                     }
                     
                     setTimeout(() => {
@@ -1584,21 +1598,123 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
                         
                         if (response.ok) {
                             const webhookStatus = document.getElementById('webhookStatus');
-                            webhookStatus.innerHTML = `<div class=\"badge badge-success\">✓ Test N8N réussi !</div>`;
+                            webhookStatus.innerHTML = `<div class="badge badge-success">✓ Test N8N réussi !</div>`;
+                            this.showToast('Test N8N réussi !', 'success');
                         } else {
                             const webhookStatus = document.getElementById('webhookStatus');
-                            webhookStatus.innerHTML = `<div class=\"badge badge-warning\">⚠ Erreur ${response.status}: ${response.statusText}</div>`;
+                            webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur ${response.status}: ${response.statusText}</div>`;
+                            this.showToast(`Erreur ${response.status}: ${response.statusText}`, 'error');
                         }
                     } catch (error) {
                         const webhookStatus = document.getElementById('webhookStatus');
-                        webhookStatus.innerHTML = `<div class=\"badge badge-warning\">⚠ Erreur N8N: ${error.message}</div>`;
+                        webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur N8N: ${error.message}</div>`;
+                        this.showToast(`Erreur N8N: ${error.message}`, 'error');
                     } finally {
                         testWebhook.disabled = false;
                         testWebhook.textContent = 'Tester';
                     }
                 });
+
+                // Ajouter des raccourcis clavier
+                document.addEventListener('keydown', (e) => {
+                    // Ctrl+Enter pour envoyer un message
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                    
+                    // Ctrl+/ pour afficher l'aide
+                    if (e.ctrlKey && e.key === '/') {
+                        e.preventDefault();
+                        this.handleSpecialCommand('/help');
+                        this.showKeyboardHint();
+                    }
+                    
+                    // Ctrl+K pour ouvrir la configuration
+                    if (e.ctrlKey && e.key === 'k') {
+                        e.preventDefault();
+                        configButton.click();
+                    }
+                    
+                    // Echap pour fermer le modal
+                    if (e.key === 'Escape' && modal.style.display === 'flex') {
+                        modal.style.display = 'none';
+                    }
+                    
+                    // Ctrl+M pour changer de mode IA
+                    if (e.ctrlKey && e.key === 'm') {
+                        e.preventDefault();
+                        const newMode = this.aiMode === 'dev' ? 'analyst' : 'dev';
+                        this.setAIMode(newMode);
+                        this.showToast(`Mode ${newMode.toUpperCase()} activé`, 'success');
+                    }
+                    
+                    // Ctrl+Shift+C pour effacer la conversation
+                    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                        e.preventDefault();
+                        this.handleSpecialCommand('/clear');
+                    }
+                });
+
+                // Afficher les raccourcis au démarrage
+                setTimeout(() => {
+                    this.showKeyboardHint();
+                    setTimeout(() => {
+                        this.hideKeyboardHint();
+                    }, 5000);
+                }, 2000);
                 
                 console.log('✅ Event listeners N8N configurés');
+            }
+
+            showKeyboardHint() {
+                const hint = document.getElementById('keyboard-hint');
+                hint.classList.add('show');
+            }
+
+            hideKeyboardHint() {
+                const hint = document.getElementById('keyboard-hint');
+                hint.classList.remove('show');
+            }
+
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container') || this.createToastContainer();
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                container.appendChild(toast);
+                
+                // Afficher le toast
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                // Masquer et supprimer le toast
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1001;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                `;
+                document.body.appendChild(container);
+                return container;
             }
 
             // Gestion de la configuration du webhook
@@ -1631,9 +1747,9 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
             updateWebhookStatusDisplay() {
                 const webhookStatus = document.getElementById('webhookStatus');
                 if (this.webhookUrl) {
-                    webhookStatus.innerHTML = `<div class=\"badge badge-success\">✓ Webhook N8N configuré</div>`;
+                    webhookStatus.innerHTML = `<div class="badge badge-success">✓ Webhook N8N configuré</div>`;
                 } else {
-                    webhookStatus.innerHTML = `<div class=\"badge badge-warning\">⚠ Aucun webhook N8N configuré</div>`;
+                    webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Aucun webhook N8N configuré</div>`;
                 }
             }
             
@@ -1650,7 +1766,7 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
 
             showSuccessMessage(message) {
                 const webhookStatus = document.getElementById('webhookStatus');
-                webhookStatus.innerHTML = `<div class=\"badge badge-success\">✓ ${message}</div>`;
+                webhookStatus.innerHTML = `<div class="badge badge-success">✓ ${message}</div>`;
             }
 
             showError(message) {
@@ -1669,8 +1785,8 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
                 const avatar = sender === 'user' ? '👤' : '🤖';
                 
                 messageDiv.innerHTML = `
-                    <div class=\"ai-message-avatar\">${avatar}</div>
-                    <div class=\"ai-message-content\">${this.formatAIMessage(message)}</div>
+                    <div class="ai-message-avatar">${avatar}</div>
+                    <div class="ai-message-content">${this.formatAIMessage(message)}</div>
                 `;
                 
                 messagesContainer.appendChild(messageDiv);
@@ -1693,11 +1809,10 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
 
             formatAIMessage(message) {
                 return message
-                    .replace(/\\*\\*(.*?)\\*\\*/g, '<strong>$1</strong>')
-                    .replace(/\\*(.*?)\\*/g, '<em>$1</em>')
-                    .replace(/`(.*?)`/g, '<code style=\"background: #f3f4f6; padding: 2px 4px; border-radius: 3px;\">$1</code>')
-                    .replace(/\
-/g, '<br>');
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">$1</code>')
+                    .replace(/\n/g, '<br>');
             }
 
             setAIMode(mode) {
@@ -1708,13 +1823,9 @@ Tapez \\`/help\\` pour les commandes N8N disponibles.`,
                 
                 let helpMessage = '';
                 if (mode === 'dev') {
-                    helpMessage = \"🛠️ **Mode Développement N8N activé**\
-\
-Je peux créer des applications complètes via le proxy N8N vers Albert IA.\";
+                    helpMessage = "🛠️ **Mode Développement N8N activé**\n\nJe peux créer des applications complètes via le proxy N8N vers Albert IA.";
                 } else {
-                    helpMessage = \"📊 **Mode Analyste N8N activé**\
-\
-Je peux analyser vos données via N8N et Albert IA.\";
+                    helpMessage = "📊 **Mode Analyste N8N activé**\n\nJe peux analyser vos données via N8N et Albert IA.";
                 }
                 
                 this.addAIMessage(helpMessage, 'ai');
@@ -1759,10 +1870,10 @@ Je peux analyser vos données via N8N et Albert IA.\";
                     try {
                         await this.gristAPI.createTable(table.name, table.columns);
                         console.log(`✅ Table ${table.name} créée`);
-                        this.addAIMessage(`📋 Table \"${table.name}\" créée avec succès`, 'ai');
+                        this.addAIMessage(`📋 Table "${table.name}" créée avec succès`, 'ai');
                     } catch (error) {
                         if (error.message.includes('already exists')) {
-                            this.addAIMessage(`⚠️ Table \"${table.name}\" existe déjà`, 'ai');
+                            this.addAIMessage(`⚠️ Table "${table.name}" existe déjà`, 'ai');
                         } else {
                             throw error;
                         }
@@ -1794,10 +1905,10 @@ Je peux analyser vos données via N8N et Albert IA.\";
                         });
                         
                         console.log(`✅ Template ${template.id} créé`);
-                        this.addAIMessage(`🎨 Composant \"${template.name}\" créé`, 'ai');
+                        this.addAIMessage(`🎨 Composant "${template.name}" créé`, 'ai');
                     } catch (error) {
                         console.error(`Erreur création template ${template.id}:`, error);
-                        this.addAIMessage(`❌ Erreur composant \"${template.name}\": ${error.message}`, 'ai');
+                        this.addAIMessage(`❌ Erreur composant "${template.name}": ${error.message}`, 'ai');
                     }
                 }
                 
@@ -1823,8 +1934,8 @@ Je peux analyser vos données via N8N et Albert IA.\";
                     
                     // Nettoyer le code
                     fixedCode = fixedCode
-                        .replace(/import\\s+.*?from\\s+['\"]react['\"];?\\s*/g, '') // Supprimer imports React
-                        .replace(/export\\s+default\\s+Component;?\\s*/g, '') // Supprimer exports
+                        .replace(/import\s+.*?from\s+['"]react['"];?\s*/g, '') // Supprimer imports React
+                        .replace(/export\s+default\s+Component;?\s*/g, '') // Supprimer exports
                         .trim();
                     
                     // Valider la syntaxe JSX basique
@@ -1879,9 +1990,9 @@ Je peux analyser vos données via N8N et Albert IA.\";
                             await this.gristAPI.addRecord(tableName, record);
                         }
                         
-                        this.addAIMessage(`📊 ${records.length} exemples ajoutés à \"${tableName}\"`, 'ai');
+                        this.addAIMessage(`📊 ${records.length} exemples ajoutés à "${tableName}"`, 'ai');
                     } catch (error) {
-                        this.addAIMessage(`❌ Erreur données \"${dataAction.table}\": ${error.message}`, 'ai');
+                        this.addAIMessage(`❌ Erreur données "${dataAction.table}": ${error.message}`, 'ai');
                     }
                 }
             }
@@ -1939,16 +2050,14 @@ Je peux analyser vos données via N8N et Albert IA.\";
 
             sanitizeCode(code) {
                 return code
-                    .replace(/\\r\
-/g, '\
-')
-                    .replace(/\\u0000-\\u001F/g, '')
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\u0000-\u001F/g, '')
                     .trim();
             }
 
             showComponentError(container, error, componentId) {
                 container.innerHTML = `
-                    <div class=\"error-container\">
+                    <div class="error-container">
                         <h3>🚨 Erreur Composant: ${componentId}</h3>
                         <p><strong>Message:</strong> ${error.message}</p>
                         <pre>${error.stack || 'Pas de stack trace'}</pre>
@@ -2065,7 +2174,7 @@ Je peux analyser vos données via N8N et Albert IA.\";
                             grist_dashboard_version: '4.5-CORRECTED',
                             mode_used: this.aiMode,
                             n8n_webhook: this.webhookUrl,
-                            features: ['useRef_support', 'child_components_fixed']
+                            features: ['useRef_support', 'child_components_fixed', 'keyboard_shortcuts', 'toast_notifications']
                         },
                         tables: await this.gristAPI.getDocumentStructure(),
                         templates: await this.gristAPI.getData('Templates'),
@@ -2085,11 +2194,13 @@ Je peux analyser vos données via N8N et Albert IA.\";
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     
-                    this.addAIMessage('📥 Configuration N8N de l\\'application exportée (v4.5 corrigée) !', 'ai');
+                    this.addAIMessage('📥 Configuration N8N de l\'application exportée (v4.5 corrigée) !', 'ai');
+                    this.showToast('Configuration exportée avec succès', 'success');
                     
                 } catch (error) {
                     console.error('Erreur export:', error);
-                    this.addAIMessage('❌ Erreur lors de l\\'export de la configuration.', 'ai');
+                    this.addAIMessage('❌ Erreur lors de l\'export de la configuration.', 'ai');
+                    this.showToast('Erreur lors de l\'export', 'error');
                 }
             }
 
@@ -2101,7 +2212,7 @@ Je peux analyser vos données via N8N et Albert IA.\";
             showError(title, message) {
                 const main = document.getElementById('main-content');
                 main.innerHTML = `
-                    <div class=\"error-container\">
+                    <div class="error-container">
                         <h3>🚨 ${title}</h3>
                         <p>${message}</p>
                     </div>
@@ -2130,13 +2241,12 @@ Je peux analyser vos données via N8N et Albert IA.\";
             }
 
             parseCSV(text) {
-                const lines = text.split('\
-').filter(line => line.trim());
+                const lines = text.split('\n').filter(line => line.trim());
                 if (lines.length === 0) return null;
                 
-                const headers = lines[0].split(',').map(h => h.trim().replace(/\"/g, ''));
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
                 const rows = lines.slice(1, 6).map(line => 
-                    line.split(',').map(cell => cell.trim().replace(/\"/g, ''))
+                    line.split(',').map(cell => cell.trim().replace(/"/g, ''))
                 );
                 
                 return {
@@ -2196,6 +2306,7 @@ Je peux analyser vos données via N8N et Albert IA.\";
             if (file) {
                 if (file.size > 10 * 1024 * 1024) {
                     dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    dashboard.showToast('Fichier trop volumineux (max 10MB)', 'error');
                     return;
                 }
                 
@@ -2208,146 +2319,8 @@ Je peux analyser vos données via N8N et Albert IA.\";
                 
                 if (!allowedTypes.includes(file.type) && !file.name.endsWith('.csv')) {
                     dashboard.addAIMessage('❌ Type de fichier non supporté. Utilisez Excel, CSV ou JSON.', 'ai');
+                    dashboard.showToast('Type de fichier non supporté', 'error');
                     return;
                 }
                 
-                const message = `📎 J'ai uploadé le fichier \"${file.name}\" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier via N8N et créer une application adaptée ?`;
-                dashboard.sendAIMessage(message, file);
-            }
-            
-            // Reset du input file
-            event.target.value = '';
-        }
-
-        function toggleChat() {
-            const body = document.body;
-            const chatContent = document.getElementById('ai-chat-content');
-            const toggle = document.getElementById('chat-toggle');
-            
-            body.classList.toggle('chat-collapsed');
-            dashboard.chatCollapsed = body.classList.contains('chat-collapsed');
-            
-            if (dashboard.chatCollapsed) {
-                chatContent.style.display = 'none';
-                toggle.textContent = '🔼';
-            } else {
-                chatContent.style.display = 'flex';
-                toggle.textContent = '🔽';
-                
-                // Auto-scroll vers le bas des messages
-                setTimeout(() => {
-                    const messages = document.getElementById('ai-messages');
-                    messages.scrollTop = messages.scrollHeight;
-                }, 100);
-            }
-        }
-
-        function setAIMode(mode) {
-            if (dashboard) {
-                dashboard.setAIMode(mode);
-            }
-        }
-
-        function startWithExample() {
-            const examples = [
-                \"Créé-moi une application de gestion de maintenance avec équipements, techniciens et interventions\",
-                \"Application de suivi des stocks avec produits, fournisseurs et mouvements\",
-                \"Dashboard de gestion des ventes avec clients, commandes et analyses\",
-                \"Système de gestion de projet avec tâches, équipes et planning\",
-                \"Application RH avec employés, congés et évaluations\"
-            ];
-            
-            const randomExample = examples[Math.floor(Math.random() * examples.length)];
-            
-            const input = document.getElementById('ai-input');
-            input.value = randomExample;
-            
-            focusAIChat();
-            
-            setTimeout(() => {
-                dashboard.addAIMessage(
-                    '💡 Voici un exemple d\\'application que je peux créer via N8N. Vous pouvez modifier cette demande ou valider directement :', 
-                    'ai'
-                );
-            }, 100);
-        }
-
-        function focusAIChat() {
-            if (document.body.classList.contains('chat-collapsed')) {
-                toggleChat();
-            }
-            
-            const chatContainer = document.getElementById('ai-chat');
-            chatContainer.scrollIntoView({ behavior: 'smooth' });
-            
-            setTimeout(() => {
-                document.getElementById('ai-input').focus();
-            }, 300);
-        }
-
-        function handleDrop(event) {
-            event.preventDefault();
-            const uploadArea = document.getElementById('upload-area');
-            if (uploadArea) uploadArea.classList.remove('dragover');
-            
-            const files = event.dataTransfer.files;
-            if (files.length > 0) {
-                const file = files[0];
-                
-                if (file.size > 10 * 1024 * 1024) {
-                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
-                    return;
-                }
-                
-                const message = `📎 J'ai glissé le fichier \"${file.name}\" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via N8N.`;
-                dashboard.sendAIMessage(message, file);
-                
-                focusAIChat();
-            }
-        }
-
-        function handleDragOver(event) {
-            event.preventDefault();
-            const uploadArea = document.getElementById('upload-area');
-            if (uploadArea) uploadArea.classList.add('dragover');
-        }
-
-        function handleDragLeave(event) {
-            const uploadArea = document.getElementById('upload-area');
-            if (uploadArea) uploadArea.classList.remove('dragover');
-        }
-
-        // Initialisation avec gestion d'erreurs améliorée
-        document.addEventListener('DOMContentLoaded', () => {
-            try {
-                dashboard = new GristAIDashboard();
-                dashboard.init().catch(error => {
-                    console.error('Erreur critique d\\'initialisation:', error);
-                    
-                    const main = document.getElementById('main-content');
-                    main.innerHTML = `
-                        <div style=\"padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;\">
-                            <h2 style=\"color: #dc2626; margin-bottom: 20px;\">⚠️ Erreur d'Initialisation N8N</h2>
-                            <p style=\"color: #6b7280; margin-bottom: 20px;\">
-                                Le système N8N n'a pas pu s'initialiser correctement. 
-                                Cela peut être dû à un problème de connexion à Grist.
-                            </p>
-                            <button 
-                                onclick=\"location.reload()\" 
-                                style=\"
-                                    background: #3b82f6; 
-                                    color: white; 
-                                    border: none; 
-                                    padding: 12px 24px; 
-                                    border-radius: 6px; 
-                                    cursor: pointer;
-                                    font-size: 16px;
-                                \"
-                            >
-                                🔄 Recharger la page
-                            </button>
-                        </div>
-                    `;
-                });
-                
-                // Ajouter des raccourcis clavier
+                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(
