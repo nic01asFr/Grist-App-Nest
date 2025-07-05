@@ -2323,4 +2323,361 @@
                     return;
                 }
                 
-                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(
+                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier via N8N et créer une application adaptée ?`;
+                dashboard.sendAIMessage(message, file);
+                dashboard.showToast(`Fichier "${file.name}" téléchargé`, 'success');
+            }
+            
+            // Reset du input file
+            event.target.value = '';
+        }
+
+        function toggleChat() {
+            const body = document.body;
+            const chatContent = document.getElementById('ai-chat-content');
+            const toggle = document.getElementById('chat-toggle');
+            
+            body.classList.toggle('chat-collapsed');
+            dashboard.chatCollapsed = body.classList.contains('chat-collapsed');
+            
+            if (dashboard.chatCollapsed) {
+                chatContent.style.display = 'none';
+                toggle.textContent = '🔼';
+            } else {
+                chatContent.style.display = 'flex';
+                toggle.textContent = '🔽';
+                
+                // Auto-scroll vers le bas des messages
+                setTimeout(() => {
+                    const messages = document.getElementById('ai-messages');
+                    messages.scrollTop = messages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function setAIMode(mode) {
+            if (dashboard) {
+                dashboard.setAIMode(mode);
+            }
+        }
+
+        function startWithExample() {
+            const examples = [
+                "Créé-moi une application de gestion de maintenance avec équipements, techniciens et interventions",
+                "Application de suivi des stocks avec produits, fournisseurs et mouvements",
+                "Dashboard de gestion des ventes avec clients, commandes et analyses",
+                "Système de gestion de projet avec tâches, équipes et planning",
+                "Application RH avec employés, congés et évaluations"
+            ];
+            
+            const randomExample = examples[Math.floor(Math.random() * examples.length)];
+            
+            const input = document.getElementById('ai-input');
+            input.value = randomExample;
+            
+            focusAIChat();
+            
+            setTimeout(() => {
+                dashboard.addAIMessage(
+                    '💡 Voici un exemple d\'application que je peux créer via N8N. Vous pouvez modifier cette demande ou valider directement :', 
+                    'ai'
+                );
+            }, 100);
+        }
+
+        function focusAIChat() {
+            if (document.body.classList.contains('chat-collapsed')) {
+                toggleChat();
+            }
+            
+            const chatContainer = document.getElementById('ai-chat');
+            chatContainer.scrollIntoView({ behavior: 'smooth' });
+            
+            setTimeout(() => {
+                document.getElementById('ai-input').focus();
+            }, 300);
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    dashboard.showToast('Fichier trop volumineux (max 10MB)', 'error');
+                    return;
+                }
+                
+                const message = `📎 J'ai glissé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via N8N.`;
+                dashboard.sendAIMessage(message, file);
+                dashboard.showToast(`Fichier "${file.name}" glissé avec succès`, 'success');
+                
+                focusAIChat();
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+        }
+
+        // Fonctions utilitaires additionnelles
+        function quickConfigN8N() {
+            const modal = document.getElementById('webhookModal');
+            const input = document.getElementById('webhookUrl');
+            
+            // Pré-remplir avec un exemple
+            input.value = 'https://your-n8n-instance.com/webhook/grist-albert-proxy';
+            modal.style.display = 'flex';
+            input.focus();
+            input.select();
+        }
+
+        function showQuickStart() {
+            dashboard.addAIMessage(
+                `🚀 **Guide de démarrage rapide N8N**
+
+**1. Configuration N8N :**
+• Créez un workflow avec Webhook Trigger
+• Ajoutez un Switch node sur le paramètre "action"
+• Pour action="albert_chat" : HTTP Request vers Albert API
+• Response node pour renvoyer le résultat
+
+**2. Utilisation :**
+• Configurez l'URL webhook ⚙️
+• Décrivez votre besoin en français
+• Albert créera votre application complète
+
+**3. Exemples de demandes :**
+• "Créer un CRM simple"
+• "App de gestion de stock"
+• "Dashboard de maintenance"
+
+**Raccourcis :**
+• Ctrl+Enter : Envoyer message
+• Ctrl+K : Configuration
+• Ctrl+M : Changer mode
+• Ctrl+/ : Aide`,
+                'ai'
+            );
+        }
+
+        function exportToGithub() {
+            if (!dashboard || dashboard.components.size === 0) {
+                dashboard.showToast('Aucune application à exporter', 'warning');
+                return;
+            }
+            
+            dashboard.addAIMessage(
+                `📦 **Export vers GitHub**
+
+Pour exporter votre application vers GitHub :
+
+1. **Export local :** Utilisez le bouton "📥 Export" dans la navigation
+2. **Fichier généré :** \`grist-app-n8n-config-v4.5-corrected.json\`
+3. **Structure incluse :**
+   • Tables et schémas Grist
+   • Composants React créés
+   • Configuration N8N utilisée
+   • Historique des conversations
+
+4. **Upload GitHub :**
+   • Créez un repository
+   • Uploadez le fichier JSON
+   • Ajoutez un README avec instructions
+
+Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
+                'ai'
+            );
+        }
+
+        // Initialisation avec gestion d'erreurs améliorée
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                dashboard = new GristAIDashboard();
+                dashboard.init().catch(error => {
+                    console.error('Erreur critique d\'initialisation:', error);
+                    
+                    const main = document.getElementById('main-content');
+                    main.innerHTML = `
+                        <div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">
+                            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d'Initialisation N8N</h2>
+                            <p style="color: #6b7280; margin-bottom: 20px;">
+                                Le système N8N n'a pas pu s'initialiser correctement. 
+                                Cela peut être dû à un problème de connexion à Grist.
+                            </p>
+                            <div style="margin-bottom: 20px;">
+                                <strong>Solutions possibles :</strong><br>
+                                • Vérifiez que vous êtes dans un widget Grist<br>
+                                • Rechargez la page<br>
+                                • Vérifiez les permissions Grist<br>
+                                • Consultez la console développeur (F12)
+                            </div>
+                            <button 
+                                onclick="location.reload()" 
+                                style="
+                                    background: #3b82f6; 
+                                    color: white; 
+                                    border: none; 
+                                    padding: 12px 24px; 
+                                    border-radius: 6px; 
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                    margin-right: 10px;
+                                "
+                            >
+                                🔄 Recharger la page
+                            </button>
+                            <button 
+                                onclick="showQuickStart()" 
+                                style="
+                                    background: #10b981; 
+                                    color: white; 
+                                    border: none; 
+                                    padding: 12px 24px; 
+                                    border-radius: 6px; 
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                "
+                            >
+                                📖 Guide de démarrage
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                // Vérifications de compatibilité
+                if (!window.React) {
+                    console.warn('⚠️ React non chargé, certaines fonctionnalités peuvent être limitées');
+                }
+                
+                if (!window.grist) {
+                    console.warn('⚠️ API Grist non disponible, mode démo activé');
+                }
+                
+                console.log('✅ Grist AI Dashboard v4.5 CORRECTED initialisé avec succès');
+                
+            } catch (error) {
+                console.error('❌ Erreur fatale:', error);
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed; 
+                        top: 0; 
+                        left: 0; 
+                        width: 100%; 
+                        height: 100%; 
+                        background: #fee2e2; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center;
+                        font-family: sans-serif;
+                    ">
+                        <div style="
+                            background: white; 
+                            padding: 40px; 
+                            border-radius: 12px; 
+                            text-align: center;
+                            max-width: 500px;
+                        ">
+                            <h1 style="color: #dc2626; margin-bottom: 20px;">🚨 Erreur Fatale</h1>
+                            <p style="margin-bottom: 15px;">
+                                Le dashboard n'a pas pu s'initialiser.
+                            </p>
+                            <div style="
+                                background: #f3f4f6; 
+                                padding: 15px; 
+                                border-radius: 6px; 
+                                margin-bottom: 20px;
+                                text-align: left;
+                                font-family: monospace;
+                                font-size: 12px;
+                                overflow-x: auto;
+                            ">
+                                ${error.message}
+                            </div>
+                            <button onclick="location.reload()" style="
+                                background: #dc2626; 
+                                color: white; 
+                                border: none; 
+                                padding: 12px 24px; 
+                                border-radius: 6px; 
+                                cursor: pointer;
+                            ">
+                                Recharger
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Gestion des erreurs globales
+        window.addEventListener('error', (event) => {
+            console.error('Erreur JavaScript globale:', event.error);
+            if (dashboard && dashboard.showToast) {
+                dashboard.showToast('Erreur détectée - Consultez la console', 'error');
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Promise rejetée non gérée:', event.reason);
+            if (dashboard && dashboard.showToast) {
+                dashboard.showToast('Erreur async détectée', 'error');
+            }
+        });
+
+        // Performance monitoring
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`⚡ Dashboard chargé en ${loadTime.toFixed(2)}ms`);
+            
+            if (loadTime > 3000) {
+                console.warn('⚠️ Chargement lent détecté');
+                if (dashboard && dashboard.showToast) {
+                    dashboard.showToast('Chargement lent détecté', 'warning');
+                }
+            }
+        });
+
+        // Export des fonctions pour debug
+        window.GristDashboardDebug = {
+            dashboard: () => dashboard,
+            testN8N: (url) => {
+                if (dashboard) {
+                    dashboard.webhookUrl = url;
+                    return dashboard.callAlbertViaN8N({
+                        mode: 'dev',
+                        message: 'Test debug',
+                        isDocumentEmpty: true
+                    });
+                }
+            },
+            showComponents: () => {
+                if (dashboard) {
+                    console.table(Array.from(dashboard.components.entries()));
+                }
+            },
+            exportConfig: () => {
+                if (dashboard) {
+                    dashboard.exportAppConfiguration();
+                }
+            }
+        };
+
+        console.log('🎯 Grist AI Dashboard v4.5 CORRECTED - Prêt pour utilisation');
+        console.log('📖 Guide: https://github.com/nic01asFr/grist-dynamic-dashboard');
+        console.log('🛠️ Debug: window.GristDashboardDebug');
+    </script>
+</body>
+</html>
