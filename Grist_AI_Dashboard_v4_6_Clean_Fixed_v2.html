@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Grist Dynamic Dashboard - v4.6 Agent IA via N8N (Fixed v2)</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            transition: grid-template-rows 0.3s ease;
+        }
+        
+        body.chat-collapsed {
+            grid-template-rows: 60px 1fr 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+        
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+        
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        
+        /* Agent IA Chat Styles */
+        .ai-chat-container {
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-chat-header {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .ai-chat-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+        
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .ai-message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .ai-message.user .ai-message-avatar {
+            background: #3b82f6;
+        }
+        
+        .ai-message.ai .ai-message-avatar {
+            background: #10b981;
+        }
+        
+        .ai-message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .ai-message.user .ai-message-content {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .ai-chat-input {
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .ai-chat-input button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .ai-chat-input button:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .ai-chat-input button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .ai-mode-selector {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .ai-mode-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .ai-mode-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .welcome-container {
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .welcome-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px;
+            margin: 20px 0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close-modal:hover {
+            color: #374151;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .webhook-status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .webhook-status.configured {
+            background: #10b981;
+            color: white;
+        }
+        
+        .webhook-status.not-configured {
+            background: #f59e0b;
+            color: white;
+        }
+        
+        .debug-info {
+            background: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 10px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 12px;
+            color: #374151;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.6 N8N-FIXED-v2</span></h1>
+        <nav class="nav" id="navigation">
+            <span id="documentIdBadge" class="webhook-status not-configured">Document: ...</span>
+            <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
+            <button class="nav-btn" id="configButton" title="Configurer le webhook N8N">⚙️</button>
+        </nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Initialisation du système IA N8N...</div>
+        </div>
+    </main>
+
+    <!-- Agent IA Chat -->
+    <div class="ai-chat-container" id="ai-chat">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>🤖 Agent IA Albert (via N8N - Fixed v2)</span>
+                <div class="ai-mode-selector">
+                    <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
+                        🛠️ Dev
+                    </button>
+                    <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
+                        📊 Analyst
+                    </button>
+                </div>
+            </div>
+            <span id="chat-toggle">🔽</span>
+        </div>
+        
+        <div class="ai-chat-content" id="ai-chat-content">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div class="ai-message-avatar">🤖</div>
+                    <div class="ai-message-content">
+                        <strong>Version 4.6 FIXED v2 !</strong><br>
+                        ✅ Gestion robuste des réponses JSON vides<br>
+                        ✅ Fallback automatique si erreur parsing<br>
+                        ✅ Logs détaillés pour debug N8N<br><br>
+                        Configurez le webhook N8N avec ⚙️ puis décrivez votre besoin !
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-chat-input">
+                <input 
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Configurez d'abord le webhook N8N puis décrivez votre besoin..."
+                    onkeypress="if(
