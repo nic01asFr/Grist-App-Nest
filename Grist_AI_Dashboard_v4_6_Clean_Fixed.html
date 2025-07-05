@@ -477,7 +477,7 @@
 </head>
 <body>
     <header class="header">
-        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.6 N8N-CLEAN</span></h1>
+        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.6 N8N-FIXED</span></h1>
         <nav class="nav" id="navigation">
             <span id="documentIdBadge" class="webhook-status not-configured">Document: ...</span>
             <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
@@ -496,7 +496,7 @@
     <div class="ai-chat-container" id="ai-chat">
         <div class="ai-chat-header" onclick="toggleChat()">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span>🤖 Agent IA Albert (via N8N - Clean)</span>
+                <span>🤖 Agent IA Albert (via N8N - Fixed)</span>
                 <div class="ai-mode-selector">
                     <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
                         🛠️ Dev
@@ -514,10 +514,10 @@
                 <div class="ai-message ai">
                     <div class="ai-message-avatar">🤖</div>
                     <div class="ai-message-content">
-                        <strong>Version 4.6 CLEAN !</strong><br>
-                        ✅ DocumentId automatiquement transmis<br>
-                        ✅ Gestion erreurs JSON améliorée<br>
-                        ✅ Code allégé sans simulation<br><br>
+                        <strong>Version 4.6 FIXED !</strong><br>
+                        ✅ Gestion robuste des réponses N8N vides<br>
+                        ✅ Fallback automatique si JSON invalide<br>
+                        ✅ Debug amélioré pour diagnostic<br><br>
                         Configurez le webhook N8N avec ⚙️ puis décrivez votre besoin !
                     </div>
                 </div>
@@ -573,12 +573,12 @@
             </div>
             
             <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
-                <h4 style="margin-bottom: 10px;">✅ Version CLEAN :</h4>
+                <h4 style="margin-bottom: 10px;">✅ Version FIXED :</h4>
                 <ul style="margin-left: 20px; color: #4b5563;">
-                    <li><strong>DocumentId automatique</strong> : Transmis dans chaque requête</li>
-                    <li><strong>Gestion JSON robuste</strong> : Fallback si réponse invalide</li>
-                    <li><strong>Code optimisé</strong> : Suppression des simulations inutiles</li>
-                    <li><strong>Debug amélioré</strong> : Logs essentiels uniquement</li>
+                    <li><strong>Réponses vides gérées</strong> : Plus d'erreur JSON</li>
+                    <li><strong>Fallback robuste</strong> : Traitement automatique des erreurs</li>
+                    <li><strong>Debug amélioré</strong> : Logs détaillés pour diagnostic</li>
+                    <li><strong>Retry intelligent</strong> : Tentatives multiples automatiques</li>
                 </ul>
             </div>
             
@@ -590,7 +590,7 @@
     </div>
 
     <script>
-        // GRIST AI DASHBOARD v4.6 : Agent IA via N8N Proxy (CLEAN)
+        // GRIST AI DASHBOARD v4.6 : Agent IA via N8N Proxy (FIXED)
         class GristAIDashboard {
             constructor() {
                 this.components = new Map();
@@ -617,7 +617,7 @@
 
             async init() {
                 try {
-                    console.log('🤖 Initialisation Grist AI Dashboard v4.6 (N8N CLEAN)');
+                    console.log('🤖 Initialisation Grist AI Dashboard v4.6 (N8N FIXED)');
                     
                     // Initialiser Grist API
                     await grist.ready({ requiredAccess: 'read table' });
@@ -651,7 +651,7 @@
                     this.hideLoading();
                     this.isReady = true;
                     
-                    console.log('✅ Grist AI Dashboard prêt (Mode N8N CLEAN v4.6)');
+                    console.log('✅ Grist AI Dashboard prêt (Mode N8N FIXED v4.6)');
                     
                 } catch (error) {
                     console.error('❌ Erreur initialisation:', error);
@@ -883,19 +883,19 @@
                 const main = document.getElementById('main-content');
                 main.innerHTML = '<div class="welcome-container">' +
                     '<div class="welcome-hero">' +
-                        '<h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Grist AI v4.6 CLEAN</h1>' +
-                        '<p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">Agent Albert optimisé sans simulation</p>' +
+                        '<h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Grist AI v4.6 FIXED</h1>' +
+                        '<p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">Agent Albert avec gestion robuste JSON</p>' +
                         '<p style="font-size: 1.1rem; opacity: 0.8;">Configurez votre webhook N8N puis décrivez votre besoin. L\'IA créera automatiquement votre application complète !</p>' +
                     '</div>' +
                     '<div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">' +
                         '<h3 style="color: #1f2937; margin-bottom: 20px; text-align: center;">🔧 Configuration requise</h3>' +
                         '<div style="background: #d1fae5; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin-bottom: 30px;">' +
-                            '<h4 style="color: #065f46; margin-bottom: 10px;">✅ Version CLEAN - Optimisations</h4>' +
+                            '<h4 style="color: #065f46; margin-bottom: 10px;">✅ Version FIXED - Corrections</h4>' +
                             '<ul style="color: #065f46; margin-left: 20px;">' +
                                 '<li><strong>DocumentId automatique</strong> : ' + this.documentId + '</li>' +
-                                '<li><strong>Gestion JSON robuste</strong> avec fallback</li>' +
-                                '<li><strong>Code allégé</strong> : Suppression des simulations</li>' +
-                                '<li><strong>Performance améliorée</strong> : Moins de code inutile</li>' +
+                                '<li><strong>Gestion JSON robuste</strong> : Plus d\'erreur si réponse vide</li>' +
+                                '<li><strong>Fallback automatique</strong> : Traitement intelligent des erreurs</li>' +
+                                '<li><strong>Debug amélioré</strong> : Logs détaillés pour diagnostic</li>' +
                             '</ul>' +
                             '<button onclick="document.getElementById(\'configButton\').click()" style="background: #10b981; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-weight: 500; margin-top: 15px;">⚙️ Configurer le Webhook N8N</button>' +
                         '</div>' +
@@ -913,9 +913,9 @@
                 this.setAIMode('dev');
                 
                 if (this.isDocumentEmpty) {
-                    this.addAIMessage("Je peux créer votre application complète via N8N ! Version CLEAN optimisée sans simulations.", 'ai');
+                    this.addAIMessage("Je peux créer votre application complète via N8N ! Version FIXED avec gestion robuste des réponses JSON.", 'ai');
                 } else {
-                    this.addAIMessage("Votre application est prête ! Version CLEAN - code optimisé pour N8N.", 'ai');
+                    this.addAIMessage("Votre application est prête ! Version FIXED - plus d'erreur JSON avec N8N.", 'ai');
                 }
             }
 
@@ -938,7 +938,7 @@
                     this.addAIMessage(message, 'user');
                     
                     // Ajouter un indicateur de traitement
-                    const processingId = this.addAIMessage('⏳ Albert réfléchit via N8N (CLEAN)...', 'ai');
+                    const processingId = this.addAIMessage('⏳ Albert réfléchit via N8N (FIXED)...', 'ai');
                     
                     // Préparer le contexte selon le mode
                     let context = {
@@ -1013,9 +1013,9 @@
                 throw lastError;
             }
 
-            // AMÉLIORÉ v4.6 : Gestion robuste des réponses JSON
+            // CORRIGÉ v4.6 : Gestion robuste des réponses JSON vides
             async callAlbertViaN8N(context) {
-                console.log('🔗 Appel Albert IA via N8N (CLEAN):', context);
+                console.log('🔗 Appel Albert IA via N8N (FIXED):', context);
                 
                 try {
                     // Construire l'URL avec l'action albert_chat
@@ -1043,10 +1043,10 @@
                         
                         timestamp: new Date().toISOString(),
                         source: 'grist-ai-dashboard',
-                        version: '4.6-clean'
+                        version: '4.6-fixed'
                     };
                     
-                    console.log('📤 Envoi vers N8N (CLEAN):', chatUrl);
+                    console.log('📤 Envoi vers N8N (FIXED):', chatUrl);
                     this.debugLog('Request Data', webhookData);
                     
                     const response = await fetch(chatUrl, {
@@ -1054,7 +1054,7 @@
                         headers: {
                             'Content-Type': 'application/json',
                             'Accept': 'application/json',
-                            'User-Agent': 'Grist-AI-Dashboard-v4.6-Clean'
+                            'User-Agent': 'Grist-AI-Dashboard-v4.6-Fixed'
                         },
                         body: JSON.stringify(webhookData)
                     });
@@ -1072,24 +1072,36 @@
                         contentType: contentType 
                     });
                     
+                    // NOUVEAU v4.6 FIXED : Gestion robuste du parsing JSON
                     let data;
                     
-                    // NOUVEAU v4.6 : Gestion flexible du parsing
-                    if (contentType && contentType.includes('application/json')) {
-                        // Réponse JSON standard
-                        data = await response.json();
+                    // Toujours lire en tant que texte d'abord pour vérifier le contenu
+                    const textResponse = await response.text();
+                    console.log('📄 Réponse texte brute:', textResponse);
+                    this.debugLog('Raw Response Text', textResponse);
+                    
+                    if (!textResponse || textResponse.trim() === '') {
+                        console.warn('⚠️ Réponse vide détectée de N8N');
+                        
+                        // Créer une réponse par défaut
+                        data = {
+                            success: false,
+                            message: "⚠️ N8N a retourné une réponse vide. Vérifiez que votre workflow s'exécute correctement et que le node 'Respond to Webhook' reçoit bien des données.",
+                            actions: null,
+                            timestamp: new Date().toISOString(),
+                            source: "widget-empty-response-fallback",
+                            debug: {
+                                issue: "empty_response_from_n8n",
+                                suggestion: "Vérifiez les logs d'exécution dans N8N",
+                                contentType: contentType,
+                                status: response.status
+                            }
+                        };
                     } else {
-                        // Fallback : tenter de parser comme texte puis JSON
-                        const textResponse = await response.text();
-                        console.log('📄 Réponse texte brute:', textResponse);
-                        
-                        if (!textResponse || textResponse.trim() === '') {
-                            throw new Error('Réponse vide du webhook N8N');
-                        }
-                        
+                        // Tenter de parser comme JSON
                         try {
-                            // Tenter de parser comme JSON
                             data = JSON.parse(textResponse);
+                            console.log('✅ JSON parsé avec succès');
                         } catch (jsonError) {
                             console.warn('⚠️ Impossible de parser comme JSON, traitement comme texte');
                             
@@ -1097,13 +1109,18 @@
                             data = {
                                 success: true,
                                 message: textResponse,
-                                source: 'n8n-text-fallback'
+                                actions: null,
+                                source: "n8n-text-fallback",
+                                debug: {
+                                    issue: "non_json_response",
+                                    originalText: textResponse.substring(0, 200) + (textResponse.length > 200 ? '...' : '')
+                                }
                             };
                         }
                     }
                     
-                    console.log('✅ Réponse N8N (CLEAN):', data);
-                    this.debugLog('Response Data', data);
+                    console.log('✅ Réponse N8N traitée (FIXED):', data);
+                    this.debugLog('Final Parsed Data', data);
                     
                     return this.parseN8NResponse(data, context);
                     
@@ -1178,7 +1195,7 @@
                     }
                     
                     return {
-                        message: albertResponse.message || "Réponse reçue d'Albert via N8N (CLEAN)",
+                        message: albertResponse.message || "Réponse reçue d'Albert via N8N (FIXED)",
                         actions: albertResponse.actions || null
                     };
                     
@@ -1201,7 +1218,7 @@
                             this.webhookUrl = parts[1];
                             this.saveWebhookConfig(parts[1]);
                             this.updateWebhookStatusBadge();
-                            this.addAIMessage('✅ Webhook N8N configuré via commande (CLEAN) !', 'ai');
+                            this.addAIMessage('✅ Webhook N8N configuré via commande (FIXED) !', 'ai');
                         } else {
                             this.addAIMessage('🔗 Webhook actuel: ' + (this.webhookUrl || 'Non configuré') + '<br>DocumentId: ' + this.documentId + '<br>Utilisation: /webhook https://votre-n8n.com/webhook/albert', 'ai');
                         }
@@ -1217,11 +1234,11 @@
                         
                     case '/help':
                         this.addAIMessage(
-                            '🔗 <strong>Aide Grist AI Dashboard v4.6 CLEAN</strong><br><br>' +
-                            '<strong>Version CLEAN :</strong><br>' +
+                            '🔗 <strong>Aide Grist AI Dashboard v4.6 FIXED</strong><br><br>' +
+                            '<strong>Version FIXED :</strong><br>' +
                             '• DocumentId automatique: ' + this.documentId + '<br>' +
-                            '• Code optimisé sans simulation<br>' +
-                            '• Gestion JSON robuste<br><br>' +
+                            '• Gestion JSON robuste: Plus d\'erreur si réponse vide<br>' +
+                            '• Fallback automatique: Traitement intelligent<br><br>' +
                             '<strong>Commandes :</strong><br>' +
                             '• <code>/webhook URL</code> - Configurer N8N<br>' +
                             '• <code>/debug</code> - Logs debug<br>' +
@@ -1241,18 +1258,18 @@
                         
                     case '/clear':
                         this.clearAIMessages();
-                        this.addAIMessage('💬 Conversation effacée. N8N CLEAN prêt !', 'ai');
+                        this.addAIMessage('💬 Conversation effacée. N8N FIXED prêt !', 'ai');
                         break;
                         
                     case '/status':
                         const hasWebhook = !!this.webhookUrl;
                         this.addAIMessage(
-                            '📊 <strong>Status Grist AI CLEAN :</strong><br>' +
+                            '📊 <strong>Status Grist AI FIXED :</strong><br>' +
                             '• <strong>Webhook N8N :</strong> ' + (hasWebhook ? '✅ Configuré' : '❌ Non configuré') + '<br>' +
                             '• <strong>DocumentId :</strong> ' + this.documentId + '<br>' +
                             '• <strong>Mode :</strong> ' + this.aiMode.toUpperCase() + '<br>' +
-                            '• <strong>Version :</strong> 4.6 CLEAN<br><br>' +
-                            (hasWebhook ? '✅ Prêt pour Albert' : '💡 Configurez le webhook avec ⚙️'),
+                            '• <strong>Version :</strong> 4.6 FIXED<br><br>' +
+                            (hasWebhook ? '✅ Prêt pour Albert avec gestion JSON robuste' : '💡 Configurez le webhook avec ⚙️'),
                             'ai'
                         );
                         break;
@@ -1263,7 +1280,7 @@
             }
 
             setupEventListeners() {
-                console.log('🎯 Configuration des event listeners N8N CLEAN');
+                console.log('🎯 Configuration des event listeners N8N FIXED');
                 
                 // Configuration du webhook modal
                 const configButton = document.getElementById('configButton');
@@ -1297,7 +1314,7 @@
                     this.updateWebhookStatusBadge();
                     
                     if (url) {
-                        this.showSuccessMessage('Webhook N8N configuré avec succès (CLEAN)');
+                        this.showSuccessMessage('Webhook N8N configuré avec succès (FIXED)');
                     } else {
                         this.showSuccessMessage('Configuration webhook effacée');
                     }
@@ -1327,16 +1344,16 @@
                             },
                             body: JSON.stringify({
                                 test: true,
-                                message: 'Test configuration webhook N8N CLEAN',
+                                message: 'Test configuration webhook N8N FIXED',
                                 documentId: this.documentId,
                                 timestamp: new Date().toISOString(),
-                                version: '4.6-clean'
+                                version: '4.6-fixed'
                             })
                         });
                         
                         if (response.ok) {
                             const webhookStatus = document.getElementById('webhookStatus');
-                            webhookStatus.innerHTML = '<div class="badge badge-success">✓ Test N8N CLEAN réussi !</div>';
+                            webhookStatus.innerHTML = '<div class="badge badge-success">✓ Test N8N FIXED réussi !</div>';
                             this.debugLog('Test Success', { status: response.status, url: testUrl });
                         } else {
                             const webhookStatus = document.getElementById('webhookStatus');
@@ -1353,7 +1370,7 @@
                     }
                 });
                 
-                console.log('✅ Event listeners N8N CLEAN configurés');
+                console.log('✅ Event listeners N8N FIXED configurés');
             }
 
             // Gestion de la configuration du webhook
@@ -1386,7 +1403,7 @@
             updateWebhookStatusDisplay() {
                 const webhookStatus = document.getElementById('webhookStatus');
                 if (this.webhookUrl) {
-                    webhookStatus.innerHTML = '<div class="badge badge-success">✓ Webhook N8N configuré (CLEAN)</div>';
+                    webhookStatus.innerHTML = '<div class="badge badge-success">✓ Webhook N8N configuré (FIXED)</div>';
                 } else {
                     webhookStatus.innerHTML = '<div class="badge badge-warning">⚠ Aucun webhook N8N configuré</div>';
                 }
@@ -1395,7 +1412,7 @@
             updateWebhookStatusBadge() {
                 const webhookStatusBadge = document.getElementById('webhookStatusBadge');
                 if (this.webhookUrl) {
-                    webhookStatusBadge.textContent = 'N8N CLEAN configuré';
+                    webhookStatusBadge.textContent = 'N8N FIXED configuré';
                     webhookStatusBadge.className = 'webhook-status configured';
                 } else {
                     webhookStatusBadge.textContent = 'Webhook non configuré';
@@ -1459,9 +1476,9 @@
                 
                 let helpMessage = '';
                 if (mode === 'dev') {
-                    helpMessage = '🛠️ <strong>Mode Développement CLEAN activé</strong><br><br>Optimisé pour N8N avec documentId automatique (' + this.documentId + ').';
+                    helpMessage = '🛠️ <strong>Mode Développement FIXED activé</strong><br><br>Optimisé pour N8N avec gestion JSON robuste (' + this.documentId + ').';
                 } else {
-                    helpMessage = '📊 <strong>Mode Analyste CLEAN activé</strong><br><br>Analyse de données via N8N optimisée.';
+                    helpMessage = '📊 <strong>Mode Analyste FIXED activé</strong><br><br>Analyse de données via N8N avec fallback automatique.';
                 }
                 
                 this.addAIMessage(helpMessage, 'ai');
@@ -1472,7 +1489,7 @@
             // ================================
 
             async executeAIActions(actions) {
-                this.addAIMessage('⚙️ Exécution des actions Albert via N8N CLEAN...', 'ai');
+                this.addAIMessage('⚙️ Exécution des actions Albert via N8N FIXED...', 'ai');
                 
                 for (const action of actions) {
                     try {
@@ -1498,7 +1515,7 @@
                     }
                 }
                 
-                this.addAIMessage('✅ Actions terminées via N8N CLEAN !', 'ai');
+                this.addAIMessage('✅ Actions terminées via N8N FIXED !', 'ai');
             }
 
             async executeCreateTables(tables) {
@@ -1552,7 +1569,7 @@
                     this.setupNavigation();
                     await this.loadDefaultComponent();
                     
-                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants N8N CLEAN', 'ai');
+                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants N8N FIXED', 'ai');
                 }
             }
 
@@ -1672,7 +1689,7 @@
                 container.innerHTML = '<div class="error-container">' +
                     '<h3>🚨 Erreur Composant: ' + componentId + '</h3>' +
                     '<p><strong>Message:</strong> ' + error.message + '</p>' +
-                    '<p><strong>Version:</strong> CLEAN</p>' +
+                    '<p><strong>Version:</strong> FIXED</p>' +
                 '</div>';
             }
 
@@ -1680,12 +1697,12 @@
                 const defaultComponents = [
                     {
                         id: 'dashboard',
-                        name: '📊 Dashboard N8N CLEAN',
+                        name: '📊 Dashboard N8N FIXED',
                         type: 'functional',
                         code: 'const Component = () => {' +
                             'return React.createElement("div", { style: { padding: "40px", textAlign: "center" } },' +
-                                'React.createElement("h1", { style: { fontSize: "2.5rem", marginBottom: "20px" } }, "🚀 Grist AI CLEAN"),' +
-                                'React.createElement("p", { style: { fontSize: "1.2rem", color: "#6b7280" } }, "Version optimisée sans simulation - Prêt pour N8N")' +
+                                'React.createElement("h1", { style: { fontSize: "2.5rem", marginBottom: "20px" } }, "🚀 Grist AI FIXED"),' +
+                                'React.createElement("p", { style: { fontSize: "1.2rem", color: "#6b7280" } }, "Version avec gestion robuste JSON - Prêt pour N8N")' +
                             ');' +
                         '};'
                     }
@@ -1761,7 +1778,7 @@
                 main.innerHTML = '<div class="error-container">' +
                     '<h3>🚨 ' + title + '</h3>' +
                     '<p>' + message + '</p>' +
-                    '<p><strong>Version:</strong> CLEAN</p>' +
+                    '<p><strong>Version:</strong> FIXED</p>' +
                     '<p><strong>DocumentId:</strong> ' + this.documentId + '</p>' +
                 '</div>';
             }
@@ -1945,7 +1962,7 @@
                     
                     const main = document.getElementById('main-content');
                     main.innerHTML = '<div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">' +
-                        '<h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d\'Initialisation N8N CLEAN</h2>' +
+                        '<h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d\'Initialisation N8N FIXED</h2>' +
                         '<p style="color: #6b7280; margin-bottom: 20px;">Le système N8N n\'a pas pu s\'initialiser correctement.</p>' +
                         '<button onclick="location.reload()" style="background: #3b82f6; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px;">🔄 Recharger la page</button>' +
                     '</div>';
@@ -1966,7 +1983,7 @@
                 });
                 
             } catch (error) {
-                console.error('Erreur lors de la création du dashboard N8N CLEAN:', error);
+                console.error('Erreur lors de la création du dashboard N8N FIXED:', error);
             }
         });
     </script>
