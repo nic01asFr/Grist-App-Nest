@@ -21,7 +21,7 @@ https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Optimal
 ## 🎮 **Test avec Document Démo**
 
 ### **Document Prêt à Tester :**
-👉 **[https://docs.getgrist.com/doc/eNzYJgDJvkQYdTozF8BCoB](https://docs.getgrist.com/doc/eNzYJgDJvkQYdTozF8BCoB)**
+👉 **[https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4](https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4)**
 
 **Contenu :**
 - ✅ Table `Templates` avec composants React
