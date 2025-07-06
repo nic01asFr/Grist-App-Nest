@@ -30,7 +30,7 @@ Un système révolutionnaire qui permet de créer des **applications complètes*
    - Accès : "Read table"
 
 ### **Étape 2 : Tester avec le Document Démo**
-👉 **[Document de démonstration prêt](https://docs.getgrist.com/doc/5AL4y3QrB12BJdf48m7sr4)** avec composants d'exemple
+👉 **[Document de démonstration prêt](https://grist.numerique.gouv.fr/doc/5AL4y3QrB12BJdf48m7sr4)** avec composants d'exemple
 
 ### **Étape 3 : Constater le Résultat**
 - ✅ Interface React moderne
