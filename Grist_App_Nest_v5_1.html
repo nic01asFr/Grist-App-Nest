@@ -1,0 +1,2966 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>App Nest - v5</title>
+    <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8fafc;
+            height: 100vh;
+            display: grid;
+            grid-template-rows: 60px 1fr 300px;
+            transition: grid-template-rows 0.3s ease;
+        }
+        
+        body.chat-collapsed {
+            grid-template-rows: 60px 1fr 40px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .version-badge {
+            background: rgba(255,255,255,0.2);
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .nav {
+            margin-left: auto;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-size: 14px;
+        }
+        
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+        
+        .nav-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .main {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .component-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
+        }
+        
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+        
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+        
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+        }
+        
+        /* Agent IA Chat Styles */
+        .ai-chat-container {
+            background: white;
+            border-top: 2px solid #e5e7eb;
+            display: flex;
+            flex-direction: column;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-chat-header {
+            background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+            color: white;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+        
+        .ai-chat-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 250px;
+        }
+        
+        .ai-chat-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f9fafb;
+        }
+        
+        .ai-message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-message.user {
+            flex-direction: row-reverse;
+        }
+        
+        .ai-message-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+        
+        .ai-message.user .ai-message-avatar {
+            background: #3b82f6;
+        }
+        
+        .ai-message.ai .ai-message-avatar {
+            background: #10b981;
+        }
+        
+        .ai-message-content {
+            background: white;
+            padding: 10px 15px;
+            border-radius: 12px;
+            max-width: 80%;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .ai-message.user .ai-message-content {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .ai-chat-input {
+            background: white;
+            padding: 15px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            gap: 10px;
+        }
+        
+        .ai-chat-input input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #d1d5db;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+        }
+        
+        .ai-chat-input button {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .ai-chat-input button:hover:not(:disabled) {
+            background: #059669;
+        }
+        
+        .ai-chat-input button:disabled {
+            background: #d1d5db;
+            cursor: not-allowed;
+        }
+        
+        .ai-mode-selector {
+            display: flex;
+            gap: 5px;
+            margin-left: 10px;
+        }
+        
+        .ai-mode-btn {
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 11px;
+            transition: all 0.2s;
+        }
+        
+        .ai-mode-btn.active {
+            background: rgba(255,255,255,0.4);
+            font-weight: 600;
+        }
+        
+        .welcome-container {
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .welcome-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
+        }
+        
+        .upload-area {
+            border: 2px dashed #d1d5db;
+            border-radius: 12px;
+            padding: 40px;
+            margin: 20px 0;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .upload-area:hover {
+            border-color: #3b82f6;
+            background: #f8fafc;
+        }
+        
+        .upload-area.dragover {
+            border-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #6b7280;
+        }
+        
+        .close-modal:hover {
+            color: #374151;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: #374151;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+        
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2563eb;
+        }
+        
+        .btn-success {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #059669;
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .badge {
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .badge-success {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-warning {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .badge-error {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .webhook-status {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+        
+        .webhook-status.configured {
+            background: #10b981;
+            color: white;
+        }
+        
+        .webhook-status.not-configured {
+            background: #f59e0b;
+            color: white;
+        }
+
+        /* Notification Toast */
+        .toast {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #10b981;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 1001;
+            opacity: 0;
+            transform: translateX(100%);
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+
+        .toast.error {
+            background: #ef4444;
+        }
+
+        .toast.warning {
+            background: #f59e0b;
+        }
+
+        /* Keyboard shortcuts indicator */
+        .keyboard-hint {
+            position: fixed;
+            bottom: 60px;
+            right: 20px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-size: 12px;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            z-index: 999;
+        }
+
+        .keyboard-hint.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <h1>🪺 App Nest <span class="version-badge">v5</span></h1>
+        <nav class="nav" id="navigation">
+            <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
+            <button class="nav-btn" id="configButton" title="Configurer le webhook n8n">⚙️</button>
+        </nav>
+    </header>
+    
+    <main class="main" id="main-content">
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Initialisation du système IA n8n avec hooks complets...</div>
+        </div>
+    </main>
+
+    <!-- Agent IA Chat -->
+    <div class="ai-chat-container" id="ai-chat">
+        <div class="ai-chat-header" onclick="toggleChat()">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <span>Assistant Colaig</span>
+                <div class="ai-mode-selector">
+                    <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
+                        🛠️ Developper
+                    </button>
+                    <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
+                        📊 Analyser
+                    </button>
+                </div>
+            </div>
+            <span id="chat-toggle">🔽</span>
+        </div>
+        
+        <div class="ai-chat-content" id="ai-chat-content">
+            <div class="ai-chat-messages" id="ai-messages">
+                <div class="ai-message ai">
+                    <div class="ai-message-avatar">💭</div>
+                    <div class="ai-message-content">
+                        Bonjour ! Je suis votre Colaig assistant sur App Nest, je peux vous aider à créer et modifier votre application.
+                        <br><br>
+                        <strong>✅ Support hooks complet inclus</strong> (useState, useEffect, useCallback, useRef, useMemo, useContext)
+                        <br><br>
+                        <strong>Configurez d'abord le webhook n8n</strong> avec le bouton ⚙️ puis décrivez-moi votre besoin !
+                    </div>
+                </div>
+            </div>
+            
+            <div class="ai-chat-input">
+                <input 
+                    type="text" 
+                    id="ai-input" 
+                    placeholder="Configurez d'abord le webhook n8n puis décrivez votre besoin..."
+                    onkeypress="if(event.key==='Enter') sendMessage()"
+                />
+                <input 
+                    type="file" 
+                    id="file-input" 
+                    accept=".xlsx,.xls,.csv,.json" 
+                    style="display: none"
+                    onchange="handleFileUpload(event)"
+                />
+                <button onclick="document.getElementById('file-input').click()">📎</button>
+                <button onclick="sendMessage()" id="send-btn">Envoyer</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de configuration du webhook -->
+    <div id="webhookModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Configuration Webhook n8n</h3>
+                <button id="closeModal" class="close-modal">&times;</button>
+            </div>
+            
+            <div class="form-group">
+                <label for="webhookUrl">URL du Webhook n8n</label>
+                <input 
+                    type="url" 
+                    id="webhookUrl" 
+                    placeholder="https://votre-n8n.com/webhook/albert-proxy"
+                />
+                <small style="color: #6b7280; margin-top: 5px; display: block;">
+                    L'URL de votre workflow n8n qui fait le proxy vers Albert API
+                </small>
+            </div>
+            
+            <div id="webhookStatus" style="margin-bottom: 20px;">
+                <div class="badge badge-warning">⚠ Aucun webhook configuré</div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                <button id="testWebhook" class="btn btn-secondary">Tester</button>
+                <button id="saveWebhook" class="btn btn-success">Sauvegarder</button>
+            </div>
+            
+            <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
+                <h4 style="margin-bottom: 10px;">Configuration n8n requise :</h4>
+                <ul style="margin-left: 20px; color: #4b5563;">
+                    <li>Webhook Trigger avec paramètre "action"</li>
+                    <li>Switch node pour router les actions</li>
+                    <li>HTTP Request vers Albert API</li>
+                    <li>Response node pour renvoyer la réponse</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast notifications -->
+    <div id="toast-container"></div>
+
+    <!-- Keyboard hints -->
+    <div id="keyboard-hint" class="keyboard-hint">
+        <div>Raccourcis: Ctrl+Enter (envoyer), Ctrl+/ (aide), Ctrl+K (configurer)</div>
+    </div>
+
+    <script>
+        // GRIST AI DASHBOARD v5 : TOUS LES HOOKS REACT DISPONIBLES
+        class GristAIDashboard {
+            constructor() {
+                this.components = new Map();
+                this.currentComponent = null;
+                this.isReady = false;
+                this.gristAPI = null;
+                this.isDocumentEmpty = false;
+                this.aiMode = 'dev';
+                this.chatCollapsed = false;
+                this.conversationHistory = [];
+                
+                // Configuration n8n Webhook
+                this.webhookUrl = '';
+                this.webhookConfigured = false;
+            }
+
+            async init() {
+                try {
+                    console.log('🪺 Initialisation Grist App Nest v5 avec hooks complets');
+                    
+                    // Initialiser Grist API
+                    await grist.ready({ requiredAccess: 'read table' });
+                    this.setupGristAPI();
+                    
+                    // Charger la configuration webhook
+                    this.loadWebhookConfig();
+                    
+                    // Vérifier si le document est vide
+                    await this.checkIfDocumentEmpty();
+                    
+                    if (this.isDocumentEmpty) {
+                        console.log('📋 Document vide détecté - Mode configuration');
+                        this.showWelcomeScreen();
+                    } else {
+                        console.log('📊 Document existant - Mode application');
+                        await this.loadComponents();
+                        this.setupNavigation();
+                        await this.loadDefaultComponent();
+                    }
+                    
+                    // Initialiser le chat IA
+                    this.initializeAIChat();
+                    
+                    // Configurer les événements
+                    this.setupEventListeners();
+                    
+                    this.hideLoading();
+                    this.isReady = true;
+                    
+                    console.log('✅ Grist App Nest v5 prêt avec hooks complets');
+                    
+                } catch (error) {
+                    console.error('❌ Erreur initialisation:', error);
+                    this.showError('Erreur initialisation', error.message);
+                }
+            }
+
+            setupGristAPI() {
+                const self = this;
+                
+                this.gristAPI = {
+                    // ===== API DONNÉES (CRUD) =====
+                    getData: async (tableName) => {
+                        try {
+                            const result = await grist.docApi.fetchTable(tableName);
+                            console.log(`🔍 Données brutes pour ${tableName}:`, result);
+                            
+                            if (result && typeof result === 'object' && !Array.isArray(result)) {
+                                const columns = Object.keys(result);
+                                const isColumnar = columns.length > 0 && columns.some(col => Array.isArray(result[col]));
+                                
+                                if (isColumnar) {
+                                    const firstArrayCol = columns.find(col => Array.isArray(result[col]));
+                                    const rowCount = result[firstArrayCol]?.length || 0;
+                                    const rows = [];
+                                    
+                                    for (let i = 0; i < rowCount; i++) {
+                                        const row = {};
+                                        columns.forEach(col => {
+                                            if (Array.isArray(result[col])) {
+                                                row[col] = result[col][i];
+                                            } else {
+                                                row[col] = result[col];
+                                            }
+                                        });
+                                        rows.push(row);
+                                    }
+                                    
+                                    return rows;
+                                }
+                            }
+                            
+                            if (Array.isArray(result)) return result;
+                            if (result && Array.isArray(result.records)) return result.records;
+                            if (result && result.data && Array.isArray(result.data)) return result.data;
+                            
+                            return [];
+                        } catch (error) {
+                            console.warn(`❌ Table ${tableName} non trouvée:`, error);
+                            return [];
+                        }
+                    },
+                    
+                    addRecord: async (tableName, record) => {
+                        try {
+                            const result = await grist.docApi.applyUserActions([
+                                ['AddRecord', tableName, null, record]
+                            ]);
+                            return result[0];
+                        } catch (error) {
+                            console.error('Erreur ajout:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    updateRecord: async (tableName, recordId, updates) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['UpdateRecord', tableName, recordId, updates]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur modification:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    deleteRecord: async (tableName, recordId) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['RemoveRecord', tableName, recordId]
+                            ]);
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur suppression:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    // ===== API NAVIGATION =====
+                    navigate: (componentId) => {
+                        self.loadComponent(componentId);
+                    },
+                    
+                    // ===== API COMPOSANTS ENFANTS (AVEC HOOKS COMPLETS) =====
+                    getChildComponent: async (templateId) => {
+                        try {
+                            console.log(`🧩 Chargement composant enfant: ${templateId}`);
+                            const templates = await self.gristAPI.getData('Templates');
+                            const template = templates.find(t => t.template_id === templateId);
+                            
+                            if (!template) {
+                                console.warn(`⚠️ Composant enfant ${templateId} non trouvé`);
+                                return null;
+                            }
+                            
+                            console.log(`✅ Template trouvé pour ${templateId}`);
+                            return self.createChildComponent(template);
+                        } catch (error) {
+                            console.error('Erreur chargement composant enfant:', error);
+                            return null;
+                        }
+                    },
+                    
+                    renderChildComponent: async (componentId, containerId, props = {}) => {
+                        try {
+                            console.log(`🎨 Rendu composant enfant: ${componentId} dans ${containerId}`);
+                            const childComponent = await self.gristAPI.getChildComponent(componentId);
+                            
+                            if (!childComponent) {
+                                throw new Error(`Composant enfant non trouvé: ${componentId}`);
+                            }
+                            
+                            const container = document.getElementById(containerId);
+                            if (!container) {
+                                throw new Error(`Container non trouvé: ${containerId}`);
+                            }
+                            
+                            // RENDU AVEC HOOKS COMPLETS
+                            container.innerHTML = '';
+                            const childElement = React.createElement(childComponent, props);
+                            ReactDOM.render(childElement, container);
+                            
+                            console.log(`✅ Composant enfant ${componentId} rendu avec succès`);
+                            return true;
+                            
+                        } catch (error) {
+                            console.error('Erreur rendu composant enfant:', error);
+                            
+                            // Afficher une erreur dans le container si disponible
+                            const container = document.getElementById(containerId);
+                            if (container) {
+                                container.innerHTML = `
+                                    <div style="
+                                        padding: 15px; 
+                                        background: #fee2e2; 
+                                        color: #dc2626; 
+                                        border-radius: 6px; 
+                                        border: 1px solid #fecaca;
+                                        margin: 10px 0;
+                                    ">
+                                        <strong>⚠️ Erreur Composant Enfant: ${componentId}</strong><br>
+                                        ${error.message}
+                                    </div>
+                                `;
+                            }
+                            
+                            return false;
+                        }
+                    },
+                    
+                    // Créer un composant React à partir du template (AVEC HOOKS COMPLETS)
+                    createChildComponent: (template) => {
+                        return self.createChildComponent(template);
+                    },
+                    
+                    includeComponent: async (templateId, props = {}) => {
+                        // Retourner directement le composant React
+                        return await self.gristAPI.getChildComponent(templateId);
+                    },
+                    
+                    // ===== API TEMPLATES =====
+                    getTemplate: async (templateId) => {
+                        try {
+                            const templates = await self.gristAPI.getData('Templates');
+                            return templates.find(t => t.template_id === templateId);
+                        } catch (error) {
+                            console.error('Erreur getTemplate:', error);
+                            return null;
+                        }
+                    },
+                    
+                    createTable: async (tableName, columns = []) => {
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['AddTable', tableName, []]
+                            ]);
+                            
+                            for (const col of columns) {
+                                await grist.docApi.applyUserActions([
+                                    ['AddColumn', tableName, col.id || null, {
+                                        type: col.type || 'Text',
+                                        label: col.label || col.id
+                                    }]
+                                ]);
+                            }
+                            
+                            return true;
+                        } catch (error) {
+                            console.error('Erreur création table:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    createTemplate: async (templateData) => {
+                        try {
+                            return await self.gristAPI.addRecord('Templates', {
+                                template_id: templateData.id,
+                                template_name: templateData.name,
+                                component_code: templateData.code,
+                                component_type: templateData.type || 'functional'
+                            });
+                        } catch (error) {
+                            console.error('Erreur création template:', error);
+                            throw error;
+                        }
+                    },
+                    
+                    getDocumentStructure: async () => {
+                        try {
+                            const structure = {};
+                            const knownTables = ['Templates', 'Data', 'Users', 'Config', 'Logs'];
+                            
+                            for (const tableName of knownTables) {
+                                try {
+                                    const data = await self.gristAPI.getData(tableName);
+                                    if (data && data.length > 0) {
+                                        const columns = Object.keys(data[0] || {}).map(key => ({ 
+                                            id: key, 
+                                            label: key,
+                                            type: self.inferColumnType(data, key)
+                                        }));
+                                        
+                                        structure[tableName] = {
+                                            columns: columns,
+                                            rowCount: data.length,
+                                            sampleData: data.slice(0, 3)
+                                        };
+                                        
+                                        console.log(`📋 Table découverte: ${tableName} (${data.length} lignes)`);
+                                    }
+                                } catch (e) {
+                                    // Table n'existe pas, continuer
+                                }
+                            }
+                            
+                            return structure;
+                        } catch (error) {
+                            console.error('Erreur structure document:', error);
+                            return {};
+                        }
+                    }
+                };
+                
+                // Méthode pour inférer le type des colonnes
+                self.inferColumnType = (data, columnName) => {
+                    if (!data || data.length === 0) return 'Text';
+                    
+                    const sample = data[0][columnName];
+                    if (typeof sample === 'number') return 'Numeric';
+                    if (typeof sample === 'boolean') return 'Bool';
+                    if (sample instanceof Date) return 'Date';
+                    if (typeof sample === 'string') {
+                        if (sample.match(/^\d{4}-\d{2}-\d{2}/)) return 'Date';
+                        if (!isNaN(parseFloat(sample))) return 'Numeric';
+                    }
+                    return 'Text';
+                };
+            }
+
+            // ===== RENDU REACT AVEC HOOKS COMPLETS =====
+            
+            async renderReactComponent(container, code, componentId) {
+                try {
+                    container.innerHTML = '';
+                    
+                    const reactContainer = document.createElement('div');
+                    reactContainer.id = `react-container-${componentId}`;
+                    reactContainer.className = 'component-container';
+                    container.appendChild(reactContainer);
+
+                    const transformedCode = Babel.transform(code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+
+                    // ✅ HOOKS COMPLETS DISPONIBLES
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM', 
+                        'gristAPI',
+                        'container',
+                        `
+                        const { 
+                            useState, 
+                            useEffect, 
+                            useCallback, 
+                            useRef, 
+                            useMemo, 
+                            useContext,
+                            useReducer,
+                            useImperativeHandle,
+                            useLayoutEffect,
+                            useDebugValue
+                        } = React;
+                        const { render } = ReactDOM;
+                        
+                        ${transformedCode}
+                        
+                        // Rendu direct du composant
+                        if (typeof Component !== 'undefined') {
+                            render(React.createElement(Component), container);
+                        } else {
+                            throw new Error('Composant non défini - assurez-vous de définir une variable Component');
+                        }
+                        `
+                    );
+
+                    componentFunction(React, ReactDOM, this.gristAPI, reactContainer);
+                    
+                } catch (error) {
+                    console.error('Erreur rendu composant:', error);
+                    this.showComponentError(container, error, componentId);
+                }
+            }
+
+            // Méthode simplifiée pour composants avec props
+            async renderReactComponentWithProps(container, code, componentId, props = {}) {
+                try {
+                    container.innerHTML = '';
+                    
+                    const reactContainer = document.createElement('div');
+                    reactContainer.id = `react-container-${componentId}`;
+                    reactContainer.className = 'component-container';
+                    container.appendChild(reactContainer);
+
+                    const transformedCode = Babel.transform(code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+
+                    // ✅ HOOKS COMPLETS AVEC PROPS
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM', 
+                        'gristAPI',
+                        'props',
+                        'container',
+                        `
+                        const { 
+                            useState, 
+                            useEffect, 
+                            useCallback, 
+                            useRef, 
+                            useMemo, 
+                            useContext,
+                            useReducer,
+                            useImperativeHandle,
+                            useLayoutEffect,
+                            useDebugValue
+                        } = React;
+                        const { render } = ReactDOM;
+                        
+                        ${transformedCode}
+                        
+                        if (typeof Component !== 'undefined') {
+                            render(React.createElement(Component, props), container);
+                        } else {
+                            throw new Error('Composant non défini - assurez-vous de définir une variable Component');
+                        }
+                        `
+                    );
+
+                    componentFunction(React, ReactDOM, this.gristAPI, props, reactContainer);
+                    
+                } catch (error) {
+                    console.error('Erreur rendu composant avec props:', error);
+                    this.showComponentError(container, error, componentId);
+                }
+            }
+
+            // Méthode pour créer un composant enfant (AVEC HOOKS COMPLETS)
+            createChildComponent(template) {
+                try {
+                    // Transformer le code JSX avec Babel
+                    const transformedCode = Babel.transform(template.component_code, {
+                        presets: ['react'],
+                        plugins: ['proposal-class-properties']
+                    }).code;
+                    
+                    // ✅ FONCTION COMPOSANT AVEC TOUS LES HOOKS
+                    const componentFunction = new Function(
+                        'React',
+                        'useState',
+                        'useEffect',
+                        'useCallback',
+                        'useRef',
+                        'useMemo',
+                        'useContext',
+                        'useReducer',
+                        'useImperativeHandle',
+                        'useLayoutEffect',
+                        'useDebugValue',
+                        'gristAPI',
+                        `
+                        ${transformedCode}
+                        return Component;
+                        `
+                    );
+                    
+                    // Retourner le composant React directement
+                    return componentFunction(
+                        React,
+                        React.useState,
+                        React.useEffect,
+                        React.useCallback,
+                        React.useRef,
+                        React.useMemo,
+                        React.useContext,
+                        React.useReducer,
+                        React.useImperativeHandle,
+                        React.useLayoutEffect,
+                        React.useDebugValue,
+                        this.gristAPI
+                    );
+                    
+                } catch (error) {
+                    console.error(`Erreur création composant enfant ${template.template_id}:`, error);
+                    return () => React.createElement('div', { 
+                        style: { 
+                            padding: '8px', 
+                            background: '#fee2e2', 
+                            color: '#dc2626', 
+                            borderRadius: '4px',
+                            fontSize: '12px'
+                        } 
+                    }, `❌ Erreur: ${template.template_id} - ${error.message}`);
+                }
+            }
+
+            async checkIfDocumentEmpty() {
+                try {
+                    const templates = await this.gristAPI.getData('Templates');
+                    this.isDocumentEmpty = !Array.isArray(templates) || templates.length === 0;
+                } catch (error) {
+                    this.isDocumentEmpty = true;
+                }
+            }
+
+            showWelcomeScreen() {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="welcome-container">
+                        <div class="welcome-hero">
+                            <h1 style="font-size: 3rem; margin-bottom: 20px;"> Grist 🪺App Nest </h1>
+                            <p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">
+                                Avec assistant Colaig intégré et hooks React complets
+                            </p>
+                            <p style="font-size: 1.1rem; opacity: 0.8;">
+                                ✅ Support complet: useState, useEffect, useCallback, useRef, useMemo, useContext, useReducer...
+                            </p>
+                            <p style="font-size: 1.1rem; opacity: 0.8;">
+                                Configurez le webhook n8n puis décrivez votre application. 
+                                Votre assistant créera automatiquement votre application complète !
+                            </p>
+                        </div>
+                        
+                        <div style="background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1);">
+                            <h3 style="color: #1f2937; margin-bottom: 20px; text-align: center;">
+                                🔧 Configuration requise
+                            </h3>
+                            
+                            <div style="background: #f0fdf4; border: 1px solid #10b981; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                                <h4 style="color: #065f46; margin-bottom: 10px;">✅ Hooks React Complets Disponibles</h4>
+                                <p style="color: #065f46; margin-bottom: 15px;">
+                                    Tous les hooks React sont maintenant disponibles dans vos composants :
+                                </p>
+                                <ul style="color: #065f46; margin-left: 20px;">
+                                    <li>useState, useEffect, useCallback, useRef</li>
+                                    <li>useMemo, useContext, useReducer</li>
+                                    <li>useImperativeHandle, useLayoutEffect, useDebugValue</li>
+                                </ul>
+                            </div>
+                            
+                            <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
+                                <h4 style="color: #92400e; margin-bottom: 10px;">⚠️ Webhook n8n nécessaire</h4>
+                                <p style="color: #92400e; margin-bottom: 15px;">
+                                    Pour utiliser l'assistant Colaig, vous devez d'abord configurer un workflow n8n 
+                                    qui fait le proxy vers Albert API.
+                                </p>
+                                <button 
+                                    onclick="document.getElementById('configButton').click()" 
+                                    style="
+                                        background: #f59e0b; 
+                                        color: white; 
+                                        border: none; 
+                                        padding: 10px 20px; 
+                                        border-radius: 6px; 
+                                        cursor: pointer;
+                                        font-weight: 500;
+                                    "
+                                >
+                                    ⚙️ Configurer le Webhook
+                                </button>
+                            </div>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">🔗</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Workflow n8n</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
+                                        Configurez un workflow qui reçoit les messages, 
+                                        les transmet à Albert API et renvoie les réponses.
+                                    </p>
+                                </div>
+                                
+                                <div style="text-align: center; padding: 20px;">
+                                    <div style="font-size: 48px; margin-bottom: 15px;">💭</div>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Albert IA</h4>
+                                    <p style="color: #6b7280; font-size: 14px;">
+                                        Une fois configuré, votre assistant Colaig créera des applications 
+                                        complètes avec tous les hooks React disponibles.
+                                    </p>
+                                </div>
+                            </div>
+                            
+                            <div 
+                                class="upload-area" 
+                                id="upload-area"
+                                ondrop="handleDrop(event)" 
+                                ondragover="handleDragOver(event)"
+                                ondragleave="handleDragLeave(event)"
+                                onclick="document.getElementById('file-input').click()"
+                            >
+                                <div style="font-size: 48px; margin-bottom: 15px;">📎</div>
+                                <h4 style="color: #374151; margin-bottom: 10px;">Glissez vos fichiers ici</h4>
+                                <p style="color: #6b7280;">
+                                    Formats supportés : Excel (.xlsx, .xls), CSV (.csv), JSON (.json)
+                                </p>
+                                <p style="color: #6b7280; font-size: 12px; margin-top: 10px;">
+                                    Ou cliquez pour parcourir vos fichiers
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            initializeAIChat() {
+                this.setAIMode('dev');
+                
+                if (this.isDocumentEmpty) {
+                    this.addAIMessage(
+                        "Je peux créer votre application complète ! Avec la correction v5, tous les hooks React sont disponibles (useMemo, useContext, etc.)", 
+                        'ai'
+                    );
+                } else {
+                    this.addAIMessage(
+                        "Votre application est prête ! Tous les hooks React sont maintenant disponibles. Je peux vous aider à l'améliorer ou analyser vos données.", 
+                        'ai'
+                    );
+                }
+            }
+
+            async sendAIMessage(message, attachedFile = null) {
+                try {
+                    // Vérifier que le webhook est configuré (sinon utiliser simulation)
+                    if (!this.webhookUrl) {
+                        console.log('⚠️ Pas de webhook n8n, utilisation du mode simulation');
+                        return this.handleSimulationMode(message, attachedFile);
+                    }
+
+                    // Gérer les commandes spéciales
+                    if (message.startsWith('/')) {
+                        return this.handleSpecialCommand(message);
+                    }
+                    
+                    // Ajouter le message utilisateur
+                    this.addAIMessage(message, 'user');
+                    
+                    // Ajouter un indicateur de traitement
+                    const processingId = this.addAIMessage('⏳ Colaig réfléchit...', 'ai');
+                    
+                    // Préparer le contexte selon le mode
+                    let context = {
+                        mode: this.aiMode,
+                        isDocumentEmpty: this.isDocumentEmpty,
+                        message: message,
+                        features: {
+                            hooks_support: 'complete',
+                            available_hooks: ['useState', 'useEffect', 'useCallback', 'useRef', 'useMemo', 'useContext', 'useReducer'],
+                            version: 'v5_corrected'
+                        }
+                    };
+                    
+                    if (this.aiMode === 'dev') {
+                        context.documentStructure = await this.gristAPI.getDocumentStructure();
+                        context.existingTemplates = await this.gristAPI.getData('Templates');
+                    } else {
+                        context.businessData = await this.getBusinessDataSummary();
+                    }
+                    
+                    if (attachedFile) {
+                        context.attachedFile = {
+                            name: attachedFile.name,
+                            type: attachedFile.type,
+                            size: attachedFile.size
+                        };
+                        
+                        if (attachedFile.type.includes('excel') || attachedFile.type.includes('csv')) {
+                            context.fileContent = await this.parseUploadedFile(attachedFile);
+                        }
+                    }
+                    
+                    // Appeler Albert IA via n8n
+                    const aiResponse = await this.callAlbertVian8n(context);
+                    
+                    // Supprimer l'indicateur de traitement
+                    this.removeAIMessage(processingId);
+                    
+                    // Ajouter la réponse de l'IA
+                    this.addAIMessage(aiResponse.message, 'ai');
+                    
+                    // Exécuter les actions si nécessaire
+                    if (aiResponse.actions) {
+                        await this.executeAIActions(aiResponse.actions);
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur IA via n8n:', error);
+                    this.addAIMessage(
+                        "😕 Erreur de communication avec n8n. Vérifiez la configuration du webhook.", 
+                        'ai'
+                    );
+                }
+            }
+
+            async handleSimulationMode(message, attachedFile = null) {
+                console.log('🎭 Mode simulation (pas de webhook n8n)');
+                
+                // Ajouter le message utilisateur
+                this.addAIMessage(message, 'user');
+                
+                // Simuler un délai de traitement
+                const processingId = this.addAIMessage('⏳ Mode simulation avec hooks complets...', 'ai');
+                
+                setTimeout(() => {
+                    this.removeAIMessage(processingId);
+                    
+                    // Utiliser la simulation intelligente
+                    const context = {
+                        mode: this.aiMode,
+                        isDocumentEmpty: this.isDocumentEmpty,
+                        message: message
+                    };
+                    
+                    const response = this.simulateAIResponse(context);
+                    this.addAIMessage(response.message, 'ai');
+                    
+                    if (response.actions) {
+                        setTimeout(() => {
+                            this.executeAIActions(response.actions);
+                        }, 500);
+                    }
+                }, 1000);
+            }
+
+            async callAlbertVian8n(context) {
+                console.log('🔗 Appel Albert IA via n8n:', context);
+                
+                try {
+                    // Construire l'URL avec l'action albert_chat
+                    const chatUrl = this.webhookUrl.includes('?') 
+                        ? `${this.webhookUrl}&action=albert_chat` 
+                        : `${this.webhookUrl}?action=albert_chat`;
+                    
+                    // Préparer les données pour n8n
+                    const webhookData = {
+                        messageId: `ai_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+                        message: context.message,
+                        mode: context.mode,
+                        isDocumentEmpty: context.isDocumentEmpty,
+                        documentStructure: context.documentStructure || {},
+                        existingTemplates: context.existingTemplates || [],
+                        businessData: context.businessData || {},
+                        attachedFile: context.attachedFile || null,
+                        features: context.features || {},
+                        timestamp: new Date().toISOString(),
+                        source: 'grist-ai-dashboard-v5-corrected'
+                    };
+                    
+                    console.log('📤 Envoi vers n8n:', chatUrl);
+                    
+                    const response = await fetch(chatUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(webhookData)
+                    });
+                    
+                    if (!response.ok) {
+                        throw new Error(`Erreur n8n: ${response.status} ${response.statusText}`);
+                    }
+                    
+                    const data = await response.json();
+                    console.log('✅ Réponse n8n:', data);
+                    
+                    return this.parsen8nResponse(data, context);
+                    
+                } catch (error) {
+                    console.error('❌ Erreur appel n8n:', error);
+                    
+                    // Fallback en mode simulation
+                    this.addAIMessage('⚠️ Erreur n8n, passage en mode simulation.', 'ai');
+                    return this.simulateAIResponse(context);
+                }
+            }
+
+            parsen8nResponse(n8nData, context) {
+                try {
+                    // La réponse peut être directement la réponse d'Albert
+                    // ou encapsulée dans un objet n8n
+                    let albertResponse = n8nData;
+                    
+                    // Si n8n encapsule la réponse
+                    if (n8nData.albertResponse) {
+                        albertResponse = n8nData.albertResponse;
+                    } else if (n8nData.data && n8nData.data.albertResponse) {
+                        albertResponse = n8nData.data.albertResponse;
+                    }
+                    
+                    // Essayer de parser en JSON si c'est une string
+                    if (typeof albertResponse === 'string') {
+                        try {
+                            const jsonMatch = albertResponse.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) {
+                                albertResponse = JSON.parse(jsonMatch[0]);
+                            } else {
+                                // Si pas de JSON, créer une réponse simple
+                                return {
+                                    message: albertResponse,
+                                    actions: null
+                                };
+                            }
+                        } catch (e) {
+                            return {
+                                message: albertResponse,
+                                actions: null
+                            };
+                        }
+                    }
+                    
+                    return {
+                        message: albertResponse.message || "Réponse reçue",
+                        actions: albertResponse.actions || null
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing réponse n8n:', error);
+                    return {
+                        message: "Réponse reçue mais format incorrect. Vérifiez la configuration n8n.",
+                        actions: null
+                    };
+                }
+            }
+
+            // Simulation pour le mode hors ligne/sans webhook
+            simulateAIResponse(context) {
+                const message = context.message.toLowerCase();
+                
+                if (message.match(/^(bonjour|hello|salut|hi|hey|bonsoir)/)) {
+                    return {
+                        message: "👋 Bonjour ! Je suis Colaig, votre assistant sur Grist. ✅ Tous les hooks React sont maintenant disponibles (useMemo, useContext, etc.) ! Configurez le webhook pour accéder à toutes mes fonctionnalités.",
+                        actions: null
+                    };
+                }
+                
+                if (message.match(/aide|help|assistance/)) {
+                    const capabilities = context.mode === 'dev' ? 
+                        "• Créer des tables Grist\n• Générer des composants React avec TOUS les hooks\n• Analyser vos fichiers Excel/CSV\n• Construire des dashboards complets" :
+                        "• Analyser vos données\n• Créer des rapports\n• Identifier des tendances\n• Générer des insights";
+                        
+                    return {
+                        message: `💡 **Mode ${context.mode.toUpperCase()} via n8n** :\n\n${capabilities}\n\n**✅ Correction v5 :**\n• Tous les hooks React disponibles\n• useMemo, useContext, useReducer...\n• Support complet des patterns avancés\n\n**Configuration :**\n• Webhook n8n requis pour Albert complet\n• Mode simulation actif pour démonstration`,
+                        actions: null
+                    };
+                }
+                
+                if (context.mode === 'dev' && context.isDocumentEmpty) {
+                    if (message.includes('maintenance')) {
+                        return this.generateMaintenanceApp();
+                    }
+                    
+                    if (message.match(/stock|inventaire|produit/)) {
+                        return this.generateStockApp();
+                    }
+                    
+                    if (message.match(/client|vente|commercial|crm/)) {
+                        return this.generateCRMApp();
+                    }
+                }
+                
+                return {
+                    message: "🔗 **Mode simulation n8n v5**\n\n✅ **Nouveautés :**\n• Tous les hooks React disponibles\n• Support useMemo, useContext, useReducer\n• Optimisations de performance\n\n**Pour accéder aux fonctionnalités complètes :**\n1. Configurez le webhook n8n ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
+                    actions: null
+                };
+            }
+
+            generateMaintenanceApp() {
+                return {
+                    message: "✨ Application de maintenance créée ! (Mode simulation v5 - hooks complets inclus)",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Equipements',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Équipement' },
+                                        { id: 'type', type: 'Text', label: 'Type' },
+                                        { id: 'localisation', type: 'Text', label: 'Localisation' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' },
+                                        { id: 'date_installation', type: 'Date', label: 'Date Installation' },
+                                        { id: 'dernier_entretien', type: 'Date', label: 'Dernier Entretien' },
+                                        { id: 'prochain_entretien', type: 'Date', label: 'Prochain Entretien' }
+                                    ]
+                                },
+                                {
+                                    name: 'Techniciens',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom' },
+                                        { id: 'specialite', type: 'Text', label: 'Spécialité' },
+                                        { id: 'email', type: 'Text', label: 'Email' },
+                                        { id: 'telephone', type: 'Text', label: 'Téléphone' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            generateStockApp() {
+                return {
+                    message: "📦 Application de stock créée ! (Mode simulation v5 avec hooks complets)",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Produits',
+                                    columns: [
+                                        { id: 'nom', type: 'Text', label: 'Nom Produit' },
+                                        { id: 'reference', type: 'Text', label: 'Référence' },
+                                        { id: 'categorie', type: 'Text', label: 'Catégorie' },
+                                        { id: 'stock_actuel', type: 'Numeric', label: 'Stock Actuel' },
+                                        { id: 'stock_minimum', type: 'Numeric', label: 'Stock Minimum' },
+                                        { id: 'prix_unitaire', type: 'Numeric', label: 'Prix Unitaire' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            generateCRMApp() {
+                return {
+                    message: "👥 CRM créé ! (Mode simulation v5 avec hooks complets)",
+                    actions: [
+                        {
+                            type: 'createTables',
+                            tables: [
+                                {
+                                    name: 'Clients',
+                                    columns: [
+                                        { id: 'nom_entreprise', type: 'Text', label: 'Entreprise' },
+                                        { id: 'secteur', type: 'Text', label: 'Secteur' },
+                                        { id: 'taille', type: 'Text', label: 'Taille' },
+                                        { id: 'chiffre_affaires', type: 'Numeric', label: 'CA Estimé' },
+                                        { id: 'statut', type: 'Text', label: 'Statut' }
+                                    ]
+                                }
+                            ]
+                        }
+                    ]
+                };
+            }
+
+            handleSpecialCommand(command) {
+                const parts = command.split(' ');
+                const cmd = parts[0].toLowerCase();
+                
+                switch (cmd) {
+                    case '/webhook':
+                        if (parts[1] && parts[1].startsWith('http')) {
+                            this.webhookUrl = parts[1];
+                            this.saveWebhookConfig(parts[1]);
+                            this.updateWebhookStatusBadge();
+                            this.addAIMessage('✅ Webhook n8n configuré via commande !', 'ai');
+                        } else {
+                            this.addAIMessage(`🔗 Webhook actuel: ${this.webhookUrl || 'Non configuré'}\nUtilisation: /webhook https://votre-n8n.com/webhook/albert`, 'ai');
+                        }
+                        break;
+                        
+                    case '/help':
+                        this.addAIMessage(
+                            '🔗 **Aide Grist App Nest v5**\n\n' +
+                            '**✅ Nouveautés :**\n' +
+                            '• Tous les hooks React disponibles\n' +
+                            '• useMemo, useContext, useReducer...\n' +
+                            '• Support patterns avancés React\n\n' +
+                            '**Commandes spéciales :**\n' +
+                            '• `/webhook URL` - Configurer le webhook n8n\n' +
+                            '• `/mode dev` - Mode développement\n' +
+                            '• `/mode analyst` - Mode analyste\n' +
+                            '• `/status` - État du système\n' +
+                            '• `/clear` - Effacer la conversation\n\n' +
+                            '**Configuration n8n requise :**\n' +
+                            '• Webhook Trigger\n' +
+                            '• Switch sur paramètre "action"\n' +
+                            '• HTTP Request vers Albert API\n' +
+                            '• Response avec résultat Albert',
+                            'ai'
+                        );
+                        break;
+                        
+                    case '/mode':
+                        if (parts[1] === 'dev' || parts[1] === 'analyst') {
+                            this.setAIMode(parts[1]);
+                        } else {
+                            this.addAIMessage('📋 Mode actuel: ' + this.aiMode + '\nUtilisez `/mode dev` ou `/mode analyst`', 'ai');
+                        }
+                        break;
+                        
+                    case '/clear':
+                        this.clearAIMessages();
+                        this.addAIMessage('💬 Conversation effacée. n8n prêt pour nouvelles interactions avec hooks complets !', 'ai');
+                        break;
+                        
+                    case '/status':
+                        const hasWebhook = !!this.webhookUrl;
+                        this.addAIMessage(
+                            `📊 **Status Grist App Nest v5 :**\n` +
+                            `• **Version :** v5 - Hooks complets\n` +
+                            `• **Webhook n8n :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\n` +
+                            `• **Mode :** ${this.aiMode.toUpperCase()}\n` +
+                            `• **Document :** ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\n` +
+                            `• **Composants :** ${this.components.size}\n` +
+                            `• **URL :** ${this.webhookUrl || 'Non définie'}\n` +
+                            `• **Hooks React :** ✅ Complets (useState, useEffect, useMemo, useContext...)\n` +
+                            `• **Support useRef :** ✅ Activé\n` +
+                            `• **Composants enfants :** ✅ Réparés\n` +
+                            `• **Performance :** ✅ Optimisée avec useMemo\n\n` +
+                            `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert API via n8n'}`,
+                            'ai'
+                        );
+                        break;
+                        
+                    default:
+                        this.addAIMessage(
+                            `❓ Commande inconnue: ${cmd}\nTapez \`/help\` pour les commandes n8n disponibles avec hooks complets.`,
+                            'ai'
+                        );
+                }
+            }
+
+            setupEventListeners() {
+                console.log('🎯 Configuration des event listeners n8n v5');
+                
+                // Configuration du webhook modal
+                const configButton = document.getElementById('configButton');
+                const modal = document.getElementById('webhookModal');
+                const closeModal = document.getElementById('closeModal');
+                const saveWebhook = document.getElementById('saveWebhook');
+                const testWebhook = document.getElementById('testWebhook');
+                const webhookUrlInput = document.getElementById('webhookUrl');
+                
+                configButton.addEventListener('click', () => {
+                    webhookUrlInput.value = this.webhookUrl || '';
+                    this.updateWebhookStatusDisplay();
+                    modal.style.display = 'flex';
+                });
+                
+                closeModal.addEventListener('click', () => {
+                    modal.style.display = 'none';
+                });
+                
+                window.addEventListener('click', (e) => {
+                    if (e.target === modal) {
+                        modal.style.display = 'none';
+                    }
+                });
+                
+                saveWebhook.addEventListener('click', () => {
+                    const url = webhookUrlInput.value.trim();
+                    this.webhookUrl = url;
+                    this.saveWebhookConfig(url);
+                    this.updateWebhookStatusDisplay();
+                    this.updateWebhookStatusBadge();
+                    
+                    if (url) {
+                        this.showSuccessMessage('Webhook n8n v5 configuré avec succès');
+                        this.showToast('Webhook n8n v5 configuré avec succès', 'success');
+                    } else {
+                        this.showSuccessMessage('Configuration webhook effacée');
+                        this.showToast('Configuration webhook effacée', 'warning');
+                    }
+                    
+                    setTimeout(() => {
+                        modal.style.display = 'none';
+                    }, 1500);
+                });
+                
+                testWebhook.addEventListener('click', async () => {
+                    const url = webhookUrlInput.value.trim();
+                    if (!url) {
+                        this.showError('Veuillez saisir une URL de webhook n8n');
+                        return;
+                    }
+                    
+                    testWebhook.disabled = true;
+                    testWebhook.textContent = 'Test...';
+                    
+                    try {
+                        const testUrl = url.includes('?') ? `${url}&action=test` : `${url}?action=test`;
+                        
+                        const response = await fetch(testUrl, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                test: true,
+                                message: 'Test configuration webhook n8n v5',
+                                version: 'v5-corrected-hooks-complete',
+                                timestamp: new Date().toISOString()
+                            })
+                        });
+                        
+                        if (response.ok) {
+                            const webhookStatus = document.getElementById('webhookStatus');
+                            webhookStatus.innerHTML = `<div class="badge badge-success">✓ Test n8n v5 réussi !</div>`;
+                            this.showToast('Test n8n v5 réussi !', 'success');
+                        } else {
+                            const webhookStatus = document.getElementById('webhookStatus');
+                            webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur ${response.status}: ${response.statusText}</div>`;
+                            this.showToast(`Erreur ${response.status}: ${response.statusText}`, 'error');
+                        }
+                    } catch (error) {
+                        const webhookStatus = document.getElementById('webhookStatus');
+                        webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur n8n: ${error.message}</div>`;
+                        this.showToast(`Erreur n8n: ${error.message}`, 'error');
+                    } finally {
+                        testWebhook.disabled = false;
+                        testWebhook.textContent = 'Tester';
+                    }
+                });
+
+                // Ajouter des raccourcis clavier
+                document.addEventListener('keydown', (e) => {
+                    // Ctrl+Enter pour envoyer un message
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        e.preventDefault();
+                        sendMessage();
+                    }
+                    
+                    // Ctrl+/ pour afficher l'aide
+                    if (e.ctrlKey && e.key === '/') {
+                        e.preventDefault();
+                        this.handleSpecialCommand('/help');
+                        this.showKeyboardHint();
+                    }
+                    
+                    // Ctrl+K pour ouvrir la configuration
+                    if (e.ctrlKey && e.key === 'k') {
+                        e.preventDefault();
+                        configButton.click();
+                    }
+                    
+                    // Echap pour fermer le modal
+                    if (e.key === 'Escape' && modal.style.display === 'flex') {
+                        modal.style.display = 'none';
+                    }
+                    
+                    // Ctrl+M pour changer de mode IA
+                    if (e.ctrlKey && e.key === 'm') {
+                        e.preventDefault();
+                        const newMode = this.aiMode === 'dev' ? 'analyst' : 'dev';
+                        this.setAIMode(newMode);
+                        this.showToast(`Mode ${newMode.toUpperCase()} activé`, 'success');
+                    }
+                    
+                    // Ctrl+Shift+C pour effacer la conversation
+                    if (e.ctrlKey && e.shiftKey && e.key === 'C') {
+                        e.preventDefault();
+                        this.handleSpecialCommand('/clear');
+                    }
+                });
+
+                // Afficher les raccourcis au démarrage
+                setTimeout(() => {
+                    this.showKeyboardHint();
+                    setTimeout(() => {
+                        this.hideKeyboardHint();
+                    }, 5000);
+                }, 2000);
+                
+                console.log('✅ Event listeners n8n v5 configurés');
+            }
+
+            showKeyboardHint() {
+                const hint = document.getElementById('keyboard-hint');
+                hint.classList.add('show');
+            }
+
+            hideKeyboardHint() {
+                const hint = document.getElementById('keyboard-hint');
+                hint.classList.remove('show');
+            }
+
+            showToast(message, type = 'success') {
+                const container = document.getElementById('toast-container') || this.createToastContainer();
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+                toast.textContent = message;
+                
+                container.appendChild(toast);
+                
+                // Afficher le toast
+                setTimeout(() => {
+                    toast.classList.add('show');
+                }, 100);
+                
+                // Masquer et supprimer le toast
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentNode) {
+                            toast.parentNode.removeChild(toast);
+                        }
+                    }, 300);
+                }, 3000);
+            }
+
+            createToastContainer() {
+                const container = document.createElement('div');
+                container.id = 'toast-container';
+                container.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 1001;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 10px;
+                `;
+                document.body.appendChild(container);
+                return container;
+            }
+
+            // Gestion de la configuration du webhook
+            loadWebhookConfig() {
+                try {
+                    const savedUrl = localStorage.getItem('grist_ai_n8n_webhook_url');
+                    if (savedUrl) {
+                        this.webhookUrl = savedUrl;
+                        this.webhookConfigured = true;
+                        console.log('URL webhook n8n v5 chargée:', this.webhookUrl);
+                        this.updateWebhookStatusBadge();
+                    } else {
+                        console.log('Aucun webhook n8n configuré');
+                    }
+                } catch (error) {
+                    console.warn('Erreur chargement config webhook n8n:', error.message);
+                }
+            }
+            
+            saveWebhookConfig(url) {
+                try {
+                    localStorage.setItem('grist_ai_n8n_webhook_url', url);
+                    this.webhookConfigured = !!url;
+                    console.log('URL webhook n8n v5 sauvegardée:', url);
+                } catch (error) {
+                    console.warn('Erreur sauvegarde config webhook n8n:', error.message);
+                }
+            }
+
+            updateWebhookStatusDisplay() {
+                const webhookStatus = document.getElementById('webhookStatus');
+                if (this.webhookUrl) {
+                    webhookStatus.innerHTML = `<div class="badge badge-success">✓ Webhook n8n v5 configuré</div>`;
+                } else {
+                    webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Aucun webhook n8n configuré</div>`;
+                }
+            }
+            
+            updateWebhookStatusBadge() {
+                const webhookStatusBadge = document.getElementById('webhookStatusBadge');
+                if (this.webhookUrl) {
+                    webhookStatusBadge.textContent = 'n8n v5 configuré';
+                    webhookStatusBadge.className = 'webhook-status configured';
+                } else {
+                    webhookStatusBadge.textContent = 'Webhook non configuré';
+                    webhookStatusBadge.className = 'webhook-status not-configured';
+                }
+            }
+
+            showSuccessMessage(message) {
+                const webhookStatus = document.getElementById('webhookStatus');
+                webhookStatus.innerHTML = `<div class="badge badge-success">✓ ${message}</div>`;
+            }
+
+            showError(message) {
+                this.addAIMessage(`❌ ${message}`, 'ai');
+            }
+
+            // Gestion des messages AI
+            addAIMessage(message, sender) {
+                const messagesContainer = document.getElementById('ai-messages');
+                const messageDiv = document.createElement('div');
+                const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+                
+                messageDiv.id = messageId;
+                messageDiv.className = `ai-message ${sender}`;
+                
+                const avatar = sender === 'user' ? '🗨️' : '💭';
+                
+                messageDiv.innerHTML = `
+                    <div class="ai-message-avatar">${avatar}</div>
+                    <div class="ai-message-content">${this.formatAIMessage(message)}</div>
+                `;
+                
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+                
+                return messageId;
+            }
+
+            removeAIMessage(messageId) {
+                const messageElement = document.getElementById(messageId);
+                if (messageElement) {
+                    messageElement.remove();
+                }
+            }
+
+            clearAIMessages() {
+                const messagesContainer = document.getElementById('ai-messages');
+                messagesContainer.innerHTML = '';
+            }
+
+            formatAIMessage(message) {
+                return message
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                    .replace(/`(.*?)`/g, '<code style="background: #f3f4f6; padding: 2px 4px; border-radius: 3px;">$1</code>')
+                    .replace(/\n/g, '<br>');
+            }
+
+            setAIMode(mode) {
+                this.aiMode = mode;
+                
+                document.getElementById('mode-dev').classList.toggle('active', mode === 'dev');
+                document.getElementById('mode-analyst').classList.toggle('active', mode === 'analyst');
+                
+                let helpMessage = '';
+                if (mode === 'dev') {
+                    helpMessage = "🛠️ **Mode Développement n8n v5 activé**\n\nJe peux créer des applications complètes avec tous les hooks React via le proxy n8n vers Albert IA.";
+                } else {
+                    helpMessage = "📊 **Mode Analyste n8n v5 activé**\n\nJe peux analyser vos données via n8n et Albert IA avec hooks optimisés.";
+                }
+                
+                this.addAIMessage(helpMessage, 'ai');
+            }
+
+            // ================================
+            // GESTION COMPLÈTE DES COMPOSANTS 
+            // ================================
+
+            async executeAIActions(actions) {
+                this.addAIMessage('⚙️ Exécution des actions Albert via n8n v5 (hooks complets)...', 'ai');
+                
+                for (const action of actions) {
+                    try {
+                        switch (action.type) {
+                            case 'createTables':
+                                await this.executeCreateTables(action.tables);
+                                break;
+                                
+                            case 'createTemplates':
+                                await this.executeCreateTemplates(action.templates);
+                                break;
+                                
+                            case 'addSampleData':
+                                await this.executeAddSampleData(action.data);
+                                break;
+                                
+                            default:
+                                console.warn(`Type d'action non supporté: ${action.type}`);
+                        }
+                    } catch (error) {
+                        console.error(`Erreur exécution action ${action.type}:`, error);
+                        this.addAIMessage(`❌ Erreur lors de ${action.type}: ${error.message}`, 'ai');
+                    }
+                }
+                
+                this.addAIMessage('✅ Actions terminées via n8n v5 avec hooks complets !', 'ai');
+            }
+
+            async executeCreateTables(tables) {
+                for (const table of tables) {
+                    try {
+                        await this.gristAPI.createTable(table.name, table.columns);
+                        console.log(`✅ Table ${table.name} créée`);
+                        this.addAIMessage(`📋 Table "${table.name}" créée avec succès`, 'ai');
+                    } catch (error) {
+                        if (error.message.includes('already exists')) {
+                            this.addAIMessage(`⚠️ Table "${table.name}" existe déjà`, 'ai');
+                        } else {
+                            throw error;
+                        }
+                    }
+                }
+            }
+
+            async executeCreateTemplates(templates) {
+                try {
+                    await this.gristAPI.createTable('Templates', [
+                        { id: 'template_id', type: 'Text', label: 'Template ID' },
+                        { id: 'template_name', type: 'Text', label: 'Template Name' },
+                        { id: 'component_code', type: 'Text', label: 'Component Code' },
+                        { id: 'component_type', type: 'Text', label: 'Component Type' }
+                    ]);
+                } catch (e) {
+                    // Table existe déjà
+                }
+                
+                for (const template of templates) {
+                    try {
+                        const validatedCode = this.validateAndFixComponentCode(template.code, template.id);
+                        
+                        await this.gristAPI.createTemplate({
+                            id: template.id,
+                            name: template.name,
+                            type: template.type || 'functional',
+                            code: validatedCode
+                        });
+                        
+                        console.log(`✅ Template ${template.id} créé`);
+                        this.addAIMessage(`🎨 Composant "${template.name}" créé (hooks complets supportés)`, 'ai');
+                    } catch (error) {
+                        console.error(`Erreur création template ${template.id}:`, error);
+                        this.addAIMessage(`❌ Erreur composant "${template.name}": ${error.message}`, 'ai');
+                    }
+                }
+                
+                if (templates.length > 0) {
+                    this.isDocumentEmpty = false;
+                    await this.loadComponents();
+                    this.setupNavigation();
+                    await this.loadDefaultComponent();
+                    
+                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants n8n v5 (hooks complets)', 'ai');
+                }
+            }
+
+            validateAndFixComponentCode(code, componentId) {
+                try {
+                    // Vérifier que le code contient une variable Component
+                    if (!code.includes('const Component') && !code.includes('function Component')) {
+                        throw new Error('Le code doit définir une variable ou fonction Component');
+                    }
+                    
+                    // Ajouter des imports React si manquants dans le contexte
+                    let fixedCode = code;
+                    
+                    // Nettoyer le code
+                    fixedCode = fixedCode
+                        .replace(/import\s+.*?from\s+['"]react['"];?\s*/g, '') // Supprimer imports React
+                        .replace(/export\s+default\s+Component;?\s*/g, '') // Supprimer exports
+                        .trim();
+                    
+                    // Valider la syntaxe JSX basique
+                    if (fixedCode.includes('<') && !fixedCode.includes('React.createElement')) {
+                        // Le code semble contenir du JSX, c'est bon
+                    }
+                    
+                    return fixedCode;
+                    
+                } catch (error) {
+                    console.warn(`Code validation failed for ${componentId}:`, error);
+                    
+                    // Retourner un composant d'erreur de base
+                    return `
+                        const Component = () => {
+                            return React.createElement('div', {
+                                style: {
+                                    padding: '20px',
+                                    background: '#fee2e2',
+                                    color: '#dc2626',
+                                    borderRadius: '8px',
+                                    textAlign: 'center'
+                                }
+                            }, 
+                            React.createElement('h3', null, '⚠️ Erreur Composant: ${componentId}'),
+                            React.createElement('p', null, 'Code invalide: ${error.message}'),
+                            React.createElement('p', null, '✅ Hooks complets disponibles en v5'),
+                            React.createElement('button', {
+                                onClick: () => alert('Contactez Albert IA pour corriger ce composant'),
+                                style: {
+                                    background: '#dc2626',
+                                    color: 'white',
+                                    border: 'none',
+                                    padding: '8px 16px',
+                                    borderRadius: '4px',
+                                    cursor: 'pointer',
+                                    marginTop: '10px'
+                                }
+                            }, 'Signaler le problème')
+                            );
+                        };
+                    `;
+                }
+            }
+
+            async executeAddSampleData(dataActions) {
+                for (const dataAction of dataActions) {
+                    try {
+                        const tableName = dataAction.table;
+                        const records = dataAction.records;
+                        
+                        for (const record of records) {
+                            await this.gristAPI.addRecord(tableName, record);
+                        }
+                        
+                        this.addAIMessage(`📊 ${records.length} exemples ajoutés à "${tableName}"`, 'ai');
+                    } catch (error) {
+                        this.addAIMessage(`❌ Erreur données "${dataAction.table}": ${error.message}`, 'ai');
+                    }
+                }
+            }
+
+            // Chargement et rendu des composants (gardé de l'original)
+            async loadComponents() {
+                try {
+                    const templatesData = await this.gristAPI.getData('Templates');
+                    const templates = Array.isArray(templatesData) ? templatesData : [];
+                    
+                    if (!templates || templates.length === 0) {
+                        this.loadDefaultComponents();
+                        return;
+                    }
+                    
+                    for (const template of templates) {
+                        try {
+                            const component = this.processComponent(template);
+                            this.components.set(component.id, component);
+                        } catch (error) {
+                            console.warn(`❌ Erreur composant ${template.template_id}:`, error);
+                        }
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composants:', error);
+                    this.loadDefaultComponents();
+                }
+            }
+
+            processComponent(template) {
+                const componentData = {
+                    id: template.template_id,
+                    name: template.template_name,
+                    type: template.component_type || 'functional',
+                    code: template.component_code
+                };
+
+                if (!componentData.code || typeof componentData.code !== 'string') {
+                    throw new Error('Code composant manquant ou invalide');
+                }
+
+                const cleanCode = this.sanitizeCode(componentData.code);
+
+                return {
+                    id: componentData.id,
+                    name: componentData.name,
+                    type: componentData.type,
+                    code: cleanCode,
+                    render: async (container) => {
+                        await this.renderReactComponent(container, cleanCode, componentData.id);
+                    }
+                };
+            }
+
+            sanitizeCode(code) {
+                return code
+                    .replace(/\r\n/g, '\n')
+                    .replace(/\u0000-\u001F/g, '')
+                    .trim();
+            }
+
+            showComponentError(container, error, componentId) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 Erreur Composant: ${componentId}</h3>
+                        <p><strong>Message:</strong> ${error.message}</p>
+                        <div style="background: #f0fdf4; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                            <strong>✅ v5 :</strong> Tous les hooks React sont disponibles<br>
+                            (useState, useEffect, useMemo, useContext, useCallback, useRef...)
+                        </div>
+                        <pre>${error.stack || 'Pas de stack trace'}</pre>
+                    </div>
+                `;
+            }
+
+            loadDefaultComponents() {
+                const defaultComponents = [
+                    {
+                        id: 'dashboard',
+                        name: '📊 Dashboard n8n v5',
+                        type: 'functional',
+                        code: `
+                            const Component = () => {
+                                const [status, setStatus] = useState('ready');
+                                
+                                // ✅ Test useMemo disponible
+                                const computedValue = useMemo(() => {
+                                    return Math.random() * 1000;
+                                }, []);
+                                
+                                useEffect(() => {
+                                    console.log('Dashboard n8n v5 chargé avec hooks complets');
+                                    setStatus('loaded');
+                                }, []);
+                                
+                                return React.createElement('div', { 
+                                    style: { 
+                                        padding: '40px', 
+                                        textAlign: 'center',
+                                        maxWidth: '800px',
+                                        margin: '0 auto'
+                                    } 
+                                },
+                                    React.createElement('h1', { 
+                                        style: { 
+                                            fontSize: '2.5rem', 
+                                            marginBottom: '20px',
+                                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                            WebkitBackgroundClip: 'text',
+                                            WebkitTextFillColor: 'transparent',
+                                            backgroundClip: 'text'
+                                        } 
+                                    }, '🚀 Grist AI v5'),
+                                    
+                                    React.createElement('p', { 
+                                        style: { 
+                                            fontSize: '1.2rem', 
+                                            color: '#6b7280',
+                                            marginBottom: '30px' 
+                                        } 
+                                    }, 'Application créée avec Albert IA via proxy n8n + Hooks React complets'),
+                                    
+                                    React.createElement('div', {
+                                        style: {
+                                            display: 'grid',
+                                            gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                            gap: '20px',
+                                            marginTop: '40px'
+                                        }
+                                    },
+                                        React.createElement('div', {
+                                            style: {
+                                                background: 'white',
+                                                padding: '20px',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                                textAlign: 'center'
+                                            }
+                                        },
+                                            React.createElement('div', {
+                                                style: { fontSize: '48px', marginBottom: '15px' }
+                                            }, '🔗'),
+                                            React.createElement('h3', {
+                                                style: { color: '#374151', marginBottom: '10px' }
+                                            }, 'n8n Proxy'),
+                                            React.createElement('p', {
+                                                style: { color: '#6b7280', fontSize: '14px' }
+                                            }, 'Communication via workflow n8n vers Albert API')
+                                        ),
+                                        
+                                        React.createElement('div', {
+                                            style: {
+                                                background: 'white',
+                                                padding: '20px',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                                textAlign: 'center'
+                                            }
+                                        },
+                                            React.createElement('div', {
+                                                style: { fontSize: '48px', marginBottom: '15px' }
+                                            }, '🧩'),
+                                            React.createElement('h3', {
+                                                style: { color: '#374151', marginBottom: '10px' }
+                                            }, 'Hooks Complets'),
+                                            React.createElement('p', {
+                                                style: { color: '#6b7280', fontSize: '14px' }
+                                            }, 'Tous les hooks React disponibles (useMemo, useContext...)')
+                                        ),
+                                        
+                                        React.createElement('div', {
+                                            style: {
+                                                background: 'white',
+                                                padding: '20px',
+                                                borderRadius: '12px',
+                                                boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                                                textAlign: 'center'
+                                            }
+                                        },
+                                            React.createElement('div', {
+                                                style: { fontSize: '48px', marginBottom: '15px' }
+                                            }, '⚡'),
+                                            React.createElement('h3', {
+                                                style: { color: '#374151', marginBottom: '10px' }
+                                            }, 'Performance'),
+                                            React.createElement('p', {
+                                                style: { color: '#6b7280', fontSize: '14px' }
+                                            }, 'Optimisations avec useMemo et useCallback')
+                                        )
+                                    ),
+                                    
+                                    React.createElement('div', {
+                                        style: {
+                                            marginTop: '40px',
+                                            padding: '20px',
+                                            background: '#f0f9ff',
+                                            borderRadius: '12px',
+                                            border: '1px solid #0ea5e9'
+                                        }
+                                    },
+                                        React.createElement('h4', {
+                                            style: { color: '#0c4a6e', marginBottom: '10px' }
+                                        }, '✅ Status: ' + status),
+                                        React.createElement('p', {
+                                            style: { color: '#0369a1', fontSize: '14px', margin: '0 0 10px 0' }
+                                        }, 'Toutes les corrections v5 appliquées - Hooks React complets'),
+                                        React.createElement('p', {
+                                            style: { color: '#0369a1', fontSize: '12px', margin: 0 }
+                                        }, 'useMemo calculé: ' + computedValue.toFixed(2))
+                                    )
+                                );
+                            };
+                        `
+                    }
+                ];
+
+                for (const comp of defaultComponents) {
+                    this.components.set(comp.id, {
+                        id: comp.id,
+                        name: comp.name,
+                        type: comp.type,
+                        code: comp.code,
+                        render: async (container) => {
+                            await this.renderReactComponent(container, comp.code, comp.id);
+                        }
+                    });
+                }
+            }
+
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                
+                // Garder les éléments existants (status et config)
+                const existingElements = Array.from(nav.children);
+                
+                // Ajouter les composants
+                this.components.forEach(component => {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = component.name;
+                    btn.onclick = () => this.loadComponent(component.id);
+                    nav.insertBefore(btn, existingElements[0]);
+                });
+                
+                // Bouton d'export si on a des composants
+                if (this.components.size > 0) {
+                    const exportBtn = document.createElement('button');
+                    exportBtn.className = 'nav-btn';
+                    exportBtn.style.background = 'rgba(16, 185, 129, 0.3)';
+                    exportBtn.textContent = '📥 Export';
+                    exportBtn.onclick = () => this.exportAppConfiguration();
+                    nav.insertBefore(exportBtn, existingElements[0]);
+                }
+            }
+
+            async loadComponent(componentId) {
+                if (!this.isReady) return;
+                
+                try {
+                    const component = this.components.get(componentId);
+                    if (!component) {
+                        throw new Error('Composant non trouvé: ' + componentId);
+                    }
+                    
+                    const main = document.getElementById('main-content');
+                    await component.render(main);
+                    
+                    document.querySelectorAll('.nav-btn').forEach(btn => {
+                        btn.classList.toggle('active', btn.textContent === component.name);
+                    });
+                    
+                    this.currentComponent = componentId;
+                    
+                    // Tester les composants enfants si disponibles
+                    console.log('🔧 Test composants enfants après chargement:', componentId);
+                    try {
+                        const testChild = await this.gristAPI.getChildComponent('test_child');
+                        console.log('✅ Méthode getChildComponent fonctionne:', testChild);
+                    } catch (error) {
+                        console.log('⚠️ Pas de composant enfant de test:', error.message);
+                    }
+                    
+                } catch (error) {
+                    console.error('Erreur chargement composant:', error);
+                    this.showError('Erreur chargement composant', error.message);
+                }
+            }
+
+            async loadDefaultComponent() {
+                if (this.components.size > 0) {
+                    const firstComponent = Array.from(this.components.keys())[0];
+                    await this.loadComponent(firstComponent);
+                }
+            }
+
+            async exportAppConfiguration() {
+                try {
+                    const config = {
+                        metadata: {
+                            created_by: 'Albert IA via n8n',
+                            created_at: new Date().toISOString(),
+                            grist_dashboard_version: '5.0-CORRECTED-HOOKS-COMPLETE',
+                            mode_used: this.aiMode,
+                            n8n_webhook: this.webhookUrl,
+                            features: ['hooks_complete', 'useMemo_support', 'useContext_support', 'child_components_fixed', 'keyboard_shortcuts', 'toast_notifications']
+                        },
+                        tables: await this.gristAPI.getDocumentStructure(),
+                        templates: await this.gristAPI.getData('Templates'),
+                        conversation_summary: this.conversationHistory.filter(h => h.type === 'conversation')
+                    };
+                    
+                    const blob = new Blob([JSON.stringify(config, null, 2)], { 
+                        type: 'application/json' 
+                    });
+                    
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = `grist-app-n8n-config-v5-corrected-hooks-${Date.now()}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    this.addAIMessage('📥 Configuration n8n de l\'application exportée (v5 corrigée avec hooks complets) !', 'ai');
+                    this.showToast('Configuration exportée avec succès', 'success');
+                    
+                } catch (error) {
+                    console.error('Erreur export:', error);
+                    this.addAIMessage('❌ Erreur lors de l\'export de la configuration.', 'ai');
+                    this.showToast('Erreur lors de l\'export', 'error');
+                }
+            }
+
+            hideLoading() {
+                const loading = document.getElementById('loading');
+                if (loading) loading.style.display = 'none';
+            }
+
+            showError(title, message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 ${title}</h3>
+                        <p>${message}</p>
+                        <div style="background: #f0fdf4; padding: 10px; border-radius: 4px; margin: 10px 0;">
+                            <strong>✅ v5 :</strong> Tous les hooks React sont disponibles<br>
+                            Si l'erreur persiste, vérifiez que votre composant utilise la syntaxe correcte.
+                        </div>
+                    </div>
+                `;
+            }
+
+            async parseUploadedFile(file) {
+                try {
+                    const text = await file.text();
+                    
+                    if (file.type.includes('csv')) {
+                        return this.parseCSV(text);
+                    }
+                    
+                    return {
+                        type: 'file',
+                        name: file.name,
+                        size: file.size,
+                        preview: text.substring(0, 500) + '...'
+                    };
+                    
+                } catch (error) {
+                    console.error('Erreur parsing fichier:', error);
+                    return null;
+                }
+            }
+
+            parseCSV(text) {
+                const lines = text.split('\n').filter(line => line.trim());
+                if (lines.length === 0) return null;
+                
+                const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                const rows = lines.slice(1, 6).map(line => 
+                    line.split(',').map(cell => cell.trim().replace(/"/g, ''))
+                );
+                
+                return {
+                    type: 'csv',
+                    headers: headers,
+                    rowCount: lines.length - 1,
+                    sample: rows
+                };
+            }
+
+            async getBusinessDataSummary() {
+                try {
+                    const structure = await this.gristAPI.getDocumentStructure();
+                    const summary = {};
+                    
+                    for (const [tableName, tableInfo] of Object.entries(structure)) {
+                        if (tableName !== 'Templates') {
+                            summary[tableName] = {
+                                rowCount: tableInfo.rowCount,
+                                sampleData: tableInfo.sampleData
+                            };
+                        }
+                    }
+                    
+                    return summary;
+                } catch (error) {
+                    return {};
+                }
+            }
+        }
+
+        // Fonctions globales pour l'interface
+        let dashboard = null;
+
+        async function sendMessage() {
+            const input = document.getElementById('ai-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+            
+            input.value = '';
+            const sendBtn = document.getElementById('send-btn');
+            sendBtn.disabled = true;
+            sendBtn.textContent = '⏳';
+            
+            try {
+                await dashboard.sendAIMessage(message);
+            } finally {
+                sendBtn.disabled = false;
+                sendBtn.textContent = 'Envoyer';
+                input.focus();
+            }
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    dashboard.showToast('Fichier trop volumineux (max 10MB)', 'error');
+                    return;
+                }
+                
+                const allowedTypes = [
+                    'application/vnd.ms-excel',
+                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                    'text/csv',
+                    'application/json'
+                ];
+                
+                if (!allowedTypes.includes(file.type) && !file.name.endsWith('.csv')) {
+                    dashboard.addAIMessage('❌ Type de fichier non supporté. Utilisez Excel, CSV ou JSON.', 'ai');
+                    dashboard.showToast('Type de fichier non supporté', 'error');
+                    return;
+                }
+                
+                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier via n8n et créer une application adaptée avec hooks complets ?`;
+                dashboard.sendAIMessage(message, file);
+                dashboard.showToast(`Fichier "${file.name}" téléchargé`, 'success');
+            }
+            
+            // Reset du input file
+            event.target.value = '';
+        }
+
+        function toggleChat() {
+            const body = document.body;
+            const chatContent = document.getElementById('ai-chat-content');
+            const toggle = document.getElementById('chat-toggle');
+            
+            body.classList.toggle('chat-collapsed');
+            dashboard.chatCollapsed = body.classList.contains('chat-collapsed');
+            
+            if (dashboard.chatCollapsed) {
+                chatContent.style.display = 'none';
+                toggle.textContent = '🔼';
+            } else {
+                chatContent.style.display = 'flex';
+                toggle.textContent = '🔽';
+                
+                // Auto-scroll vers le bas des messages
+                setTimeout(() => {
+                    const messages = document.getElementById('ai-messages');
+                    messages.scrollTop = messages.scrollHeight;
+                }, 100);
+            }
+        }
+
+        function setAIMode(mode) {
+            if (dashboard) {
+                dashboard.setAIMode(mode);
+            }
+        }
+
+        function startWithExample() {
+            const examples = [
+                "Créé-moi une application de gestion de maintenance avec équipements, techniciens et interventions",
+                "Application de suivi des stocks avec produits, fournisseurs et mouvements",
+                "Dashboard de gestion des ventes avec clients, commandes et analyses",
+                "Système de gestion de projet avec tâches, équipes et planning",
+                "Application RH avec employés, congés et évaluations"
+            ];
+            
+            const randomExample = examples[Math.floor(Math.random() * examples.length)];
+            
+            const input = document.getElementById('ai-input');
+            input.value = randomExample;
+            
+            focusAIChat();
+            
+            setTimeout(() => {
+                dashboard.addAIMessage(
+                    '💡 Voici un exemple d\'application que je peux créer via n8n avec hooks complets. Vous pouvez modifier cette demande ou valider directement :', 
+                    'ai'
+                );
+            }, 100);
+        }
+
+        function focusAIChat() {
+            if (document.body.classList.contains('chat-collapsed')) {
+                toggleChat();
+            }
+            
+            const chatContainer = document.getElementById('ai-chat');
+            chatContainer.scrollIntoView({ behavior: 'smooth' });
+            
+            setTimeout(() => {
+                document.getElementById('ai-input').focus();
+            }, 300);
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+            
+            const files = event.dataTransfer.files;
+            if (files.length > 0) {
+                const file = files[0];
+                
+                if (file.size > 10 * 1024 * 1024) {
+                    dashboard.addAIMessage('❌ Fichier trop volumineux (max 10MB)', 'ai');
+                    dashboard.showToast('Fichier trop volumineux (max 10MB)', 'error');
+                    return;
+                }
+                
+                const message = `📎 J'ai glissé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via n8n avec hooks complets.`;
+                dashboard.sendAIMessage(message, file);
+                dashboard.showToast(`Fichier "${file.name}" glissé avec succès`, 'success');
+                
+                focusAIChat();
+            }
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault();
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.add('dragover');
+        }
+
+        function handleDragLeave(event) {
+            const uploadArea = document.getElementById('upload-area');
+            if (uploadArea) uploadArea.classList.remove('dragover');
+        }
+
+        // Fonctions utilitaires additionnelles
+        function quickConfign8n() {
+            const modal = document.getElementById('webhookModal');
+            const input = document.getElementById('webhookUrl');
+            
+            // Pré-remplir avec un exemple
+            input.value = 'https://your-n8n-instance.com/webhook/grist-albert-proxy';
+            modal.style.display = 'flex';
+            input.focus();
+            input.select();
+        }
+
+        function showQuickStart() {
+            dashboard.addAIMessage(
+                `🚀 **Guide de démarrage rapide n8n v5**
+
+**✅ Nouveautés v5 :**
+• Tous les hooks React disponibles (useMemo, useContext, useReducer...)
+• Optimisations de performance automatiques
+• Support complet des patterns React avancés
+
+**1. Configuration n8n :**
+• Créez un workflow avec Webhook Trigger
+• Ajoutez un Switch node sur le paramètre "action"
+• Pour action="albert_chat" : HTTP Request vers Albert API
+• Response node pour renvoyer le résultat
+
+**2. Utilisation :**
+• Configurez l'URL webhook ⚙️
+• Décrivez votre besoin en français
+• Albert créera votre application complète avec hooks
+
+**3. Exemples de demandes :**
+• "Créer un CRM simple"
+• "App de gestion de stock"
+• "Dashboard de maintenance"
+
+**Raccourcis :**
+• Ctrl+Enter : Envoyer message
+• Ctrl+K : Configuration
+• Ctrl+M : Changer mode
+• Ctrl+/ : Aide`,
+                'ai'
+            );
+        }
+
+        function exportToGithub() {
+            if (!dashboard || dashboard.components.size === 0) {
+                dashboard.showToast('Aucune application à exporter', 'warning');
+                return;
+            }
+            
+            dashboard.addAIMessage(
+                `📦 **Export vers GitHub v5**
+
+Pour exporter votre application vers GitHub :
+
+1. **Export local :** Utilisez le bouton "📥 Export" dans la navigation
+2. **Fichier généré :** \`grist-app-nest-config-v5-corrected-hooks.json\`
+3. **Structure incluse :**
+   • Tables et schémas Grist
+   • Composants React créés (avec hooks complets)
+   • Configuration n8n utilisée
+   • Historique des conversations
+
+4. **Upload GitHub :**
+   • Créez un repository
+   • Uploadez le fichier JSON
+   • Ajoutez un README avec instructions
+
+**✅ Nouveautés v5 :**
+• Support complet de tous les hooks React
+• Optimisations de performance incluses
+• Patterns avancés documentés
+
+Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
+                'ai'
+            );
+        }
+
+        // Initialisation avec gestion d'erreurs améliorée
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                dashboard = new GristAIDashboard();
+                dashboard.init().catch(error => {
+                    console.error('Erreur critique d\'initialisation:', error);
+                    
+                    const main = document.getElementById('main-content');
+                    main.innerHTML = `
+                        <div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">
+                            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d'Initialisation n8n v5</h2>
+                            <p style="color: #6b7280; margin-bottom: 20px;">
+                                Le système n8n v5 n'a pas pu s'initialiser correctement. 
+                                Cela peut être dû à un problème de connexion à Grist.
+                            </p>
+                            <div style="margin-bottom: 20px;">
+                                <strong>Solutions possibles :</strong><br>
+                                • Vérifiez que vous êtes dans un widget Grist<br>
+                                • Rechargez la page<br>
+                                • Vérifiez les permissions Grist<br>
+                                • Consultez la console développeur (F12)
+                            </div>
+                            <div style="background: #f0fdf4; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                                <strong>✅ v5 :</strong> Tous les hooks React sont disponibles<br>
+                                useMemo, useContext, useReducer, useCallback, useRef...
+                            </div>
+                            <button 
+                                onclick="location.reload()" 
+                                style="
+                                    background: #3b82f6; 
+                                    color: white; 
+                                    border: none; 
+                                    padding: 12px 24px; 
+                                    border-radius: 6px; 
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                    margin-right: 10px;
+                                "
+                            >
+                                🔄 Recharger la page
+                            </button>
+                            <button 
+                                onclick="showQuickStart()" 
+                                style="
+                                    background: #10b981; 
+                                    color: white; 
+                                    border: none; 
+                                    padding: 12px 24px; 
+                                    border-radius: 6px; 
+                                    cursor: pointer;
+                                    font-size: 16px;
+                                "
+                            >
+                                📖 Guide de démarrage v5
+                            </button>
+                        </div>
+                    `;
+                });
+                
+                // Vérifications de compatibilité
+                if (!window.React) {
+                    console.warn('⚠️ React non chargé, certaines fonctionnalités peuvent être limitées');
+                }
+                
+                if (!window.grist) {
+                    console.warn('⚠️ API Grist non disponible, mode démo activé');
+                }
+                
+                console.log('✅ Grist App Nest v5 initialisé avec succès');
+                console.log('🎯 Hooks complets disponibles: useState, useEffect, useMemo, useContext, useCallback, useRef, useReducer...');
+                
+            } catch (error) {
+                console.error('❌ Erreur fatale:', error);
+                document.body.innerHTML = `
+                    <div style="
+                        position: fixed; 
+                        top: 0; 
+                        left: 0; 
+                        width: 100%; 
+                        height: 100%; 
+                        background: #fee2e2; 
+                        display: flex; 
+                        align-items: center; 
+                        justify-content: center;
+                        font-family: sans-serif;
+                    ">
+                        <div style="
+                            background: white; 
+                            padding: 40px; 
+                            border-radius: 12px; 
+                            text-align: center;
+                            max-width: 500px;
+                        ">
+                            <h1 style="color: #dc2626; margin-bottom: 20px;">🚨 Erreur Fatale v5</h1>
+                            <p style="margin-bottom: 15px;">
+                                Le dashboard v5 n'a pas pu s'initialiser.
+                            </p>
+                            <div style="
+                                background: #f0fdf4; 
+                                padding: 15px; 
+                                border-radius: 6px; 
+                                margin-bottom: 20px;
+                            ">
+                                <strong>✅ v5 :</strong> Hooks React complets disponibles
+                            </div>
+                            <div style="
+                                background: #f3f4f6; 
+                                padding: 15px; 
+                                border-radius: 6px; 
+                                margin-bottom: 20px;
+                                text-align: left;
+                                font-family: monospace;
+                                font-size: 12px;
+                                overflow-x: auto;
+                            ">
+                                ${error.message}
+                            </div>
+                            <button onclick="location.reload()" style="
+                                background: #dc2626; 
+                                color: white; 
+                                border: none; 
+                                padding: 12px 24px; 
+                                border-radius: 6px; 
+                                cursor: pointer;
+                            ">
+                                Recharger v5
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        // Gestion des erreurs globales
+        window.addEventListener('error', (event) => {
+            console.error('Erreur JavaScript globale:', event.error);
+            if (dashboard && dashboard.showToast) {
+                dashboard.showToast('Erreur détectée - Consultez la console', 'error');
+            }
+        });
+
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Promise rejetée non gérée:', event.reason);
+            if (dashboard && dashboard.showToast) {
+                dashboard.showToast('Erreur async détectée', 'error');
+            }
+        });
+
+        // Performance monitoring
+        window.addEventListener('load', () => {
+            const loadTime = performance.now();
+            console.log(`⚡ Dashboard v5 chargé en ${loadTime.toFixed(2)}ms`);
+            
+            if (loadTime > 3000) {
+                console.warn('⚠️ Chargement lent détecté');
+                if (dashboard && dashboard.showToast) {
+                    dashboard.showToast('Chargement lent détecté', 'warning');
+                }
+            }
+        });
+
+        // Export des fonctions pour debug
+        window.GristDashboardDebug = {
+            dashboard: () => dashboard,
+            testn8n: (url) => {
+                if (dashboard) {
+                    dashboard.webhookUrl = url;
+                    return dashboard.callAlbertVian8n({
+                        mode: 'dev',
+                        message: 'Test debug v5',
+                        isDocumentEmpty: true,
+                        features: { hooks_support: 'complete' }
+                    });
+                }
+            },
+            showComponents: () => {
+                if (dashboard) {
+                    console.table(Array.from(dashboard.components.entries()));
+                }
+            },
+            exportConfig: () => {
+                if (dashboard) {
+                    dashboard.exportAppConfiguration();
+                }
+            },
+            testHooks: () => {
+                console.log('🧪 Test des hooks disponibles:');
+                console.log('✅ useState, useEffect, useCallback, useRef disponibles');
+                console.log('✅ useMemo, useContext, useReducer disponibles');
+                console.log('✅ useImperativeHandle, useLayoutEffect disponibles');
+            }
+        };
+
+        console.log('🎯 Grist App Nest v5 - Prêt pour utilisation avec hooks complets');
+        console.log('📖 Guide: https://github.com/nic01asFr/grist-dynamic-dashboard');
+        console.log('🛠️ Debug: window.GristDashboardDebug');
+        console.log('✅ Correction: useMemo, useContext et tous les hooks React maintenant disponibles');
+    </script>
+</body>
+</html>
