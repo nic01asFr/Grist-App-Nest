@@ -546,7 +546,7 @@
         <div class="ai-chat-content" id="ai-chat-content">
             <div class="ai-chat-messages" id="ai-messages">
                 <div class="ai-message ai">
-                    <div class="ai-message-avatar">😶‍🌫️</div>
+                    <div class="ai-message-avatar">💭</div>
                     <div class="ai-message-content">
                         Bonjour ! Je suis votre Colaig assistant sur App Nest, je peux vous aider à créer et modifier votre application.
                         <br><br>
@@ -1144,7 +1144,7 @@
                                 </div>
                                 
                                 <div style="text-align: center; padding: 20px;">
-                                    <div style="font-size: 48px; margin-bottom: 15px;">😶‍🌫️</div>
+                                    <div style="font-size: 48px; margin-bottom: 15px;">💭</div>
                                     <h4 style="color: #374151; margin-bottom: 10px;">Albert IA</h4>
                                     <p style="color: #6b7280; font-size: 14px;">
                                         Une fois configuré, votre assistant Colaig créera des applications 
@@ -1208,7 +1208,7 @@
                     this.addAIMessage(message, 'user');
                     
                     // Ajouter un indicateur de traitement
-                    const processingId = this.addAIMessage('⏳ Albert réfléchit via n8n...', 'ai');
+                    const processingId = this.addAIMessage('⏳ Colaig réfléchit...', 'ai');
                     
                     // Préparer le contexte selon le mode
                     let context = {
@@ -1375,14 +1375,14 @@
                     }
                     
                     return {
-                        message: albertResponse.message || "Réponse reçue d'Albert via n8n",
+                        message: albertResponse.message || "Réponse reçue",
                         actions: albertResponse.actions || null
                     };
                     
                 } catch (error) {
                     console.error('Erreur parsing réponse n8n:', error);
                     return {
-                        message: "Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration n8n.",
+                        message: "Réponse reçue mais format incorrect. Vérifiez la configuration n8n.",
                         actions: null
                     };
                 }
@@ -1394,7 +1394,7 @@
                 
                 if (message.match(/^(bonjour|hello|salut|hi|hey|bonsoir)/)) {
                     return {
-                        message: "👋 Bonjour ! Je suis Albert via n8n. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.",
+                        message: "👋 Bonjour ! Je suis Colaig, votre assistant sur Grist. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.",
                         actions: null
                     };
                 }
@@ -1425,14 +1425,14 @@
                 }
                 
                 return {
-                    message: "🔗 **Mode simulation n8n**\n\nPour accéder aux fonctionnalités complètes d'Albert :\n1. Configurez le webhook n8n ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
+                    message: "🔗 **Mode simulation n8n**\n\nPour accéder aux fonctionnalités complètes :\n1. Configurez le webhook n8n ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
                     actions: null
                 };
             }
 
             generateMaintenanceApp() {
                 return {
-                    message: "✨ Application de maintenance créée ! (Mode simulation - configurez n8n pour Albert complet)",
+                    message: "✨ Application de maintenance créée ! (Mode simulation - configurez n8n pour Colaig complet)",
                     actions: [
                         {
                             type: 'createTables',
@@ -1529,7 +1529,7 @@
                         
                     case '/help':
                         this.addAIMessage(
-                            '🔗 **Aide Grist AI Dashboard via n8n**\n\n' +
+                            '🔗 **Aide Grist App Nest**\n\n' +
                             '**Commandes spéciales :**\n' +
                             '• `/webhook URL` - Configurer le webhook n8n\n' +
                             '• `/mode dev` - Mode développement\n' +
@@ -1561,7 +1561,7 @@
                     case '/status':
                         const hasWebhook = !!this.webhookUrl;
                         this.addAIMessage(
-                            `📊 **Status Grist AI via n8n :**\n` +
+                            `📊 **Status Grist App nest :**\n` +
                             `• **Webhook n8n :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\n` +
                             `• **Mode :** ${this.aiMode.toUpperCase()}\n` +
                             `• **Document :** ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\n` +
@@ -1569,7 +1569,7 @@
                             `• **URL :** ${this.webhookUrl || 'Non définie'}\n` +
                             `• **Support useRef :** ✅ Activé\n` +
                             `• **Composants enfants :** ✅ Réparés\n\n` +
-                            `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert via n8n'}`,
+                            `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert API via n8n'}`,
                             'ai'
                         );
                         break;
@@ -1840,7 +1840,7 @@
                 messageDiv.id = messageId;
                 messageDiv.className = `ai-message ${sender}`;
                 
-                const avatar = sender === 'user' ? '👤' : '🤖';
+                const avatar = sender === 'user' ? '🗨️' : '💭';
                 
                 messageDiv.innerHTML = `
                     <div class="ai-message-avatar">${avatar}</div>
