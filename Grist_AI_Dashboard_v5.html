@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist Dynamic Dashboard - v4.5 CORRECTED - Agent IA via N8N</title>
+    <title>DynamicPages - v5</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -512,17 +512,17 @@
 </head>
 <body>
     <header class="header">
-        <h1>🤖 Grist AI Dashboard <span class="version-badge">v4.5 CORRECTED</span></h1>
+        <h1>🪺 App Nest <span class="version-badge">v5</span></h1>
         <nav class="nav" id="navigation">
             <span id="webhookStatusBadge" class="webhook-status not-configured">Webhook non configuré</span>
-            <button class="nav-btn" id="configButton" title="Configurer le webhook N8N">⚙️</button>
+            <button class="nav-btn" id="configButton" title="Configurer le webhook n8n">⚙️</button>
         </nav>
     </header>
     
     <main class="main" id="main-content">
         <div class="loading" id="loading">
             <div class="spinner"></div>
-            <div>Initialisation du système IA N8N...</div>
+            <div>Initialisation du système IA n8n...</div>
         </div>
     </main>
 
@@ -530,13 +530,13 @@
     <div class="ai-chat-container" id="ai-chat">
         <div class="ai-chat-header" onclick="toggleChat()">
             <div style="display: flex; align-items: center; gap: 10px;">
-                <span>🤖 Agent IA Albert (via N8N)</span>
+                <span>Assistant IA</span>
                 <div class="ai-mode-selector">
                     <button class="ai-mode-btn active" id="mode-dev" onclick="setAIMode('dev')">
-                        🛠️ Dev
+                        🛠️ Developper
                     </button>
                     <button class="ai-mode-btn" id="mode-analyst" onclick="setAIMode('analyst')">
-                        📊 Analyst
+                        📊 Analyser
                     </button>
                 </div>
             </div>
@@ -546,11 +546,11 @@
         <div class="ai-chat-content" id="ai-chat-content">
             <div class="ai-chat-messages" id="ai-messages">
                 <div class="ai-message ai">
-                    <div class="ai-message-avatar">🤖</div>
+                    <div class="ai-message-avatar">😶‍🌫️</div>
                     <div class="ai-message-content">
-                        Bonjour ! Je suis Albert, votre agent IA spécialisé en création d'applications Grist. 
-                        Je fonctionne maintenant via un proxy N8N pour contourner les restrictions CORS.<br><br>
-                        <strong>Configurez d'abord le webhook N8N</strong> avec le bouton ⚙️ puis décrivez-moi votre besoin !
+                        Bonjour ! Je suis votre Colaig assistant sur App Nest, je peux vous aider à créer et modifier votre application.
+                        <br><br>
+                        <strong>Configurez d'abord le webhook n8n</strong> avec le bouton ⚙️ puis décrivez-moi votre besoin !
                     </div>
                 </div>
             </div>
@@ -559,7 +559,7 @@
                 <input 
                     type="text" 
                     id="ai-input" 
-                    placeholder="Configurez d'abord le webhook N8N puis décrivez votre besoin..."
+                    placeholder="Configurez d'abord le webhook n8n puis décrivez votre besoin..."
                     onkeypress="if(event.key==='Enter') sendMessage()"
                 />
                 <input 
@@ -579,19 +579,19 @@
     <div id="webhookModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Configuration Webhook N8N</h3>
+                <h3>Configuration Webhook n8n</h3>
                 <button id="closeModal" class="close-modal">&times;</button>
             </div>
             
             <div class="form-group">
-                <label for="webhookUrl">URL du Webhook N8N</label>
+                <label for="webhookUrl">URL du Webhook n8n</label>
                 <input 
                     type="url" 
                     id="webhookUrl" 
                     placeholder="https://votre-n8n.com/webhook/albert-proxy"
                 />
                 <small style="color: #6b7280; margin-top: 5px; display: block;">
-                    L'URL de votre workflow N8N qui fait le proxy vers Albert API
+                    L'URL de votre workflow n8n qui fait le proxy vers Albert API
                 </small>
             </div>
             
@@ -605,7 +605,7 @@
             </div>
             
             <div style="margin-top: 20px; padding: 15px; background: #f3f4f6; border-radius: 6px;">
-                <h4 style="margin-bottom: 10px;">Configuration N8N requise :</h4>
+                <h4 style="margin-bottom: 10px;">Configuration n8n requise :</h4>
                 <ul style="margin-left: 20px; color: #4b5563;">
                     <li>Webhook Trigger avec paramètre "action"</li>
                     <li>Switch node pour router les actions</li>
@@ -625,7 +625,7 @@
     </div>
 
     <script>
-        // GRIST AI DASHBOARD v4.5 CORRECTED : Agent IA via N8N Proxy + Composants Enfants + useRef
+        // GRIST AI DASHBOARD v4.5 CORRECTED : Agent IA via n8n Proxy + Composants Enfants + useRef
         class GristAIDashboard {
             constructor() {
                 this.components = new Map();
@@ -637,14 +637,14 @@
                 this.chatCollapsed = false;
                 this.conversationHistory = [];
                 
-                // Configuration N8N Webhook
+                // Configuration n8n Webhook
                 this.webhookUrl = '';
                 this.webhookConfigured = false;
             }
 
             async init() {
                 try {
-                    console.log('🤖 Initialisation Grist AI Dashboard v4.5 CORRECTED (N8N Proxy + useRef)');
+                    console.log('🪺 Initialisation Grist App Nest v5');
                     
                     // Initialiser Grist API
                     await grist.ready({ requiredAccess: 'read table' });
@@ -675,7 +675,7 @@
                     this.hideLoading();
                     this.isReady = true;
                     
-                    console.log('✅ Grist AI Dashboard prêt (Mode N8N Proxy + Composants Enfants corrigés)');
+                    console.log('✅ Grist App Nest prêt');
                     
                 } catch (error) {
                     console.error('❌ Erreur initialisation:', error);
@@ -1096,13 +1096,13 @@
                 main.innerHTML = `
                     <div class="welcome-container">
                         <div class="welcome-hero">
-                            <h1 style="font-size: 3rem; margin-bottom: 20px;">🤖✨ Grist AI via N8N</h1>
+                            <h1 style="font-size: 3rem; margin-bottom: 20px;"> Grist 🪺App Nest </h1>
                             <p style="font-size: 1.4rem; opacity: 0.9; margin-bottom: 20px;">
-                                Agent Albert accessible via proxy N8N
+                                Avec assistant Colaig intégré
                             </p>
                             <p style="font-size: 1.1rem; opacity: 0.8;">
-                                Configurez votre webhook N8N puis décrivez votre besoin. 
-                                L'IA créera automatiquement votre application complète !
+                                Configurez le webhook n8n puis décrivez votre application. 
+                                Votre assistant créera automatiquement votre application complète !
                             </p>
                         </div>
                         
@@ -1112,9 +1112,9 @@
                             </h3>
                             
                             <div style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 20px; margin-bottom: 30px;">
-                                <h4 style="color: #92400e; margin-bottom: 10px;">⚠️ Webhook N8N nécessaire</h4>
+                                <h4 style="color: #92400e; margin-bottom: 10px;">⚠️ Webhook n8n nécessaire</h4>
                                 <p style="color: #92400e; margin-bottom: 15px;">
-                                    Pour utiliser Albert IA, vous devez d'abord configurer un workflow N8N 
+                                    Pour utiliser l'assistant Colaig, vous devez d'abord configurer un workflow n8n 
                                     qui fait le proxy vers Albert API.
                                 </p>
                                 <button 
@@ -1136,7 +1136,7 @@
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px; margin-bottom: 30px;">
                                 <div style="text-align: center; padding: 20px;">
                                     <div style="font-size: 48px; margin-bottom: 15px;">🔗</div>
-                                    <h4 style="color: #374151; margin-bottom: 10px;">Workflow N8N</h4>
+                                    <h4 style="color: #374151; margin-bottom: 10px;">Workflow n8n</h4>
                                     <p style="color: #6b7280; font-size: 14px;">
                                         Configurez un workflow qui reçoit les messages, 
                                         les transmet à Albert API et renvoie les réponses.
@@ -1144,10 +1144,10 @@
                                 </div>
                                 
                                 <div style="text-align: center; padding: 20px;">
-                                    <div style="font-size: 48px; margin-bottom: 15px;">🤖</div>
+                                    <div style="font-size: 48px; margin-bottom: 15px;">😶‍🌫️</div>
                                     <h4 style="color: #374151; margin-bottom: 10px;">Albert IA</h4>
                                     <p style="color: #6b7280; font-size: 14px;">
-                                        Une fois configuré, Albert créera des applications 
+                                        Une fois configuré, votre assistant Colaig créera des applications 
                                         complètes basées sur vos descriptions.
                                     </p>
                                 </div>
@@ -1180,12 +1180,12 @@
                 
                 if (this.isDocumentEmpty) {
                     this.addAIMessage(
-                        "Je peux créer votre application complète via N8N ! Configurez d'abord le webhook puis décrivez-moi votre besoin.", 
+                        "Je peux créer votre application complète ! Décrivez-moi votre besoin.", 
                         'ai'
                     );
                 } else {
                     this.addAIMessage(
-                        "Votre application est prête ! Je peux vous aider via N8N à l'améliorer ou analyser vos données.", 
+                        "Votre application est prête ! Je peux vous aider à l'améliorer ou analyser vos données.", 
                         'ai'
                     );
                 }
@@ -1195,7 +1195,7 @@
                 try {
                     // Vérifier que le webhook est configuré (sinon utiliser simulation)
                     if (!this.webhookUrl) {
-                        console.log('⚠️ Pas de webhook N8N, utilisation du mode simulation');
+                        console.log('⚠️ Pas de webhook n8n, utilisation du mode simulation');
                         return this.handleSimulationMode(message, attachedFile);
                     }
 
@@ -1208,7 +1208,7 @@
                     this.addAIMessage(message, 'user');
                     
                     // Ajouter un indicateur de traitement
-                    const processingId = this.addAIMessage('⏳ Albert réfléchit via N8N...', 'ai');
+                    const processingId = this.addAIMessage('⏳ Albert réfléchit via n8n...', 'ai');
                     
                     // Préparer le contexte selon le mode
                     let context = {
@@ -1236,8 +1236,8 @@
                         }
                     }
                     
-                    // Appeler Albert IA via N8N
-                    const aiResponse = await this.callAlbertViaN8N(context);
+                    // Appeler Albert IA via n8n
+                    const aiResponse = await this.callAlbertVian8n(context);
                     
                     // Supprimer l'indicateur de traitement
                     this.removeAIMessage(processingId);
@@ -1251,16 +1251,16 @@
                     }
                     
                 } catch (error) {
-                    console.error('Erreur IA via N8N:', error);
+                    console.error('Erreur IA via n8n:', error);
                     this.addAIMessage(
-                        "😕 Erreur de communication avec N8N. Vérifiez la configuration du webhook.", 
+                        "😕 Erreur de communication avec n8n. Vérifiez la configuration du webhook.", 
                         'ai'
                     );
                 }
             }
 
             async handleSimulationMode(message, attachedFile = null) {
-                console.log('🎭 Mode simulation (pas de webhook N8N)');
+                console.log('🎭 Mode simulation (pas de webhook n8n)');
                 
                 // Ajouter le message utilisateur
                 this.addAIMessage(message, 'user');
@@ -1289,8 +1289,8 @@
                 }, 1000);
             }
 
-            async callAlbertViaN8N(context) {
-                console.log('🔗 Appel Albert IA via N8N:', context);
+            async callAlbertVian8n(context) {
+                console.log('🔗 Appel Albert IA via n8n:', context);
                 
                 try {
                     // Construire l'URL avec l'action albert_chat
@@ -1298,7 +1298,7 @@
                         ? `${this.webhookUrl}&action=albert_chat` 
                         : `${this.webhookUrl}?action=albert_chat`;
                     
-                    // Préparer les données pour N8N
+                    // Préparer les données pour n8n
                     const webhookData = {
                         messageId: `ai_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
                         message: context.message,
@@ -1312,7 +1312,7 @@
                         source: 'grist-ai-dashboard'
                     };
                     
-                    console.log('📤 Envoi vers N8N:', chatUrl);
+                    console.log('📤 Envoi vers n8n:', chatUrl);
                     
                     const response = await fetch(chatUrl, {
                         method: 'POST',
@@ -1323,30 +1323,30 @@
                     });
                     
                     if (!response.ok) {
-                        throw new Error(`Erreur N8N: ${response.status} ${response.statusText}`);
+                        throw new Error(`Erreur n8n: ${response.status} ${response.statusText}`);
                     }
                     
                     const data = await response.json();
-                    console.log('✅ Réponse N8N:', data);
+                    console.log('✅ Réponse n8n:', data);
                     
-                    return this.parseN8NResponse(data, context);
+                    return this.parsen8nResponse(data, context);
                     
                 } catch (error) {
-                    console.error('❌ Erreur appel N8N:', error);
+                    console.error('❌ Erreur appel n8n:', error);
                     
                     // Fallback en mode simulation
-                    this.addAIMessage('⚠️ Erreur N8N, passage en mode simulation.', 'ai');
+                    this.addAIMessage('⚠️ Erreur n8n, passage en mode simulation.', 'ai');
                     return this.simulateAIResponse(context);
                 }
             }
 
-            parseN8NResponse(n8nData, context) {
+            parsen8nResponse(n8nData, context) {
                 try {
                     // La réponse peut être directement la réponse d'Albert
-                    // ou encapsulée dans un objet N8N
+                    // ou encapsulée dans un objet n8n
                     let albertResponse = n8nData;
                     
-                    // Si N8N encapsule la réponse
+                    // Si n8n encapsule la réponse
                     if (n8nData.albertResponse) {
                         albertResponse = n8nData.albertResponse;
                     } else if (n8nData.data && n8nData.data.albertResponse) {
@@ -1375,14 +1375,14 @@
                     }
                     
                     return {
-                        message: albertResponse.message || "Réponse reçue d'Albert via N8N",
+                        message: albertResponse.message || "Réponse reçue d'Albert via n8n",
                         actions: albertResponse.actions || null
                     };
                     
                 } catch (error) {
-                    console.error('Erreur parsing réponse N8N:', error);
+                    console.error('Erreur parsing réponse n8n:', error);
                     return {
-                        message: "Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration N8N.",
+                        message: "Réponse d'Albert reçue mais format incorrect. Vérifiez la configuration n8n.",
                         actions: null
                     };
                 }
@@ -1394,7 +1394,7 @@
                 
                 if (message.match(/^(bonjour|hello|salut|hi|hey|bonsoir)/)) {
                     return {
-                        message: "👋 Bonjour ! Je suis Albert via N8N. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.",
+                        message: "👋 Bonjour ! Je suis Albert via n8n. Configurez le webhook pour accéder à toutes mes fonctionnalités, ou utilisez le mode simulation pour tester.",
                         actions: null
                     };
                 }
@@ -1405,7 +1405,7 @@
                         "• Analyser vos données\n• Créer des rapports\n• Identifier des tendances\n• Générer des insights";
                         
                     return {
-                        message: `💡 **Mode ${context.mode.toUpperCase()} via N8N** :\n\n${capabilities}\n\n**Configuration :**\n• Webhook N8N requis pour Albert complet\n• Mode simulation actif pour démonstration`,
+                        message: `💡 **Mode ${context.mode.toUpperCase()} via n8n** :\n\n${capabilities}\n\n**Configuration :**\n• Webhook n8n requis pour Albert complet\n• Mode simulation actif pour démonstration`,
                         actions: null
                     };
                 }
@@ -1425,14 +1425,14 @@
                 }
                 
                 return {
-                    message: "🔗 **Mode simulation N8N**\n\nPour accéder aux fonctionnalités complètes d'Albert :\n1. Configurez le webhook N8N ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
+                    message: "🔗 **Mode simulation n8n**\n\nPour accéder aux fonctionnalités complètes d'Albert :\n1. Configurez le webhook n8n ⚙️\n2. Créez un workflow avec action 'albert_chat'\n3. Connectez à Albert API\n\nEn attendant, testez avec 'créer une app de maintenance'.",
                     actions: null
                 };
             }
 
             generateMaintenanceApp() {
                 return {
-                    message: "✨ Application de maintenance créée ! (Mode simulation - configurez N8N pour Albert complet)",
+                    message: "✨ Application de maintenance créée ! (Mode simulation - configurez n8n pour Albert complet)",
                     actions: [
                         {
                             type: 'createTables',
@@ -1521,7 +1521,7 @@
                             this.webhookUrl = parts[1];
                             this.saveWebhookConfig(parts[1]);
                             this.updateWebhookStatusBadge();
-                            this.addAIMessage('✅ Webhook N8N configuré via commande !', 'ai');
+                            this.addAIMessage('✅ Webhook n8n configuré via commande !', 'ai');
                         } else {
                             this.addAIMessage(`🔗 Webhook actuel: ${this.webhookUrl || 'Non configuré'}\nUtilisation: /webhook https://votre-n8n.com/webhook/albert`, 'ai');
                         }
@@ -1529,14 +1529,14 @@
                         
                     case '/help':
                         this.addAIMessage(
-                            '🔗 **Aide Grist AI Dashboard via N8N**\n\n' +
+                            '🔗 **Aide Grist AI Dashboard via n8n**\n\n' +
                             '**Commandes spéciales :**\n' +
-                            '• `/webhook URL` - Configurer le webhook N8N\n' +
+                            '• `/webhook URL` - Configurer le webhook n8n\n' +
                             '• `/mode dev` - Mode développement\n' +
                             '• `/mode analyst` - Mode analyste\n' +
                             '• `/status` - État du système\n' +
                             '• `/clear` - Effacer la conversation\n\n' +
-                            '**Configuration N8N requise :**\n' +
+                            '**Configuration n8n requise :**\n' +
                             '• Webhook Trigger\n' +
                             '• Switch sur paramètre "action"\n' +
                             '• HTTP Request vers Albert API\n' +
@@ -1555,35 +1555,35 @@
                         
                     case '/clear':
                         this.clearAIMessages();
-                        this.addAIMessage('💬 Conversation effacée. N8N prêt pour nouvelles interactions !', 'ai');
+                        this.addAIMessage('💬 Conversation effacée. n8n prêt pour nouvelles interactions !', 'ai');
                         break;
                         
                     case '/status':
                         const hasWebhook = !!this.webhookUrl;
                         this.addAIMessage(
-                            `📊 **Status Grist AI via N8N :**\n` +
-                            `• **Webhook N8N :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\n` +
+                            `📊 **Status Grist AI via n8n :**\n` +
+                            `• **Webhook n8n :** ${hasWebhook ? '✅ Configuré' : '❌ Non configuré'}\n` +
                             `• **Mode :** ${this.aiMode.toUpperCase()}\n` +
                             `• **Document :** ${this.isDocumentEmpty ? 'Vide' : 'Avec données'}\n` +
                             `• **Composants :** ${this.components.size}\n` +
                             `• **URL :** ${this.webhookUrl || 'Non définie'}\n` +
                             `• **Support useRef :** ✅ Activé\n` +
                             `• **Composants enfants :** ✅ Réparés\n\n` +
-                            `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert via N8N'}`,
+                            `${!hasWebhook ? '💡 Configurez le webhook avec ⚙️' : '✅ Prêt pour Albert via n8n'}`,
                             'ai'
                         );
                         break;
                         
                     default:
                         this.addAIMessage(
-                            `❓ Commande inconnue: ${cmd}\nTapez \`/help\` pour les commandes N8N disponibles.`,
+                            `❓ Commande inconnue: ${cmd}\nTapez \`/help\` pour les commandes n8n disponibles.`,
                             'ai'
                         );
                 }
             }
 
             setupEventListeners() {
-                console.log('🎯 Configuration des event listeners N8N');
+                console.log('🎯 Configuration des event listeners n8n');
                 
                 // Configuration du webhook modal
                 const configButton = document.getElementById('configButton');
@@ -1617,8 +1617,8 @@
                     this.updateWebhookStatusBadge();
                     
                     if (url) {
-                        this.showSuccessMessage('Webhook N8N configuré avec succès');
-                        this.showToast('Webhook N8N configuré avec succès', 'success');
+                        this.showSuccessMessage('Webhook n8n configuré avec succès');
+                        this.showToast('Webhook n8n configuré avec succès', 'success');
                     } else {
                         this.showSuccessMessage('Configuration webhook effacée');
                         this.showToast('Configuration webhook effacée', 'warning');
@@ -1632,7 +1632,7 @@
                 testWebhook.addEventListener('click', async () => {
                     const url = webhookUrlInput.value.trim();
                     if (!url) {
-                        this.showError('Veuillez saisir une URL de webhook N8N');
+                        this.showError('Veuillez saisir une URL de webhook n8n');
                         return;
                     }
                     
@@ -1649,15 +1649,15 @@
                             },
                             body: JSON.stringify({
                                 test: true,
-                                message: 'Test configuration webhook N8N',
+                                message: 'Test configuration webhook n8n',
                                 timestamp: new Date().toISOString()
                             })
                         });
                         
                         if (response.ok) {
                             const webhookStatus = document.getElementById('webhookStatus');
-                            webhookStatus.innerHTML = `<div class="badge badge-success">✓ Test N8N réussi !</div>`;
-                            this.showToast('Test N8N réussi !', 'success');
+                            webhookStatus.innerHTML = `<div class="badge badge-success">✓ Test n8n réussi !</div>`;
+                            this.showToast('Test n8n réussi !', 'success');
                         } else {
                             const webhookStatus = document.getElementById('webhookStatus');
                             webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur ${response.status}: ${response.statusText}</div>`;
@@ -1665,8 +1665,8 @@
                         }
                     } catch (error) {
                         const webhookStatus = document.getElementById('webhookStatus');
-                        webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur N8N: ${error.message}</div>`;
-                        this.showToast(`Erreur N8N: ${error.message}`, 'error');
+                        webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Erreur n8n: ${error.message}</div>`;
+                        this.showToast(`Erreur n8n: ${error.message}`, 'error');
                     } finally {
                         testWebhook.disabled = false;
                         testWebhook.textContent = 'Tester';
@@ -1722,7 +1722,7 @@
                     }, 5000);
                 }, 2000);
                 
-                console.log('✅ Event listeners N8N configurés');
+                console.log('✅ Event listeners n8n configurés');
             }
 
             showKeyboardHint() {
@@ -1782,13 +1782,13 @@
                     if (savedUrl) {
                         this.webhookUrl = savedUrl;
                         this.webhookConfigured = true;
-                        console.log('URL webhook N8N chargée:', this.webhookUrl);
+                        console.log('URL webhook n8n chargée:', this.webhookUrl);
                         this.updateWebhookStatusBadge();
                     } else {
-                        console.log('Aucun webhook N8N configuré');
+                        console.log('Aucun webhook n8n configuré');
                     }
                 } catch (error) {
-                    console.warn('Erreur chargement config webhook N8N:', error.message);
+                    console.warn('Erreur chargement config webhook n8n:', error.message);
                 }
             }
             
@@ -1796,25 +1796,25 @@
                 try {
                     localStorage.setItem('grist_ai_n8n_webhook_url', url);
                     this.webhookConfigured = !!url;
-                    console.log('URL webhook N8N sauvegardée:', url);
+                    console.log('URL webhook n8n sauvegardée:', url);
                 } catch (error) {
-                    console.warn('Erreur sauvegarde config webhook N8N:', error.message);
+                    console.warn('Erreur sauvegarde config webhook n8n:', error.message);
                 }
             }
 
             updateWebhookStatusDisplay() {
                 const webhookStatus = document.getElementById('webhookStatus');
                 if (this.webhookUrl) {
-                    webhookStatus.innerHTML = `<div class="badge badge-success">✓ Webhook N8N configuré</div>`;
+                    webhookStatus.innerHTML = `<div class="badge badge-success">✓ Webhook n8n configuré</div>`;
                 } else {
-                    webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Aucun webhook N8N configuré</div>`;
+                    webhookStatus.innerHTML = `<div class="badge badge-warning">⚠ Aucun webhook n8n configuré</div>`;
                 }
             }
             
             updateWebhookStatusBadge() {
                 const webhookStatusBadge = document.getElementById('webhookStatusBadge');
                 if (this.webhookUrl) {
-                    webhookStatusBadge.textContent = 'N8N configuré';
+                    webhookStatusBadge.textContent = 'n8n configuré';
                     webhookStatusBadge.className = 'webhook-status configured';
                 } else {
                     webhookStatusBadge.textContent = 'Webhook non configuré';
@@ -1881,9 +1881,9 @@
                 
                 let helpMessage = '';
                 if (mode === 'dev') {
-                    helpMessage = "🛠️ **Mode Développement N8N activé**\n\nJe peux créer des applications complètes via le proxy N8N vers Albert IA.";
+                    helpMessage = "🛠️ **Mode Développement n8n activé**\n\nJe peux créer des applications complètes via le proxy n8n vers Albert IA.";
                 } else {
-                    helpMessage = "📊 **Mode Analyste N8N activé**\n\nJe peux analyser vos données via N8N et Albert IA.";
+                    helpMessage = "📊 **Mode Analyste n8n activé**\n\nJe peux analyser vos données via n8n et Albert IA.";
                 }
                 
                 this.addAIMessage(helpMessage, 'ai');
@@ -1894,7 +1894,7 @@
             // ================================
 
             async executeAIActions(actions) {
-                this.addAIMessage('⚙️ Exécution des actions Albert via N8N...', 'ai');
+                this.addAIMessage('⚙️ Exécution des actions Albert via n8n...', 'ai');
                 
                 for (const action of actions) {
                     try {
@@ -1920,7 +1920,7 @@
                     }
                 }
                 
-                this.addAIMessage('✅ Actions terminées via N8N !', 'ai');
+                this.addAIMessage('✅ Actions terminées via n8n !', 'ai');
             }
 
             async executeCreateTables(tables) {
@@ -1976,7 +1976,7 @@
                     this.setupNavigation();
                     await this.loadDefaultComponent();
                     
-                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants N8N', 'ai');
+                    this.addAIMessage('🔄 Application rechargée avec nouveaux composants n8n', 'ai');
                 }
             }
 
@@ -2127,14 +2127,14 @@
                 const defaultComponents = [
                     {
                         id: 'dashboard',
-                        name: '📊 Dashboard N8N',
+                        name: '📊 Dashboard n8n',
                         type: 'functional',
                         code: `
                             const Component = () => {
                                 const [status, setStatus] = useState('ready');
                                 
                                 useEffect(() => {
-                                    console.log('Dashboard N8N v4.5 CORRECTED chargé');
+                                    console.log('Dashboard n8n v4.5 CORRECTED chargé');
                                     setStatus('loaded');
                                 }, []);
                                 
@@ -2155,7 +2155,7 @@
                                             WebkitTextFillColor: 'transparent',
                                             backgroundClip: 'text'
                                         } 
-                                    }, '🚀 Grist AI via N8N v4.5 CORRECTED'),
+                                    }, '🚀 Grist AI via n8n v4.5 CORRECTED'),
                                     
                                     React.createElement('p', { 
                                         style: { 
@@ -2163,7 +2163,7 @@
                                             color: '#6b7280',
                                             marginBottom: '30px' 
                                         } 
-                                    }, 'Application créée avec Albert IA via proxy N8N + Support useRef + Composants enfants réparés'),
+                                    }, 'Application créée avec Albert IA via proxy n8n + Support useRef + Composants enfants réparés'),
                                     
                                     React.createElement('div', {
                                         style: {
@@ -2187,10 +2187,10 @@
                                             }, '🔗'),
                                             React.createElement('h3', {
                                                 style: { color: '#374151', marginBottom: '10px' }
-                                            }, 'N8N Proxy'),
+                                            }, 'n8n Proxy'),
                                             React.createElement('p', {
                                                 style: { color: '#6b7280', fontSize: '14px' }
-                                            }, 'Communication via workflow N8N vers Albert API')
+                                            }, 'Communication via workflow n8n vers Albert API')
                                         ),
                                         
                                         React.createElement('div', {
@@ -2248,7 +2248,7 @@
                                         }, '✅ Status: ' + status),
                                         React.createElement('p', {
                                             style: { color: '#0369a1', fontSize: '14px', margin: 0 }
-                                        }, 'Toutes les corrections v4.5 appliquées - Prêt pour utilisation avec N8N')
+                                        }, 'Toutes les corrections v4.5 appliquées - Prêt pour utilisation avec n8n')
                                     )
                                 );
                             };
@@ -2339,7 +2339,7 @@
                 try {
                     const config = {
                         metadata: {
-                            created_by: 'Albert IA via N8N',
+                            created_by: 'Albert IA via n8n',
                             created_at: new Date().toISOString(),
                             grist_dashboard_version: '4.5-CORRECTED',
                             mode_used: this.aiMode,
@@ -2364,7 +2364,7 @@
                     document.body.removeChild(a);
                     URL.revokeObjectURL(url);
                     
-                    this.addAIMessage('📥 Configuration N8N de l\'application exportée (v4.5 corrigée) !', 'ai');
+                    this.addAIMessage('📥 Configuration n8n de l\'application exportée (v4.5 corrigée) !', 'ai');
                     this.showToast('Configuration exportée avec succès', 'success');
                     
                 } catch (error) {
@@ -2493,7 +2493,7 @@
                     return;
                 }
                 
-                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier via N8N et créer une application adaptée ?`;
+                const message = `📎 J'ai uploadé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Peux-tu analyser ce fichier via n8n et créer une application adaptée ?`;
                 dashboard.sendAIMessage(message, file);
                 dashboard.showToast(`Fichier "${file.name}" téléchargé`, 'success');
             }
@@ -2549,7 +2549,7 @@
             
             setTimeout(() => {
                 dashboard.addAIMessage(
-                    '💡 Voici un exemple d\'application que je peux créer via N8N. Vous pouvez modifier cette demande ou valider directement :', 
+                    '💡 Voici un exemple d\'application que je peux créer via n8n. Vous pouvez modifier cette demande ou valider directement :', 
                     'ai'
                 );
             }, 100);
@@ -2583,7 +2583,7 @@
                     return;
                 }
                 
-                const message = `📎 J'ai glissé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via N8N.`;
+                const message = `📎 J'ai glissé le fichier "${file.name}" (${(file.size / 1024).toFixed(1)} KB). Analyse ce fichier et crée-moi une application complète basée sur ces données via n8n.`;
                 dashboard.sendAIMessage(message, file);
                 dashboard.showToast(`Fichier "${file.name}" glissé avec succès`, 'success');
                 
@@ -2603,7 +2603,7 @@
         }
 
         // Fonctions utilitaires additionnelles
-        function quickConfigN8N() {
+        function quickConfign8n() {
             const modal = document.getElementById('webhookModal');
             const input = document.getElementById('webhookUrl');
             
@@ -2616,9 +2616,9 @@
 
         function showQuickStart() {
             dashboard.addAIMessage(
-                `🚀 **Guide de démarrage rapide N8N**
+                `🚀 **Guide de démarrage rapide n8n**
 
-**1. Configuration N8N :**
+**1. Configuration n8n :**
 • Créez un workflow avec Webhook Trigger
 • Ajoutez un Switch node sur le paramètre "action"
 • Pour action="albert_chat" : HTTP Request vers Albert API
@@ -2655,11 +2655,11 @@
 Pour exporter votre application vers GitHub :
 
 1. **Export local :** Utilisez le bouton "📥 Export" dans la navigation
-2. **Fichier généré :** \`grist-app-n8n-config-v4.5-corrected.json\`
+2. **Fichier généré :** \`grist-app-nest-config-v5.json\`
 3. **Structure incluse :**
    • Tables et schémas Grist
    • Composants React créés
-   • Configuration N8N utilisée
+   • Configuration n8n utilisée
    • Historique des conversations
 
 4. **Upload GitHub :**
@@ -2682,9 +2682,9 @@ Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
                     const main = document.getElementById('main-content');
                     main.innerHTML = `
                         <div style="padding: 40px; text-align: center; background: white; margin: 20px; border-radius: 12px;">
-                            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d'Initialisation N8N</h2>
+                            <h2 style="color: #dc2626; margin-bottom: 20px;">⚠️ Erreur d'Initialisation n8n</h2>
                             <p style="color: #6b7280; margin-bottom: 20px;">
-                                Le système N8N n'a pas pu s'initialiser correctement. 
+                                Le système n8n n'a pas pu s'initialiser correctement. 
                                 Cela peut être dû à un problème de connexion à Grist.
                             </p>
                             <div style="margin-bottom: 20px;">
@@ -2736,7 +2736,7 @@ Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
                     console.warn('⚠️ API Grist non disponible, mode démo activé');
                 }
                 
-                console.log('✅ Grist AI Dashboard v4.5 CORRECTED initialisé avec succès');
+                console.log('✅ Grist App Nest v5 avec succès');
                 
             } catch (error) {
                 console.error('❌ Erreur fatale:', error);
@@ -2823,10 +2823,10 @@ Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
         // Export des fonctions pour debug
         window.GristDashboardDebug = {
             dashboard: () => dashboard,
-            testN8N: (url) => {
+            testn8n: (url) => {
                 if (dashboard) {
                     dashboard.webhookUrl = url;
-                    return dashboard.callAlbertViaN8N({
+                    return dashboard.callAlbertVian8n({
                         mode: 'dev',
                         message: 'Test debug',
                         isDocumentEmpty: true
@@ -2845,7 +2845,7 @@ Le repo de référence : https://github.com/nic01asFr/grist-dynamic-dashboard`,
             }
         };
 
-        console.log('🎯 Grist AI Dashboard v4.5 CORRECTED - Prêt pour utilisation');
+        console.log('🎯 Grist App Nest v5 - Prêt pour utilisation');
         console.log('📖 Guide: https://github.com/nic01asFr/grist-dynamic-dashboard');
         console.log('🛠️ Debug: window.GristDashboardDebug');
     </script>
