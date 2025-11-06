@@ -1,0 +1,106 @@
+{
+  "When Executed by Another Workflow": [
+    {
+      "conversation_id": "conv_1704585600000_abc123def",
+      "business_domain": "gestion_stock",
+      "schema": {
+        "entities": [
+          {
+            "table_name": "Produits",
+            "entity_type": "master",
+            "description": "Articles en stock",
+            "columns": [
+              {
+                "column_name": "id",
+                "column_type": "Int",
+                "is_primary": true,
+                "is_required": true
+              },
+              {
+                "column_name": "nom",
+                "column_type": "Text",
+                "is_required": true
+              },
+              {
+                "column_name": "stock_actuel",
+                "column_type": "Int",
+                "is_required": true
+              }
+            ],
+            "relationships": []
+          },
+          {
+            "table_name": "Fournisseurs",
+            "entity_type": "master",
+            "description": "Entreprises fournissant les produits",
+            "columns": [
+              {
+                "column_name": "id",
+                "column_type": "Int",
+                "is_primary": true
+              },
+              {
+                "column_name": "nom",
+                "column_type": "Text",
+                "is_required": true
+              }
+            ],
+            "relationships": []
+          }
+        ],
+        "total_tables": 4,
+        "total_columns": 25,
+        "total_relationships": 3
+      },
+      "use_cases": {
+        "all_use_cases": [
+          {
+            "uc_id": "UC_CREATE_PRODUITS",
+            "description": "Créer un nouveau produit",
+            "actor": "Gestionnaire",
+            "priority": "high",
+            "type": "crud",
+            "data_required": ["Produits"]
+          }
+        ],
+        "total_count": 15,
+        "crud_count": 12,
+        "specific_count": 3
+      },
+      "component_to_generate": {
+        "id": "gestion_produits",
+        "name": "Gestion Produits",
+        "priority": 2,
+        "type": "crud",
+        "entity": "Produits",
+        "description": "Interface CRUD pour gérer les Produits",
+        "table_schema": {
+          "table_name": "Produits",
+          "entity_type": "master",
+          "description": "Articles en stock",
+          "columns": [
+            {
+              "column_name": "id",
+              "column_type": "Int",
+              "is_primary": true,
+              "is_required": true
+            },
+            {
+              "column_name": "nom",
+              "column_type": "Text",
+              "is_required": true
+            },
+            {
+              "column_name": "stock_actuel",
+              "column_type": "Int",
+              "is_required": true
+            }
+          ],
+          "relationships": []
+        }
+      },
+      "component_index": 0,
+      "total_components": 3
+    }
+  ]
+}
