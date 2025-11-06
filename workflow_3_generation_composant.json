@@ -1,0 +1,88 @@
+{
+  "name": "Workflow 3: Génération Composant (Single)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "execute-workflow-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Format Prompt Agent 10 (Contexte Réduit pour UN composant)\nconst input = $input.first().json;\nconst context = input.component_context;\n\n// Récupérer schéma et use cases complets depuis variables\nconst schema = JSON.parse($vars.get('schema_full'));\nconst allUseCases = JSON.parse($vars.get('use_cases_full'));\nconst businessDomain = $vars.get('business_domain');\n\n// System Prompt (statique)\nconst systemPrompt = `Tu es Agent 10: Code Generator.\nTon rôle : Générer le code JSX React pour UN SEUL composant App Nest.\nIMPORTANT : Respecter STRICTEMENT les contraintes App Nest.`;\n\n// Helper: Générer exemple de code selon type de composant\nfunction generateComponentExample(compId, compType, requiredTables, schema) {\n  if (compType === 'dashboard' || compId === 'dashboard') {\n    // Dashboard avec métriques\n    const tables = requiredTables.slice(0, 3);\n    return `\\`\\`\\`javascript\nconst Component = () => {\n  const [metrics, setMetrics] = useState({});\n\n  useEffect(() => {\n    const loadMetrics = async () => {\n${tables.map(table => `      const ${table.toLowerCase()} = await gristAPI.getData('${table}');`).join('\\n')}\n\n      setMetrics({\n${tables.map(table => `        ${table.toLowerCase()}: Array.isArray(${table.toLowerCase()}) ? ${table.toLowerCase()}.length : 0`).join(',\\n')}\n      });\n    };\n    loadMetrics();\n  }, []);\n\n  return (\n    <div style={{padding: '20px', fontFamily: 'Marianne, sans-serif'}}>\n      <h1>Tableau de bord</h1>\n      <div style={{display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px'}}>\n${tables.map(table => `        <div style={{backgroundColor: '#fff', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>\n          <h3>Total ${table}</h3>\n          <p style={{fontSize: '2rem', fontWeight: 'bold'}}>{metrics.${table.toLowerCase()} || 0}</p>\n        </div>`).join('\\n')}\n      </div>\n    </div>\n  );\n};\n\\`\\`\\``;\n  }\n\n  if (compType === 'crud') {\n    // CRUD classique\n    const tableName = requiredTables[0];\n    const entity = schema.entities.find(e => e.table_name === tableName);\n    if (!entity) return '// Erreur: entité non trouvée';\n\n    const formColumns = entity.columns.filter(c => !c.is_primary && c.is_required).slice(0, 4);\n    \n    return `\\`\\`\\`javascript\nconst Component = () => {\n  const [items, setItems] = useState([]);\n  const [formData, setFormData] = useState({});\n  const [editingId, setEditingId] = useState(null);\n\n  const loadItems = async () => {\n    const data = await gristAPI.getData('${tableName}');\n    if (Array.isArray(data)) {\n      setItems(data);\n    }\n  };\n\n  const saveItem = async () => {\n    if (editingId) {\n      await gristAPI.updateRecord('${tableName}', editingId, formData);\n      setEditingId(null);\n    } else {\n      await gristAPI.addRecord('${tableName}', formData);\n    }\n    setFormData({});\n    await loadItems();\n  };\n\n  const deleteItem = async (id) => {\n    if (confirm('Supprimer cet élément ?')) {\n      await gristAPI.deleteRecord('${tableName}', id);\n      await loadItems();\n    }\n  };\n\n  useEffect(() => { loadItems(); }, []);\n\n  return (\n    <div style={{padding: '20px'}}>\n      <h1>Gestion ${tableName}</h1>\n\n      {/* Formulaire */}\n      <div style={{marginBottom: '20px', backgroundColor: '#f5f5f5', padding: '15px', borderRadius: '8px'}}>\n        <h2>{editingId ? 'Modifier' : 'Nouveau'} ${tableName}</h2>\n${formColumns.map(col => `        <div style={{marginBottom: '10px'}}>\n          <label style={{display: 'block', marginBottom: '5px'}}>${col.column_name}</label>\n          <input\n            type=\"${col.column_type === 'Numeric' ? 'number' : col.column_type === 'Date' ? 'date' : 'text'}\"\n            value={formData.${col.column_name} || ''}\n            onChange={(e) => setFormData({...formData, ${col.column_name}: e.target.value})}\n            style={{width: '100%', padding: '8px', border: '1px solid #ddd', borderRadius: '4px'}}\n          />\n        </div>`).join('\\n')}\n        <button onClick={saveItem} style={{backgroundColor: '#000091', color: '#fff', padding: '10px 20px', border: 'none', borderRadius: '4px', cursor: 'pointer'}}>\n          {editingId ? 'Mettre à jour' : 'Créer'}\n        </button>\n        {editingId && (\n          <button onClick={() => { setEditingId(null); setFormData({}); }} style={{marginLeft: '10px', padding: '10px 20px'}}>\n            Annuler\n          </button>\n        )}\n      </div>\n\n      {/* Liste */}\n      <div>\n        <h2>Liste des ${tableName}</h2>\n        {items.map(item => (\n          <div key={item.id} style={{padding: '15px', borderBottom: '1px solid #ddd', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>\n            <div>\n${formColumns.slice(0, 3).map(col => `              <strong>${col.column_name}:</strong> {item.${col.column_name}}<br/>`).join('\\n')}\n            </div>\n            <div>\n              <button onClick={() => { setEditingId(item.id); setFormData(item); }} style={{marginRight: '10px', padding: '5px 10px'}}>\n                Modifier\n              </button>\n              <button onClick={() => deleteItem(item.id)} style={{backgroundColor: '#d32f2f', color: '#fff', padding: '5px 10px', border: 'none', borderRadius: '4px'}}>\n                Supprimer\n              </button>\n            </div>\n          </div>\n        ))}\n      </div>\n    </div>\n  );\n};\n\\`\\`\\``;\n  }\n\n  return '// Code générique pour composant';\n}\n\n// User Prompt (dynamique avec contexte spécifique au composant)\nconst userPrompt = `## COMPOSANT À GÉNÉRER\n\n**ID** : ${context.component_id}\n**Nom** : ${context.component_name}\n**Type** : ${context.component_type || 'functional'}\n**Priorité** : ${context.component_priority}\n\n---\n\n## SCHÉMA DES TABLES NÉCESSAIRES\n\n${context.required_tables.map(tableName => {\n  const entity = schema.entities.find(e => e.table_name === tableName);\n  if (!entity) return `Table ${tableName} non trouvée dans le schéma.`;\n\n  return `**Table: ${entity.table_name}**\nType: ${entity.entity_type}\nDescription: ${entity.description || 'N/A'}\nColonnes (${entity.columns.length} total):\n${entity.columns.slice(0, 12).map(col => `  - ${col.column_name} (${col.column_type})${col.is_required ? ' *required*' : ''}${col.is_primary ? ' *primary*' : ''}`).join('\\n')}\n${entity.columns.length > 12 ? `  ... ${entity.columns.length - 12} autres colonnes` : ''}\n\n${entity.relationships && entity.relationships.length > 0 ? `Relations:\n${entity.relationships.map(r => `  - ${r.type} vers ${r.target} via ${r.via}`).join('\\n')}` : 'Aucune relation'}\n`;\n}).join('\\n---\\n\\n')}\n\n---\n\n## USE CASES LIÉS\n\n${context.related_use_cases && context.related_use_cases.length > 0 ? context.related_use_cases.slice(0, 3).map(uc => `\n**${uc.uc_id}** : ${uc.description}\n- Actor: ${uc.actor}\n- Priority: ${uc.priority}\n- Action: ${uc.action}\n- Data required: ${uc.data_required.join(', ')}\n`).join('\\n') : 'Aucun use case spécifique lié'}\n\n---\n\n## CONTRAINTES APP NEST (STRICT)\n\n### ✅ OBLIGATOIRE\n\n1. **Nom composant** : const Component = () => {}\n   ❌ PAS : const ${context.component_name.replace(/\\s/g, '')} = () => {}\n\n2. **Pas d'imports** : AUCUN import/require\n   ❌ PAS : import React from 'react';\n   ❌ PAS : const { useState } = require('react');\n\n3. **Styles inline uniquement** : style={{...}}\n   ❌ PAS : className=\"button\"\n   ❌ PAS : <link rel=\"stylesheet\".../>\n\n4. **Validation Array OBLIGATOIRE** :\n   ✅ TOUJOURS vérifier avec Array.isArray() avant .map()\n   \\`\\`\\`javascript\n   const data = await gristAPI.getData('${context.required_tables[0]}');\n   if (Array.isArray(data)) {\n     data.map(item => ...)\n   }\n   \\`\\`\\`\n\n5. **Hooks autorisés** : useState, useEffect, useCallback, useMemo, useRef\n   ❌ PAS : useReducer, useImperativeHandle, useContext\n\n### API gristAPI disponible\n\n${context.required_tables.map(table => `- gristAPI.getData('${table}') → Retourne Array d'objets\n- gristAPI.addRecord('${table}', data) → Retourne id\n- gristAPI.updateRecord('${table}', id, data) → Retourne boolean\n- gristAPI.deleteRecord('${table}', id) → Retourne boolean`).join('\\n\\n')}\n\n### Styles DSFR (Design Système Français)\n\nBouton primary:\n\\`\\`\\`javascript\nstyle={{backgroundColor: '#000091', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontFamily: 'Marianne, sans-serif'}}\n\\`\\`\\`\n\nCard:\n\\`\\`\\`javascript\nstyle={{backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '0.25rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}}\n\\`\\`\\`\n\n---\n\n## EXEMPLE DE CODE pour \"${context.component_id}\"\n\n${generateComponentExample(\n  context.component_id, \n  context.type, \n  context.required_tables, \n  schema\n)}\n\n---\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON (pas de texte avant/après, pas de markdown) :\n\n{\n  \"component_id\": \"${context.component_id}\",\n  \"template_name\": \"${context.component_name}\",\n  \"component_type\": \"functional\",\n  \"component_code\": \"const Component = () => { ... };\"\n}\n\nGénère le code complet et fonctionnel pour CE composant uniquement.\n`;\n\n// Retourner prompts formatés\nreturn {\n  system_prompt: systemPrompt,\n  user_prompt: userPrompt,\n  component_id: context.component_id,\n  component_name: context.component_name,\n  context_size_estimate: Math.round((systemPrompt.length + userPrompt.length) / 4) + ' tokens'\n};"
+      },
+      "id": "code-format-prompt-a10",
+      "name": "Code: Format Prompt A10",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "options": {}
+      },
+      "id": "agent-010",
+      "name": "Agent 10: Code Generator (Single)",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4096
+        }
+      },
+      "id": "llm-010",
+      "name": "Albert API - Agent 10",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [650, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract component code from Agent 10 output\nconst output = $input.first().json.output;\n\n// Retourner composant généré\nreturn {\n  component_id: output.component_id,\n  template_name: output.template_name,\n  component_type: output.component_type,\n  component_code: output.component_code,\n  generated_at: new Date().toISOString(),\n  code_length: output.component_code.length,\n  estimated_tokens: Math.round(output.component_code.length / 4)\n};"
+      },
+      "id": "code-extract-component",
+      "name": "Code: Extract Component",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Code: Format Prompt A10", "type": "main", "index": 0}]]
+    },
+    "Code: Format Prompt A10": {
+      "main": [[{"node": "Agent 10: Code Generator (Single)", "type": "main", "index": 0}]]
+    },
+    "Agent 10: Code Generator (Single)": {
+      "main": [[{"node": "Code: Extract Component", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 10": {
+      "ai_languageModel": [[{"node": "Agent 10: Code Generator (Single)", "type": "ai_languageModel", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}
