@@ -3,17 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "appnest-generate-component",
-        "responseMode": "responseNode",
-        "options": {}
+        "inputSource": "passthrough"
       },
-      "id": "webhook-trigger-w3",
-      "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
       "position": [240, 460],
-      "webhookId": "appnest-generate-component"
+      "id": "trigger-w3",
+      "name": "When Executed by Another Workflow"
     },
     {
       "parameters": {
@@ -113,7 +109,7 @@
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "When Executed by Another Workflow": {
       "main": [
         [
           {

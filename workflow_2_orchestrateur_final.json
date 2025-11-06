@@ -3,17 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "appnest-orchestrateur",
-        "responseMode": "responseNode",
-        "options": {}
+        "inputSource": "passthrough"
       },
-      "id": "webhook-trigger-w2",
-      "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
-      "position": [240, 460],
-      "webhookId": "appnest-orchestrateur"
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [176, -64],
+      "id": "trigger-w2",
+      "name": "When Executed by Another Workflow"
     },
     {
       "parameters": {
@@ -23,7 +19,7 @@
       "name": "Extract Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [460, 460]
+      "position": [400, -64]
     },
     {
       "parameters": {
@@ -33,18 +29,17 @@
       "name": "Code: Prepare Components List",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [680, 460]
+      "position": [624, -64]
     },
     {
       "parameters": {
-        "batchSize": 1,
         "options": {}
       },
       "id": "split-components",
       "name": "Split In Batches",
       "type": "n8n-nodes-base.splitInBatches",
       "typeVersion": 3,
-      "position": [900, 460]
+      "position": [848, -64]
     },
     {
       "parameters": {
@@ -54,7 +49,7 @@
       "name": "Code: Prepare Workflow 3 Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1120, 460]
+      "position": [1056, -176]
     },
     {
       "parameters": {
@@ -67,7 +62,7 @@
       "name": "Execute Workflow 3",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [1340, 460],
+      "position": [1264, -176],
       "notes": "Appelle le Workflow 3 pour générer UN composant"
     },
     {
@@ -78,17 +73,15 @@
       "name": "Code: Collect Component",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1560, 460]
+      "position": [1456, -176]
     },
     {
-      "parameters": {
-        "options": {}
-      },
+      "parameters": {},
       "id": "loop-back",
       "name": "Loop Back",
       "type": "n8n-nodes-base.noOp",
       "typeVersion": 1,
-      "position": [1560, 660],
+      "position": [1648, -96],
       "notes": "Retour vers Split In Batches pour le composant suivant"
     },
     {
@@ -99,7 +92,7 @@
       "name": "Code: Aggregate Results",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [1780, 460]
+      "position": [1888, -48]
     },
     {
       "parameters": {
@@ -111,7 +104,7 @@
       "name": "Respond Success",
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
-      "position": [2000, 460]
+      "position": [2160, -224]
     },
     {
       "parameters": {
@@ -122,12 +115,12 @@
       "name": "Execute Workflow 5",
       "type": "n8n-nodes-base.executeWorkflow",
       "typeVersion": 1.3,
-      "position": [2000, 660],
+      "position": [2352, -48],
       "notes": "Optionnel: Appelle le Workflow 5 pour assemblage final"
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "When Executed by Another Workflow": {
       "main": [
         [
           {

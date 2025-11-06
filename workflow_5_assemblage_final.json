@@ -3,17 +3,13 @@
   "nodes": [
     {
       "parameters": {
-        "httpMethod": "POST",
-        "path": "appnest-assemble",
-        "responseMode": "responseNode",
-        "options": {}
+        "inputSource": "passthrough"
       },
-      "id": "webhook-trigger-w5",
-      "name": "Webhook Trigger",
-      "type": "n8n-nodes-base.webhook",
-      "typeVersion": 2,
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
       "position": [240, 460],
-      "webhookId": "appnest-assemble"
+      "id": "trigger-w5",
+      "name": "When Executed by Another Workflow"
     },
     {
       "parameters": {
@@ -79,7 +75,7 @@
     }
   ],
   "connections": {
-    "Webhook Trigger": {
+    "When Executed by Another Workflow": {
       "main": [
         [
           {
