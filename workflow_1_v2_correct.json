@@ -1,0 +1,387 @@
+{
+  "name": "Workflow 1: Analyse & Schéma (Pattern Correct)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appnest-analyse",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "appnest-analyse"
+    },
+    {
+      "parameters": {
+        "jsCode": "const userInput = $input.first().json.user_input;\n\nreturn {\n  user_input: userInput,\n  timestamp: new Date().toISOString(),\n  conversation_id: `conv_${Date.now()}`\n};"
+      },
+      "id": "extract-input",
+      "name": "Extract User Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "options": {
+          "systemMessage": "Tu es Agent 1: Conversation Manager.\n\nAnalyse cette demande utilisateur et identifie le domaine métier, les entités, et les besoins.\n\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"timestamp\": \"{{ $json.timestamp }}\",\n  \"user_request\": \"{{ $json.user_input }}\",\n  \"business_domain\": \"domaine identifié\",\n  \"business_domain_description\": \"Description\",\n  \"extracted_entities\": [\n    {\"name\": \"entité1\", \"description\": \"desc\"}\n  ],\n  \"functional_requirements\": [\"Req 1\"],\n  \"non_functional_requirements\": {\n    \"performance\": \"< 2s\",\n    \"accessibility\": \"RGAA AAA\",\n    \"security\": \"RGPD\"\n  }\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [650, 300],
+      "id": "agent-001",
+      "name": "Agent 1: Conversation Manager"
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "id": "llm-001",
+      "name": "Albert API - Agent 1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [650, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-a1",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [850, 300],
+      "id": "edit-fields-a1",
+      "name": "Edit Fields A1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const a1Output = $input.first().json.output;\n\nconst systemPrompt2 = `Tu es Agent 2: Intent Analyzer.\n\nTu dois identifier les intentions métier (consultation, gestion CRUD, workflow, reporting) et définir les personas utilisateurs.\n\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"primary_intent\": \"intent principal\",\n  \"secondary_intents\": [\"intent1\", \"intent2\"],\n  \"user_personas\": [\n    {\n      \"name\": \"persona_id\",\n      \"role\": \"Nom du rôle métier\",\n      \"needs\": [\"besoin 1\"],\n      \"frequency\": \"quotidienne/hebdomadaire\"\n    }\n  ],\n  \"use_cases\": [\n    {\n      \"uc_id\": \"UC001\",\n      \"actor\": \"persona_id\",\n      \"action\": \"action_name\",\n      \"description\": \"Description\",\n      \"priority\": \"haute/moyenne/basse\",\n      \"data_required\": [\"Entity1\", \"Entity2\"]\n    }\n  ],\n  \"business_domain\": \"${a1Output.business_domain}\",\n  \"complexity_level\": \"low/medium/high\"\n}`;\n\nconst userPrompt2 = `## CONTEXTE\nDomaine métier: ${a1Output.business_domain}\nDescription: ${a1Output.business_domain_description}\n\nEntités identifiées (${a1Output.extracted_entities.length}):\n${a1Output.extracted_entities.map(e => `- ${e.name}: ${e.description}`).join('\\n')}\n\nBesoins fonctionnels:\n${a1Output.functional_requirements.map(r => `- ${r}`).join('\\n')}`;\n\nreturn {\n  agent1_output: a1Output,\n  system_message: systemPrompt2,\n  user_message: userPrompt2\n};"
+      },
+      "id": "code-format-a1-a2",
+      "name": "Code: Format A1→A2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [1250, 300],
+      "id": "agent-002",
+      "name": "Agent 2: Intent Analyzer"
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2500
+        }
+      },
+      "id": "llm-002",
+      "name": "Albert API - Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1250, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-a2",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent1-a2",
+              "name": "agent1_output",
+              "value": "={{ $json.agent1_output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1450, 300],
+      "id": "edit-fields-a2",
+      "name": "Edit Fields A2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const a1Output = $input.first().json.agent1_output;\nconst a2Output = $input.first().json.output;\n\nconst systemPrompt3 = `Tu es Agent 3: Validation Coordinator.\n\nTu dois valider la faisabilité technique avec les contraintes App Nest.\n\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"validation_id\": \"valid_${Date.now()}\",\n  \"is_feasible\": true,\n  \"technical_validation\": {\n    \"app_nest_compatible\": true,\n    \"grist_schema_possible\": true,\n    \"performance_achievable\": true\n  },\n  \"validation_status\": \"APPROVED\"\n}`;\n\nconst userPrompt3 = `## VALIDATION FAISABILITÉ\nDomaine: ${a2Output.business_domain}\nEntités: ${a1Output.extracted_entities.length} tables\nUse cases: ${a2Output.use_cases.length}\nComplexité: ${a2Output.complexity_level}\n\nContraintes App Nest:\n- Max 10 tables\n- Max 50 colonnes/table\n- Pas de temps réel\n- Volumétrie < 10,000 records/table`;\n\nreturn {\n  agent1_output: a1Output,\n  agent2_output: a2Output,\n  system_message: systemPrompt3,\n  user_message: userPrompt3\n};"
+      },
+      "id": "code-format-a2-a3",
+      "name": "Code: Format A2→A3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [1850, 300],
+      "id": "agent-003",
+      "name": "Agent 3: Validation"
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 2000
+        }
+      },
+      "id": "llm-003",
+      "name": "Albert API - Agent 3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1850, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-a3",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent1-a3",
+              "name": "agent1_output",
+              "value": "={{ $json.agent1_output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent2-a3",
+              "name": "agent2_output",
+              "value": "={{ $json.agent2_output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2050, 300],
+      "id": "edit-fields-a3",
+      "name": "Edit Fields A3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const a1Output = $input.first().json.agent1_output;\nconst a2Output = $input.first().json.agent2_output;\nconst a3Output = $input.first().json.output;\n\nif (!a3Output.is_feasible) {\n  throw new Error('Application non faisable avec App Nest');\n}\n\nconst systemPrompt4 = `Tu es Agent 4: Entity Classifier.\n\nTu dois créer le schéma complet de chaque entité avec tous ses attributs.\n\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"entities\": [\n    {\n      \"entity_name\": \"NomEntite\",\n      \"entity_type\": \"ressource/dossier/referentiel\",\n      \"table_name\": \"TableName\",\n      \"description\": \"Description\",\n      \"columns\": [\n        {\n          \"column_name\": \"id\",\n          \"column_type\": \"Text\",\n          \"is_primary\": true,\n          \"is_required\": true\n        }\n      ]\n    }\n  ],\n  \"total_tables\": ${a1Output.extracted_entities.length}\n}`;\n\nconst userPrompt4 = `## CRÉATION SCHÉMA\nDomaine: ${a2Output.business_domain}\n\nEntités à structurer (${a1Output.extracted_entities.length}):\n${a1Output.extracted_entities.map((e, i) => `${i+1}. ${e.name}: ${e.description}`).join('\\n')}\n\nUse cases:\n${a2Output.use_cases.map(uc => `- ${uc.description} (utilise: ${uc.data_required.join(', ')})`).join('\\n')}`;\n\nreturn {\n  agent1_output: a1Output,\n  agent2_output: a2Output,\n  agent3_output: a3Output,\n  system_message: systemPrompt4,\n  user_message: userPrompt4\n};"
+      },
+      "id": "code-format-a3-a4",
+      "name": "Code: Format A3→A4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [2450, 300],
+      "id": "agent-004",
+      "name": "Agent 4: Entity Classifier"
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 3500
+        }
+      },
+      "id": "llm-004",
+      "name": "Albert API - Agent 4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2450, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output-a4",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent2-a4",
+              "name": "agent2_output",
+              "value": "={{ $json.agent2_output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2650, 300],
+      "id": "edit-fields-a4",
+      "name": "Edit Fields A4"
+    },
+    {
+      "parameters": {
+        "jsCode": "const a2Output = $input.first().json.agent2_output;\nconst a4Output = $input.first().json.output;\n\nconst componentsToGenerate = [\n  {id: 'dashboard', name: 'Tableau de bord', priority: 1, type: 'dashboard'}\n];\n\na4Output.entities.slice(0, 5).forEach((entity, i) => {\n  componentsToGenerate.push({\n    id: `gestion_${entity.table_name.toLowerCase()}`,\n    name: `Gestion ${entity.table_name}`,\n    priority: i + 2,\n    type: 'crud',\n    entity: entity.table_name\n  });\n});\n\nreturn {\n  conversation_id: a4Output.conversation_id || `conv_${Date.now()}`,\n  business_domain: a2Output.business_domain,\n  schema: a4Output,\n  use_cases: a2Output.use_cases,\n  components_to_generate: componentsToGenerate,\n  summary: {\n    entities: a4Output.total_tables,\n    components: componentsToGenerate.length,\n    use_cases: a2Output.use_cases.length\n  }\n};"
+      },
+      "id": "code-prepare-output",
+      "name": "Code: Prepare Final Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2850, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [3050, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Extract User Input", "type": "main", "index": 0}]]
+    },
+    "Extract User Input": {
+      "main": [[{"node": "Agent 1: Conversation Manager", "type": "main", "index": 0}]]
+    },
+    "Agent 1: Conversation Manager": {
+      "main": [[{"node": "Edit Fields A1", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 1": {
+      "ai_languageModel": [[{"node": "Agent 1: Conversation Manager", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Edit Fields A1": {
+      "main": [[{"node": "Code: Format A1→A2", "type": "main", "index": 0}]]
+    },
+    "Code: Format A1→A2": {
+      "main": [[{"node": "Agent 2: Intent Analyzer", "type": "main", "index": 0}]]
+    },
+    "Agent 2: Intent Analyzer": {
+      "main": [[{"node": "Edit Fields A2", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 2": {
+      "ai_languageModel": [[{"node": "Agent 2: Intent Analyzer", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Edit Fields A2": {
+      "main": [[{"node": "Code: Format A2→A3", "type": "main", "index": 0}]]
+    },
+    "Code: Format A2→A3": {
+      "main": [[{"node": "Agent 3: Validation", "type": "main", "index": 0}]]
+    },
+    "Agent 3: Validation": {
+      "main": [[{"node": "Edit Fields A3", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 3": {
+      "ai_languageModel": [[{"node": "Agent 3: Validation", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Edit Fields A3": {
+      "main": [[{"node": "Code: Format A3→A4", "type": "main", "index": 0}]]
+    },
+    "Code: Format A3→A4": {
+      "main": [[{"node": "Agent 4: Entity Classifier", "type": "main", "index": 0}]]
+    },
+    "Agent 4: Entity Classifier": {
+      "main": [[{"node": "Edit Fields A4", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 4": {
+      "ai_languageModel": [[{"node": "Agent 4: Entity Classifier", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Edit Fields A4": {
+      "main": [[{"node": "Code: Prepare Final Output", "type": "main", "index": 0}]]
+    },
+    "Code: Prepare Final Output": {
+      "main": [[{"node": "Respond Success", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {
+    "Webhook Trigger": [
+      {
+        "user_input": "Je veux une application de gestion de stock avec produits, fournisseurs et commandes"
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
