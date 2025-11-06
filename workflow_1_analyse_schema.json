@@ -1,0 +1,364 @@
+{
+  "name": "Workflow 1: Analyse & Schéma",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appnest-analyse",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "appnest-analyse"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_input",
+              "name": "user_input",
+              "value": "={{ $json.body.user_input }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "conversation_id",
+              "name": "conversation_id",
+              "value": "={{ 'conv_' + $now.format('YYYYMMDDHHmmss') }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "extract-input",
+      "name": "Extract User Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "Tu es Agent 1: Conversation Manager pour la création d'applications métier avec App Nest.\n\nTa mission: analyser la demande utilisateur et structurer les besoins pour N'IMPORTE QUEL domaine métier.\n\n## CONTEXTE\n- App Nest: Système permettant de créer des applications de gestion métier\n- Domaines supportés: Gestion immobilière, RH, inventaire, CRM, projets, budget, etc.\n- Standards français: RGPD, RGAA AAA, DSFR (si administration)\n\n## TON RÔLE\n1. Analyser la demande utilisateur sans présupposer le domaine\n2. Identifier les entités métier mentionnées (ex: clients, produits, interventions, etc.)\n3. Extraire les besoins fonctionnels (consultation, CRUD, workflow, reporting)\n4. Identifier les exigences non-fonctionnelles\n\n## DEMANDE UTILISATEUR\n={{ $json.user_input }}\n\n## FORMAT OUTPUT JSON STRICT\nRéponds UNIQUEMENT avec ce JSON (aucun commentaire avant ni après):\n{\n  \"conversation_id\": \"={{ $json.conversation_id }}\",\n  \"timestamp\": \"={{ $json.timestamp }}\",\n  \"user_request\": \"={{ $json.user_input }}\",\n  \"business_domain\": \"domaine identifié\",\n  \"business_domain_description\": \"Description du domaine\",\n  \"extracted_entities\": [\n    {\"name\": \"entité1\", \"description\": \"description\"}\n  ],\n  \"functional_requirements\": [\n    \"Req 1\",\n    \"Req 2\"\n  ],\n  \"non_functional_requirements\": {\n    \"performance\": \"< 2s load time\",\n    \"accessibility\": \"RGAA AAA si admin publique\",\n    \"security\": \"RGPD compliant\"\n  },\n  \"ambiguities\": []\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans l'analyse de besoins pour applications métier de tout domaine."
+        }
+      },
+      "id": "agent-001",
+      "name": "Agent 1: Conversation Manager",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "id": "llm-001",
+      "name": "Albert API - Agent 1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [650, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Format A1→A2 (Contextual Prompting)\nconst a1 = $input.first().json.output;\n\n// Stocker données brutes dans variables N8N\n$vars.set('agent1_raw', JSON.stringify(a1));\n$vars.set('conversation_id', a1.conversation_id);\n$vars.set('business_domain', a1.business_domain);\n\n// System Prompt Agent 2 (statique)\nconst systemPrompt2 = `Tu es Agent 2: Intent Analyzer.\nTon rôle : Identifier les intentions métier (consultation, gestion, workflow, reporting)\net définir les personas utilisateurs.`;\n\n// User Prompt Agent 2 (dynamique avec exemples réels d'A1)\nconst userPrompt2 = `## CONTEXTE DU BESOIN UTILISATEUR\n\n**Domaine métier identifié** : ${a1.business_domain}\nDescription : ${a1.business_domain_description}\n\n**Entités métier extraites** (${a1.extracted_entities.length} entités) :\n${a1.extracted_entities.map((e, i) => `${i+1}. **${e.name}** : ${e.description}`).join('\\n')}\n\n**Besoins fonctionnels identifiés** :\n${a1.functional_requirements.map((r, i) => `- ${r}`).join('\\n')}\n\n---\n\n## TA MISSION\n\nÀ partir de ce contexte **${a1.business_domain}**, identifie :\n\n1. **Intentions principales** pour ce domaine spécifique\n   Pour \"${a1.business_domain}\", les intentions typiques sont :\n   - Consultation des ${a1.extracted_entities[0]?.name || 'données'}\n   - Gestion CRUD des ${a1.extracted_entities[1]?.name || 'entités'}\n   - Suivi des processus (workflow)\n   - Reporting et tableaux de bord\n\n2. **Personas utilisateurs** pour \"${a1.business_domain}\"\n   Identifie les rôles typiques dans ce domaine.\n\n3. **Use cases détaillés** avec les entités identifiées : ${a1.extracted_entities.map(e => e.name).join(', ')}\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec un JSON contenant :\n{\n  \"primary_intent\": \"intent principal\",\n  \"secondary_intents\": [\"intent1\", \"intent2\"],\n  \"intent_confidence\": 0.95,\n  \"user_personas\": [\n    {\n      \"name\": \"persona_id\",\n      \"role\": \"Nom du rôle métier\",\n      \"needs\": [\"besoin 1\", \"besoin 2\"],\n      \"frequency\": \"quotidienne/hebdomadaire/mensuelle\"\n    }\n  ],\n  \"use_cases\": [\n    {\n      \"uc_id\": \"UC001\",\n      \"actor\": \"persona_id\",\n      \"action\": \"action_name\",\n      \"description\": \"Description du use case\",\n      \"frequency\": \"quotidienne/hebdomadaire\",\n      \"priority\": \"haute/moyenne/basse\",\n      \"data_required\": [\"Entité1\", \"Entité2\"]\n    }\n  ],\n  \"data_flow\": \"flux identifié (ex: saisie > validation > archivage)\",\n  \"business_domain\": \"${a1.business_domain}\",\n  \"complexity_level\": \"low/medium/high\"\n}`;\n\n// Stocker dans variables N8N\n$vars.set('agent2_system_prompt', systemPrompt2);\n$vars.set('agent2_user_prompt', userPrompt2);\n\n// Retourner pour passage à Agent 2\nreturn {\n  system_prompt: systemPrompt2,\n  user_prompt: userPrompt2,\n  context_summary: `Prepared context for Intent Analysis of ${a1.business_domain}`,\n  entity_count: a1.extracted_entities.length\n};"
+      },
+      "id": "code-format-a1-a2",
+      "name": "Code: Format A1→A2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "options": {}
+      },
+      "id": "agent-002",
+      "name": "Agent 2: Intent Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2500
+        }
+      },
+      "id": "llm-002",
+      "name": "Albert API - Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1050, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Format A2→A3\nconst a1 = JSON.parse($vars.get('agent1_raw'));\nconst a2 = $input.first().json.output;\n\n$vars.set('agent2_raw', JSON.stringify(a2));\n\n// System Prompt Agent 3\nconst systemPrompt3 = `Tu es Agent 3: Validation Coordinator.\nTon rôle : Valider la faisabilité technique avec les contraintes App Nest.`;\n\n// User Prompt Agent 3 (avec contexte A1+A2)\nconst userPrompt3 = `## CONTEXTE DU PROJET\n\n**Domaine** : ${a2.business_domain}\n\n**Entités métier identifiées** : ${a1.extracted_entities.map(e => e.name).join(', ')}\nTotal : ${a1.extracted_entities.length} tables principales\n\n**Intentions métier** :\n- Intent principal : ${a2.primary_intent}\n- Intents secondaires : ${a2.secondary_intents.join(', ')}\n\n**Use cases identifiés** : ${a2.use_cases.length} use cases\n${a2.use_cases.slice(0, 3).map(uc => `- ${uc.uc_id}: ${uc.description}`).join('\\n')}\n\n**Niveau de complexité** : ${a2.complexity_level}\n\n---\n\n## TA MISSION : VALIDATION TECHNIQUE\n\nValide la faisabilité de cette application \"${a2.business_domain}\" avec les contraintes App Nest :\n\n### Contraintes à vérifier :\n1. **Nombre de tables** : ${a1.extracted_entities.length} tables ${a1.extracted_entities.length <= 10 ? '✅ OK (<10)' : '❌ RISQUE (>10)'}\n2. **Complexité workflow** : Level ${a2.complexity_level} ${a2.complexity_level === 'high' ? '⚠️ ATTENTION' : '✅ OK'}\n3. **Volumétrie estimée** : Pour chaque entité (${a1.extracted_entities.map(e => e.name).join(', ')})\n4. **Performances** : ${a2.use_cases.length} use cases réalisables ?\n\n### Contraintes techniques App Nest :\n- Max 50,000 records par table Grist\n- Max 50 colonnes par table\n- Relations N-N nécessitent table pivot\n- Performance optimale: pagination si > 50 records affichés\n- Pas de temps réel (WebSockets, Server-Sent Events)\n- Pas de backend custom (Node.js, Python, etc.)\n\n## FORMAT DE SORTIE\n\nRéponds avec JSON contenant :\n{\n  \"validation_id\": \"valid_${Date.now()}\",\n  \"is_feasible\": true,\n  \"technical_validation\": {\n    \"app_nest_compatible\": true,\n    \"grist_schema_possible\": true,\n    \"react_components_available\": true,\n    \"performance_achievable\": true\n  },\n  \"constraints_identified\": [\n    {\n      \"constraint_id\": \"CONST_001\",\n      \"type\": \"technical\",\n      \"description\": \"Description de la contrainte\",\n      \"impact\": \"low/medium/high\",\n      \"mitigation\": \"Solution proposée\"\n    }\n  ],\n  \"risks\": [\n    {\n      \"risk_id\": \"RISK_001\",\n      \"description\": \"Description du risque\",\n      \"probability\": \"low/medium/high\",\n      \"impact\": \"low/medium/high\",\n      \"mitigation\": \"Plan de mitigation\",\n      \"priority\": \"low/medium/high\"\n    }\n  ],\n  \"approved_specifications\": {\n    \"entities\": [\n      {\"name\": \"EntityName\", \"type\": \"ressource/dossier/referentiel\", \"estimated_records\": 100}\n    ],\n    \"patterns\": [\"dashboard\", \"crud_list\", \"workflow_form\", \"reporting\"],\n    \"use_cases\": [${a2.use_cases.map(uc => `\"${uc.uc_id}\"`).join(', ')}]\n  },\n  \"validation_status\": \"APPROVED\",\n  \"proceed_to_phase_2\": true\n}\n\nSi is_feasible = false, arrêter le workflow.`;\n\n$vars.set('agent3_system_prompt', systemPrompt3);\n$vars.set('agent3_user_prompt', userPrompt3);\n\nreturn {\n  system_prompt: systemPrompt3,\n  user_prompt: userPrompt3,\n  context_summary: `Validation for ${a1.extracted_entities.length} tables, ${a2.use_cases.length} use cases`\n};"
+      },
+      "id": "code-format-a2-a3",
+      "name": "Code: Format A2→A3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "options": {}
+      },
+      "id": "agent-003",
+      "name": "Agent 3: Validation Coordinator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 2500
+        }
+      },
+      "id": "llm-003",
+      "name": "Albert API - Agent 3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1450, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-feasible",
+              "leftValue": "={{ $json.output.is_feasible }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "if-feasible",
+      "name": "IF Feasible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error",
+              "name": "error",
+              "value": "Application non faisable avec App Nest. Contraintes techniques dépassées.",
+              "type": "string"
+            },
+            {
+              "id": "details",
+              "name": "details",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "set-error",
+      "name": "Set Error Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1650, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 500]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Format A3→A4\nconst a1 = JSON.parse($vars.get('agent1_raw'));\nconst a2 = JSON.parse($vars.get('agent2_raw'));\nconst a3 = $input.first().json.output;\n\n$vars.set('agent3_raw', JSON.stringify(a3));\n\n// System Prompt Agent 4\nconst systemPrompt4 = `Tu es Agent 4: Entity Classifier.\nTon rôle : Créer le schéma complet de chaque entité avec tous ses attributs.`;\n\n// User Prompt Agent 4 (avec exemples concrets du domaine)\nconst userPrompt4 = `## CONTEXTE PROJET VALIDÉ\n\n**Domaine** : ${a2.business_domain}\n**Validation** : ${a3.validation_status} ✅\n\n**Entités à structurer** (${a1.extracted_entities.length} entités) :\n${a1.extracted_entities.map((e, i) => `${i+1}. **${e.name}** : ${e.description}`).join('\\n')}\n\n**Use cases nécessitant ces entités** :\n${a2.use_cases.map(uc => `- ${uc.description} → Utilise: ${uc.data_required.join(', ')}`).join('\\n')}\n\n---\n\n## TA MISSION : CLASSIFICATION ET STRUCTURATION\n\nPour chaque entité du domaine \"${a2.business_domain}\", crée sa structure complète.\n\n### Méthodologie :\n\n1. **Identifier les entités métier** extraites des besoins utilisateur\n2. **Classifier chaque entité** selon son type:\n   - **ressource**: Entité principale métier (ex: Client, Produit, Bâtiment, Employé)\n   - **dossier**: Processus/transaction (ex: Commande, Intervention, Congé)\n   - **referentiel**: Données de référence (ex: Catégories, Statuts, Types)\n   - **pivot**: Table de liaison N-N\n\n3. **Définir les attributs** de chaque entité:\n   - ID unique (ex: ${a1.extracted_entities[0]?.name.toLowerCase()}_id)\n   - Attributs métier (nom, description, dates, montants, etc.)\n   - Relations (foreign keys vers autres entités)\n   - Champs calculés si nécessaire\n   - Contraintes (unique, required, enum)\n\n4. **Respecter contraintes Grist**:\n   - Max 50 colonnes par table\n   - Types supportés: Text, Numeric, Date, DateTime, Choice, Reference\n\n### Exemple concret pour \"${a1.extracted_entities[0]?.name}\" :\n\nType d'entité : ${a1.extracted_entities[0]?.name.includes('Commande') || a1.extracted_entities[0]?.name.includes('Intervention') || a1.extracted_entities[0]?.name.includes('Congé') ? 'dossier (processus)' : 'ressource (entité principale)'}\n\nAttributs attendus :\n- ${a1.extracted_entities[0]?.name.toLowerCase()}_id (Text, primary, required)\n- nom ou désignation (Text, required)\n- ${a1.extracted_entities[1] ? `${a1.extracted_entities[1].name.toLowerCase()}_id (Reference:${a1.extracted_entities[1].name})` : 'relations vers autres entités'}\n- date_creation (DateTime)\n- ${a1.extracted_entities[0]?.name.includes('Commande') || a1.extracted_entities[0]?.name.includes('Intervention') ? 'statut (Choice: [\"Brouillon\", \"En cours\", \"Terminé\"])' : 'actif (Choice: [\"Oui\", \"Non\"])'}\n- autres attributs métier spécifiques à \"${a2.business_domain}\"\n\n### Structure à créer pour TOUTES les entités :\n${a1.extracted_entities.map(e => `- ${e.name}`).join('\\n')}\n\n## FORMAT DE SORTIE\n\nRéponds avec JSON contenant :\n{\n  \"entities\": [\n    {\n      \"entity_name\": \"NomEntite\",\n      \"entity_type\": \"ressource/dossier/referentiel/pivot\",\n      \"table_name\": \"NomTable\",\n      \"description\": \"Description de l'entité\",\n      \"estimated_records\": 100,\n      \"columns\": [\n        {\n          \"column_name\": \"entity_id\",\n          \"column_type\": \"Text\",\n          \"is_primary\": true,\n          \"is_required\": true,\n          \"description\": \"Identifiant unique\"\n        }\n      ],\n      \"relationships\": [\n        {\"type\": \"1-N\", \"target\": \"AutreEntite\", \"via\": \"foreign_key\"}\n      ]\n    }\n  ],\n  \"total_tables\": ${a1.extracted_entities.length},\n  \"total_columns\": 0,\n  \"constraints_check\": {\n    \"max_columns_per_table\": \"OK (<50)\",\n    \"max_tables\": \"${a1.extracted_entities.length <= 10 ? 'OK (<10)' : 'WARNING (>10)'}\"\n  }\n}`;\n\n$vars.set('agent4_system_prompt', systemPrompt4);\n$vars.set('agent4_user_prompt', userPrompt4);\n\nreturn {\n  system_prompt: systemPrompt4,\n  user_prompt: userPrompt4,\n  context_summary: `Schema creation for ${a1.extracted_entities.length} entities`\n};"
+      },
+      "id": "code-format-a3-a4",
+      "name": "Code: Format A3→A4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "options": {}
+      },
+      "id": "agent-004",
+      "name": "Agent 4: Entity Classifier",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 3500
+        }
+      },
+      "id": "llm-004",
+      "name": "Albert API - Agent 4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2050, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Prepare for Workflow 2\nconst a1 = JSON.parse($vars.get('agent1_raw'));\nconst a2 = JSON.parse($vars.get('agent2_raw'));\nconst a4 = $input.first().json.output;\n\n// Stocker schéma complet\n$vars.set('schema_full', JSON.stringify(a4));\n$vars.set('use_cases_full', JSON.stringify(a2.use_cases));\n\n// Déterminer les composants à générer basés sur use cases et entités\nconst componentsToGenerate = [];\n\n// 1. Dashboard (toujours)\ncomponentsToGenerate.push({\n  id: 'dashboard',\n  name: 'Tableau de bord',\n  priority: 1,\n  type: 'dashboard'\n});\n\n// 2. Un composant de gestion CRUD par entité (max 5 premières)\nconst entitiesToManage = a4.entities.filter(e => \n  e.entity_type === 'ressource' || e.entity_type === 'dossier'\n).slice(0, 5);\n\nentitiesToManage.forEach((entity, i) => {\n  componentsToGenerate.push({\n    id: `gestion_${entity.table_name.toLowerCase()}`,\n    name: `Gestion ${entity.table_name}`,\n    priority: i + 2,\n    type: 'crud',\n    entity: entity.table_name\n  });\n});\n\n// 3. Composant workflow si entités dossier avec statuts\nconst workflowEntities = a4.entities.filter(e => \n  e.entity_type === 'dossier' && \n  e.columns.some(c => c.column_name === 'statut')\n);\n\nif (workflowEntities.length > 0) {\n  componentsToGenerate.push({\n    id: `suivi_${workflowEntities[0].table_name.toLowerCase()}`,\n    name: `Suivi ${workflowEntities[0].table_name}`,\n    priority: 90,\n    type: 'workflow',\n    entity: workflowEntities[0].table_name\n  });\n}\n\n// Stocker liste composants\n$vars.set('components_to_generate', JSON.stringify(componentsToGenerate));\n$vars.set('total_components_expected', componentsToGenerate.length);\n\n// Préparer output pour Workflow 2\nreturn {\n  conversation_id: $vars.get('conversation_id'),\n  business_domain: $vars.get('business_domain'),\n  schema: a4,\n  use_cases: a2.use_cases,\n  components_to_generate: componentsToGenerate,\n  summary: {\n    entities: a4.total_tables,\n    columns: a4.total_columns,\n    components: componentsToGenerate.length,\n    use_cases: a2.use_cases.length\n  }\n};"
+      },
+      "id": "code-prepare-workflow-2",
+      "name": "Code: Prepare for Workflow 2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success (Phase 1 Complete)",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [2450, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [[{"node": "Extract User Input", "type": "main", "index": 0}]]
+    },
+    "Extract User Input": {
+      "main": [[{"node": "Agent 1: Conversation Manager", "type": "main", "index": 0}]]
+    },
+    "Agent 1: Conversation Manager": {
+      "main": [[{"node": "Code: Format A1→A2", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 1": {
+      "ai_languageModel": [[{"node": "Agent 1: Conversation Manager", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Code: Format A1→A2": {
+      "main": [[{"node": "Agent 2: Intent Analyzer", "type": "main", "index": 0}]]
+    },
+    "Agent 2: Intent Analyzer": {
+      "main": [[{"node": "Code: Format A2→A3", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 2": {
+      "ai_languageModel": [[{"node": "Agent 2: Intent Analyzer", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Code: Format A2→A3": {
+      "main": [[{"node": "Agent 3: Validation Coordinator", "type": "main", "index": 0}]]
+    },
+    "Agent 3: Validation Coordinator": {
+      "main": [[{"node": "IF Feasible?", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 3": {
+      "ai_languageModel": [[{"node": "Agent 3: Validation Coordinator", "type": "ai_languageModel", "index": 0}]]
+    },
+    "IF Feasible?": {
+      "main": [
+        [{"node": "Code: Format A3→A4", "type": "main", "index": 0}],
+        [{"node": "Set Error Response", "type": "main", "index": 0}]
+      ]
+    },
+    "Set Error Response": {
+      "main": [[{"node": "Respond Error", "type": "main", "index": 0}]]
+    },
+    "Code: Format A3→A4": {
+      "main": [[{"node": "Agent 4: Entity Classifier", "type": "main", "index": 0}]]
+    },
+    "Agent 4: Entity Classifier": {
+      "main": [[{"node": "Code: Prepare for Workflow 2", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 4": {
+      "ai_languageModel": [[{"node": "Agent 4: Entity Classifier", "type": "ai_languageModel", "index": 0}]]
+    },
+    "Code: Prepare for Workflow 2": {
+      "main": [[{"node": "Respond Success (Phase 1 Complete)", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}

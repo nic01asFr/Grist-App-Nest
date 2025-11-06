@@ -1,0 +1,211 @@
+{
+  "name": "Workflow 2: Orchestrateur Composants",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "execute-workflow-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Initialiser array des composants validés\n$vars.set('validated_components', JSON.stringify([]));\n\n// Récupérer données d'entrée\nconst input = $input.first().json;\n\n// Stocker données dans variables pour accès par sous-workflows\n$vars.set('schema_full', JSON.stringify(input.schema));\n$vars.set('use_cases_full', JSON.stringify(input.use_cases));\n$vars.set('business_domain', input.business_domain);\n$vars.set('conversation_id', input.conversation_id);\n$vars.set('total_components_expected', input.components_to_generate.length);\n\n// Retourner liste composants pour la boucle\nreturn {\n  components_to_generate: input.components_to_generate,\n  total: input.components_to_generate.length,\n  summary: input.summary\n};"
+      },
+      "id": "code-initialize",
+      "name": "Code: Initialize",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-in-batches",
+      "name": "Loop Each Component",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer contexte pour CE composant\nconst schema = JSON.parse($vars.get('schema_full'));\nconst useCases = JSON.parse($vars.get('use_cases_full'));\nconst currentComponent = $input.first().json;\n\n// Déterminer les tables nécessaires pour ce composant\nfunction determineRequiredTables(componentId, componentType, schema, useCases) {\n  if (componentType === 'dashboard' || componentId === 'dashboard') {\n    // Dashboard: toutes les tables principales (max 5)\n    return schema.entities\n      .filter(e => e.entity_type === 'ressource' || e.entity_type === 'dossier')\n      .slice(0, 5)\n      .map(e => e.table_name);\n  }\n\n  if (componentType === 'crud' && currentComponent.entity) {\n    // CRUD: juste la table concernée + ses relations directes\n    const mainTable = currentComponent.entity;\n    const entity = schema.entities.find(e => e.table_name === mainTable);\n    \n    const relatedTables = [];\n    if (entity && entity.relationships) {\n      entity.relationships.forEach(rel => {\n        if (rel.type === '1-N' || rel.type === 'N-1') {\n          relatedTables.push(rel.target);\n        }\n      });\n    }\n    \n    return [mainTable, ...relatedTables.slice(0, 2)];\n  }\n\n  if (componentType === 'workflow' && currentComponent.entity) {\n    // Workflow: table principale uniquement\n    return [currentComponent.entity];\n  }\n\n  // Par défaut: première table\n  return [schema.entities[0]?.table_name || 'Templates'];\n}\n\nconst requiredTables = determineRequiredTables(\n  currentComponent.id,\n  currentComponent.type,\n  schema,\n  useCases\n);\n\n// Use cases liés à ce composant\nconst relatedUseCases = useCases.filter(uc => {\n  const ucTables = uc.data_required || [];\n  return requiredTables.some(table => ucTables.includes(table));\n});\n\n// Construire contexte complet\nconst componentContext = {\n  component_id: currentComponent.id,\n  component_name: currentComponent.name,\n  component_priority: currentComponent.priority,\n  component_type: currentComponent.type,\n  required_tables: requiredTables,\n  related_use_cases: relatedUseCases,\n  schema: schema\n};\n\nreturn {\n  component_context: componentContext\n};"
+      },
+      "id": "code-prepare-context",
+      "name": "Code: Prepare Component Context",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ 'workflow_3_generation_composant' }}",
+        "options": {
+          "waitForCompletion": true
+        }
+      },
+      "id": "execute-workflow-3",
+      "name": "Execute Workflow 3: Generation",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ 'workflow_4_validation_composant' }}",
+        "options": {
+          "waitForCompletion": true
+        }
+      },
+      "id": "execute-workflow-4",
+      "name": "Execute Workflow 4: Validation",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-valid",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "VALID",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "or",
+          "conditions2": [
+            {
+              "id": "is-valid-with-warnings",
+              "leftValue": "={{ $json.validation_status }}",
+              "rightValue": "VALID_WITH_WARNINGS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ]
+        }
+      },
+      "id": "if-component-valid",
+      "name": "IF Component Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stocker composant validé dans array\nlet validatedComponents = [];\ntry {\n  validatedComponents = JSON.parse($vars.get('validated_components') || '[]');\n} catch(e) {\n  validatedComponents = [];\n}\n\n// Ajouter le nouveau composant\nconst newComponent = $input.first().json;\nvalidatedComponents.push({\n  component_id: newComponent.component_id,\n  template_name: newComponent.template_name,\n  component_type: newComponent.component_type,\n  component_code: newComponent.component_code,\n  validation_status: newComponent.validation_status,\n  code_length: newComponent.code_length,\n  estimated_tokens: newComponent.estimated_tokens,\n  generated_at: newComponent.generated_at,\n  validation_result: newComponent.validation_result\n});\n\n// Sauvegarder\n$vars.set('validated_components', JSON.stringify(validatedComponents));\n\nconsole.log(`✅ Composant ${newComponent.component_id} validé et stocké (${validatedComponents.length}/${$vars.get('total_components_expected')})`);\n\nreturn {\n  component_id: newComponent.component_id,\n  status: 'stored',\n  total_validated: validatedComponents.length,\n  total_expected: parseInt($vars.get('total_components_expected'))\n};"
+      },
+      "id": "code-store-valid-component",
+      "name": "Code: Store Valid Component",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Logger composant invalide\nconst invalidComponent = $input.first().json;\n\nconsole.error(`❌ Composant ${invalidComponent.component_id} INVALIDE:`, invalidComponent.validation_result.errors);\n\n// Option: Retry (à implémenter si nécessaire)\n// Pour l'instant, on continue sans ce composant\n\nreturn {\n  component_id: invalidComponent.component_id,\n  status: 'invalid',\n  errors: invalidComponent.validation_result.errors,\n  warnings: invalidComponent.validation_result.warnings\n};"
+      },
+      "id": "code-log-invalid-component",
+      "name": "Code: Log Invalid Component",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1650, 400]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Cette node est exécutée après chaque itération\n// Le node SplitInBatches gère automatiquement la boucle\nreturn $input.first().json;"
+      },
+      "id": "code-continue-loop",
+      "name": "Code: Continue Loop",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Tous les composants ont été traités\nconst validatedComponents = JSON.parse($vars.get('validated_components') || '[]');\nconst totalExpected = parseInt($vars.get('total_components_expected'));\n\nconsole.log(`✅ Tous les composants traités: ${validatedComponents.length}/${totalExpected}`);\n\nif (validatedComponents.length === 0) {\n  throw new Error('Aucun composant validé. Impossible de continuer.');\n}\n\nreturn {\n  validated_components: validatedComponents,\n  total_validated: validatedComponents.length,\n  total_expected: totalExpected,\n  success_rate: Math.round((validatedComponents.length / totalExpected) * 100) + '%'\n};"
+      },
+      "id": "code-all-components-done",
+      "name": "Code: All Components Done",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ 'workflow_5_assemblage_final' }}",
+        "options": {
+          "waitForCompletion": true
+        }
+      },
+      "id": "execute-workflow-5",
+      "name": "Execute Workflow 5: Assemblage",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1,
+      "position": [2250, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Code: Initialize", "type": "main", "index": 0}]]
+    },
+    "Code: Initialize": {
+      "main": [[{"node": "Loop Each Component", "type": "main", "index": 0}]]
+    },
+    "Loop Each Component": {
+      "main": [
+        [{"node": "Code: Prepare Component Context", "type": "main", "index": 0}],
+        [{"node": "Code: All Components Done", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Prepare Component Context": {
+      "main": [[{"node": "Execute Workflow 3: Generation", "type": "main", "index": 0}]]
+    },
+    "Execute Workflow 3: Generation": {
+      "main": [[{"node": "Execute Workflow 4: Validation", "type": "main", "index": 0}]]
+    },
+    "Execute Workflow 4: Validation": {
+      "main": [[{"node": "IF Component Valid?", "type": "main", "index": 0}]]
+    },
+    "IF Component Valid?": {
+      "main": [
+        [{"node": "Code: Store Valid Component", "type": "main", "index": 0}],
+        [{"node": "Code: Log Invalid Component", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Store Valid Component": {
+      "main": [[{"node": "Code: Continue Loop", "type": "main", "index": 0}]]
+    },
+    "Code: Log Invalid Component": {
+      "main": [[{"node": "Code: Continue Loop", "type": "main", "index": 0}]]
+    },
+    "Code: Continue Loop": {
+      "main": [[{"node": "Loop Each Component", "type": "main", "index": 0}]]
+    },
+    "Code: All Components Done": {
+      "main": [[{"node": "Execute Workflow 5: Assemblage", "type": "main", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}

@@ -1,0 +1,88 @@
+{
+  "name": "Workflow 5: Assemblage Final",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "execute-workflow-trigger",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1,
+      "position": [250, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// CODE NODE: Format Prompt Agent 13 (Assemblage)\nconst input = $input.first().json;\nconst validatedComponents = input.validated_components;\nconst schema = JSON.parse($vars.get('schema_full'));\nconst businessDomain = $vars.get('business_domain');\n\nconst systemPrompt = `Tu es Agent 13: App Assembler.\nTon rôle : Assembler tous les composants validés en application complète.`;\n\nconst userPrompt = `## APPLICATION À ASSEMBLER\n\n**Domaine** : ${businessDomain}\n**Tables** : ${schema.total_tables} tables, ${schema.total_columns} colonnes\n**Composants validés** : ${validatedComponents.length} composants\n\n---\n\n## COMPOSANTS DISPONIBLES\n\n${validatedComponents.map((comp, i) => `\n${i+1}. **${comp.component_id}** : ${comp.template_name}\n   - Type: ${comp.component_type}\n   - Status: ${comp.validation_status}\n   - Taille: ${comp.code_length} caractères (~${comp.estimated_tokens} tokens)\n   - Validé: ${comp.validation_result?.validated_at || 'N/A'}\n`).join('')}\n\n---\n\n## SCHÉMA DES TABLES\n\n${schema.entities.map(entity => `\n**${entity.table_name}** (${entity.entity_type})\n- Description: ${entity.description || 'N/A'}\n- Colonnes: ${entity.columns.length}\n- Relations: ${entity.relationships?.length || 0}\n`).join('')}\n\n---\n\n## TA MISSION\n\nAssemble l'application complète avec :\n\n1. **Table Templates** : Structure Grist avec ces ${validatedComponents.length} composants\n   Chaque composant doit avoir:\n   - template_id (Text)\n   - template_name (Text)\n   - component_type (Text)\n   - component_code (Text)\n\n2. **Navigation** : Menu avec ordre logique\n   - Composant par défaut: dashboard (ou premier composant)\n   - Menu ordonné par priorité\n\n3. **Structure document Grist** :\n   - Liste des tables: ${schema.entities.map(e => e.table_name).join(', ')}\n   - Widget URL: Grist_App_Nest_v5_2.html\n\n4. **Instructions déploiement** : Guide pour l'utilisateur\n\n---\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON :\n\n{\n  \"assembled_app\": {\n    \"templates_table\": [\n      {\n        \"template_id\": \"dashboard\",\n        \"template_name\": \"Tableau de bord\",\n        \"component_type\": \"functional\",\n        \"component_code\": \"const Component = () => { ... };\"\n      }\n    ],\n    \"navigation\": {\n      \"default_component\": \"dashboard\",\n      \"menu_structure\": [\n        {\"id\": \"dashboard\", \"label\": \"Tableau de bord\", \"icon\": \"📊\", \"order\": 1}\n      ]\n    },\n    \"grist_document_structure\": {\n      \"tables\": [${schema.entities.map(e => `\"${e.table_name}\"`).join(', ')}],\n      \"widget_configuration\": {\n        \"url\": \"https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html\",\n        \"access_level\": \"full\"\n      }\n    },\n    \"deployment_instructions\": {\n      \"step_1\": \"Créer document Grist\",\n      \"step_2\": \"Créer table Templates avec colonnes: template_id, template_name, component_type, component_code\",\n      \"step_3\": \"Importer les ${validatedComponents.length} composants dans table Templates\",\n      \"step_4\": \"Créer les ${schema.total_tables} tables métier\",\n      \"step_5\": \"Ajouter Custom Widget avec URL widget\",\n      \"step_6\": \"Définir Access Level: full\"\n    }\n  },\n  \"metadata\": {\n    \"domain\": \"${businessDomain}\",\n    \"total_components\": ${validatedComponents.length},\n    \"total_tables\": ${schema.total_tables},\n    \"total_columns\": ${schema.total_columns},\n    \"generated_at\": \"${new Date().toISOString()}\"\n  }\n}\n`;\n\nreturn {\n  system_prompt: systemPrompt,\n  user_prompt: userPrompt,\n  components_count: validatedComponents.length,\n  tables_count: schema.total_tables\n};"
+      },
+      "id": "code-format-prompt-a13",
+      "name": "Code: Format Prompt A13",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "options": {}
+      },
+      "id": "agent-013",
+      "name": "Agent 13: App Assembler",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 4096
+        }
+      },
+      "id": "llm-013",
+      "name": "Albert API - Agent 13",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [650, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer réponse finale complète\nconst assembledApp = $input.first().json.output.assembled_app;\nconst metadata = $input.first().json.output.metadata;\nconst conversationId = $vars.get('conversation_id');\n\n// Stocker app assemblée\n$vars.set('assembled_app', JSON.stringify(assembledApp));\n\nreturn {\n  success: true,\n  conversation_id: conversationId,\n  message: `Application ${metadata.domain} créée avec succès !`,\n  application: assembledApp,\n  metadata: metadata,\n  summary: {\n    domain: metadata.domain,\n    components_created: metadata.total_components,\n    tables_created: metadata.total_tables,\n    columns_total: metadata.total_columns,\n    generated_at: metadata.generated_at\n  },\n  next_steps: [\n    \"1. Créer un nouveau document Grist\",\n    `2. Créer la table 'Templates' avec les colonnes: template_id, template_name, component_type, component_code`,\n    `3. Importer les ${metadata.total_components} composants dans la table Templates`,\n    `4. Créer les ${metadata.total_tables} tables métier selon le schéma fourni`,\n    \"5. Ajouter un Custom Widget avec l'URL: \" + assembledApp.grist_document_structure.widget_configuration.url,\n    \"6. Définir Access Level du widget: full\",\n    \"7. L'application se chargera automatiquement\"\n  ],\n  widget_url: assembledApp.grist_document_structure.widget_configuration.url\n};"
+      },
+      "id": "code-prepare-final-response",
+      "name": "Code: Prepare Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [850, 300]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [[{"node": "Code: Format Prompt A13", "type": "main", "index": 0}]]
+    },
+    "Code: Format Prompt A13": {
+      "main": [[{"node": "Agent 13: App Assembler", "type": "main", "index": 0}]]
+    },
+    "Agent 13: App Assembler": {
+      "main": [[{"node": "Code: Prepare Final Response", "type": "main", "index": 0}]]
+    },
+    "Albert API - Agent 13": {
+      "ai_languageModel": [[{"node": "Agent 13: App Assembler", "type": "ai_languageModel", "index": 0}]]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}

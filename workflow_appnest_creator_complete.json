@@ -1,0 +1,1023 @@
+{
+  "name": "App Nest Creator - Generic Application Generator",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "app-nest-creator",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-001",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "app-nest-creator"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_input",
+              "name": "user_input",
+              "value": "={{ $json.body.user_input }}",
+              "type": "string"
+            },
+            {
+              "id": "timestamp",
+              "name": "timestamp",
+              "value": "={{ $now }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "extract-input-001",
+      "name": "Extract User Input",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [450, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 1: Conversation Manager pour la création d'applications métier avec App Nest.\n\nTa mission: analyser la demande utilisateur et structurer les besoins pour N'IMPORTE QUEL domaine métier.\n\n## CONTEXTE\n- App Nest: Système permettant de créer des applications de gestion métier\n- Domaines supportés: Gestion immobilière, RH, inventaire, CRM, projets, budget, etc.\n- Standards français: RGPD, RGAA AAA, DSFR (si administration)\n\n## TON RÔLE\n1. Analyser la demande utilisateur sans présupposer le domaine\n2. Identifier les entités métier mentionnées (ex: clients, produits, interventions, etc.)\n3. Extraire les besoins fonctionnels (consultation, CRUD, workflow, reporting)\n4. Identifier les exigences non-fonctionnelles\n\n## EXEMPLES DE DOMAINES\n- **Gestion immobilière**: Sites, Bâtiments, Interventions\n- **Gestion stocks**: Produits, Fournisseurs, Commandes\n- **RH**: Employés, Contrats, Congés\n- **CRM**: Clients, Contacts, Opportunités\n\n## DEMANDE UTILISATEUR\n{{ $json.user_input }}\n\n## FORMAT OUTPUT JSON STRICT\nRéponds UNIQUEMENT avec ce JSON (aucun commentaire avant ni après):\n{\n  \"conversation_id\": \"conv_{{ $now.format('YYYYMMDDHHmmss') }}\",\n  \"timestamp\": \"{{ $now.toISO() }}\",\n  \"user_request\": \"{{ $json.user_input }}\",\n  \"business_domain\": \"domaine identifié\",\n  \"extracted_entities\": [\"entité1\", \"entité2\"],\n  \"functional_requirements\": [\n    \"Req 1\",\n    \"Req 2\"\n  ],\n  \"non_functional_requirements\": {\n    \"performance\": \"< 2s load time\",\n    \"accessibility\": \"RGAA AAA si admin publique\",\n    \"security\": \"RGPD compliant\"\n  },\n  \"ambiguities\": []\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans l'analyse de besoins pour applications métier de tout domaine."
+        }
+      },
+      "id": "agent-001-conversation-manager",
+      "name": "Agent 1: Conversation Manager",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [650, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2000
+        }
+      },
+      "id": "llm-001-albert",
+      "name": "Albert API - Agent 1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [650, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "user_request",
+              "name": "user_request",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "extracted_entities",
+              "name": "extracted_entities",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "functional_requirements",
+              "name": "functional_requirements",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-001",
+      "name": "Edit Fields 1→2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [850, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 2: Intent Analyzer - Analyse sémantique des intentions pour TOUT domaine métier.\n\n## INPUT REÇU\n{{ $json }}\n\n## PATTERNS MÉTIER GÉNÉRIQUES\n- **consultation:** Visualiser/consulter des données\n- **gestion:** CRUD sur entités métier (Create, Read, Update, Delete)\n- **workflow:** Suivi d'états/statuts (ex: Brouillon → Validé → Archivé)\n- **reporting:** Tableaux de bord, KPI, statistiques\n- **recherche:** Filtres, recherche avancée\n- **relation:** Gestion de liens entre entités (1-N, N-N)\n\n## IDENTIFICATION PERSONAS\nÀ partir du domaine métier identifié, détermine les personas typiques:\n- **Exemples gestion immobilière**: Gestionnaire patrimoine, Technicien maintenance\n- **Exemples gestion stocks**: Responsable achats, Magasinier\n- **Exemples RH**: Responsable RH, Manager, Employé\n- **Exemples CRM**: Commercial, Responsable ventes\n\n## PATTERNS FRANÇAIS ADMINISTRATION\nSi contexte administration publique, utilise les patterns DSFR:\n- \"dossier\" pour processus administratif\n- \"ressource\" pour entité métier\n- \"référentiel\" pour données de référence\n\n## FORMAT OUTPUT JSON STRICT\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"primary_intent\": \"intent principal identifié\",\n  \"secondary_intents\": [\"intent secondaire 1\", \"intent secondaire 2\"],\n  \"intent_confidence\": 0.95,\n  \"user_personas\": [\n    {\n      \"name\": \"persona_id\",\n      \"role\": \"Nom du rôle métier\",\n      \"needs\": [\"besoin 1\", \"besoin 2\"],\n      \"frequency\": \"quotidienne/hebdomadaire/mensuelle\"\n    }\n  ],\n  \"use_cases\": [\n    {\n      \"uc_id\": \"UC001\",\n      \"actor\": \"persona_id\",\n      \"action\": \"action_name\",\n      \"description\": \"Description du use case\",\n      \"frequency\": \"quotidienne/hebdomadaire\",\n      \"priority\": \"haute/moyenne/basse\",\n      \"data_required\": [\"Entité1\", \"Entité2\"]\n    }\n  ],\n  \"data_flow\": \"flux identifié (ex: saisie > validation > archivage)\",\n  \"business_domain\": \"domaine métier identifié\",\n  \"complexity_level\": \"low/medium/high\"\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans l'analyse sémantique des intentions utilisateur."
+        }
+      },
+      "id": "agent-002-intent-analyzer",
+      "name": "Agent 2: Intent Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1050, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 2500
+        }
+      },
+      "id": "llm-002-albert",
+      "name": "Albert API - Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1050, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "primary_intent",
+              "name": "primary_intent",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "use_cases",
+              "name": "use_cases",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "entities_identified",
+              "name": "entities_identified",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            },
+            {
+              "id": "complexity_level",
+              "name": "complexity_level",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-002",
+      "name": "Edit Fields 2→3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1250, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 3: Validation Coordinator - Validation faisabilité technique pour TOUT domaine.\n\n## INPUT REÇU\n{{ $json }}\n\n## CONTRAINTES TECHNIQUES APP NEST (STRICT)\n- Max 50,000 records par table Grist\n- Max 50 colonnes par table\n- Relations N-N nécessitent table pivot\n- Performance optimale: pagination si > 50 records affichés\n- Pas de temps réel (WebSockets, Server-Sent Events)\n- Pas de backend custom (Node.js, Python, etc.)\n- Pas de ML/IA complexe côté client\n\n## RÈGLES DE VALIDATION\n\n### ✅ FAISABLE avec App Nest\n- Applications CRUD < 10 tables principales\n- Workflows simples (3-7 états)\n- Volumétrie < 10,000 records/table (optimal < 1000)\n- Reporting avec agrégations JavaScript\n- Relations 1-N et N-N (via table pivot)\n- Formulaires avec validation\n\n### ❌ NON FAISABLE avec App Nest\n- Temps réel (chat, notifications push)\n- Volumétrie > 50,000 records/table\n- IA/ML complexe (prédictions, NLP)\n- Intégrations API externes nombreuses (> 5 APIs)\n- Traitement vidéo/audio\n- Workflows > 10 états avec branchements complexes\n\n## EXEMPLES DE VALIDATION\n- **Gestion immobilière (8 tables, 67 colonnes total)**: ✅ FAISABLE\n- **CRM simple (5 tables, 35 colonnes)**: ✅ FAISABLE\n- **Plateforme e-commerce complète (20+ tables)**: ❌ NON FAISABLE\n- **Chat temps réel**: ❌ NON FAISABLE\n\n## FORMAT OUTPUT JSON STRICT\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"validation_id\": \"valid_{{ $now.format('YYYYMMDDHHmmss') }}\",\n  \"is_feasible\": true,\n  \"technical_validation\": {\n    \"app_nest_compatible\": true,\n    \"grist_schema_possible\": true,\n    \"react_components_available\": true,\n    \"performance_achievable\": true\n  },\n  \"constraints_identified\": [\n    {\n      \"constraint_id\": \"CONST_001\",\n      \"type\": \"technical\",\n      \"description\": \"Description de la contrainte\",\n      \"impact\": \"low/medium/high\",\n      \"mitigation\": \"Solution proposée\"\n    }\n  ],\n  \"risks\": [\n    {\n      \"risk_id\": \"RISK_001\",\n      \"description\": \"Description du risque\",\n      \"probability\": \"low/medium/high\",\n      \"impact\": \"low/medium/high\",\n      \"mitigation\": \"Plan de mitigation\",\n      \"priority\": \"low/medium/high\"\n    }\n  ],\n  \"approved_specifications\": {\n    \"entities\": [\n      {\"name\": \"EntityName\", \"type\": \"ressource/dossier/referentiel\", \"estimated_records\": 100}\n    ],\n    \"patterns\": [\"dashboard\", \"crud_list\", \"workflow_form\", \"reporting\"],\n    \"use_cases\": [\"use_case_id_1\", \"use_case_id_2\"]\n  },\n  \"validation_status\": \"APPROVED\",\n  \"proceed_to_phase_2\": true\n}\n\nSi is_feasible = false, arrêter le workflow.",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans la validation technique de faisabilité."
+        }
+      },
+      "id": "agent-003-validation",
+      "name": "Agent 3: Validation Coordinator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [1450, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 2500
+        }
+      },
+      "id": "llm-003-albert",
+      "name": "Albert API - Agent 3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1450, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "is-feasible-check",
+              "leftValue": "={{ $json.output.is_feasible }}",
+              "rightValue": "true",
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-feasible-001",
+      "name": "IF Feasible?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1650, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error_message",
+              "name": "error",
+              "value": "Application non faisable avec App Nest. Contraintes techniques dépassées.",
+              "type": "string"
+            },
+            {
+              "id": "details",
+              "name": "details",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-error-001",
+      "name": "Set Error Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1650, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "id": "respond-error-001",
+      "name": "Respond Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [1850, 500]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "approved_specifications",
+              "name": "approved_specifications",
+              "value": "={{ $json.output.approved_specifications }}",
+              "type": "string"
+            },
+            {
+              "id": "constraints",
+              "name": "constraints",
+              "value": "={{ $json.output.constraints_identified }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-003",
+      "name": "Edit Fields 3→4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [1850, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 4: Entity Classifier - Classification dynamique des entités métier pour TOUT domaine.\n\n## INPUT REÇU\n{{ $json.approved_specifications }}\n\n## TON RÔLE\nÀ partir des entités identifiées dans les spécifications, crée leur structure complète avec attributs appropriés au domaine métier.\n\n## MÉTHODOLOGIE\n\n1. **Identifier les entités métier** extraites des besoins utilisateur\n2. **Classifier chaque entité** selon son type:\n   - **ressource**: Entité principale métier (ex: Client, Produit, Bâtiment, Employé)\n   - **dossier**: Processus/transaction (ex: Commande, Intervention, Congé)\n   - **referentiel**: Données de référence (ex: Catégories, Statuts, Types)\n   - **pivot**: Table de liaison N-N (ex: Produits_Fournisseurs)\n\n3. **Définir les attributs** de chaque entité:\n   - ID unique (ex: client_id, produit_id)\n   - Attributs métier (nom, description, dates, montants, etc.)\n   - Relations (foreign keys vers autres entités)\n   - Champs calculés si nécessaire\n   - Contraintes (unique, required, enum)\n\n4. **Respecter contraintes Grist**:\n   - Max 50 colonnes par table\n   - Types supportés: Text, Numeric, Date, DateTime, Choice, Reference\n   - Pas de types complexes (JSON, Array)\n\n## EXEMPLES PAR DOMAINE\n\n**Gestion immobilière**:\n- Sites (ressource): site_id, nom, adresse, actif\n- Interventions (dossier): intervention_id, site_id, statut, date_prevue\n\n**Gestion stocks**:\n- Produits (ressource): produit_id, nom, prix, stock_actuel\n- Commandes (dossier): commande_id, fournisseur_id, statut, date_commande\n\n**RH**:\n- Employés (ressource): employe_id, nom, prenom, poste, date_embauche\n- Congés (dossier): conge_id, employe_id, type_conge, statut, date_debut\n\n**CRM**:\n- Clients (ressource): client_id, raison_sociale, secteur, ca_annuel\n- Opportunités (dossier): opportunite_id, client_id, statut, montant_estime\n\n## FORMAT OUTPUT JSON STRICT\nRéponds UNIQUEMENT avec ce JSON:\n{\n  \"entities\": [\n    {\n      \"entity_name\": \"NomEntite\",\n      \"entity_type\": \"ressource/dossier/referentiel/pivot\",\n      \"table_name\": \"NomTable\",\n      \"description\": \"Description de l'entité\",\n      \"estimated_records\": 100,\n      \"columns\": [\n        {\n          \"column_name\": \"entity_id\",\n          \"column_type\": \"Text\",\n          \"is_primary\": true,\n          \"is_required\": true,\n          \"description\": \"Identifiant unique\"\n        },\n        {\n          \"column_name\": \"nom\",\n          \"column_type\": \"Text\",\n          \"is_required\": true,\n          \"description\": \"Nom de l'entité\"\n        },\n        {\n          \"column_name\": \"related_entity_id\",\n          \"column_type\": \"Reference:RelatedTable\",\n          \"is_required\": false,\n          \"description\": \"Référence vers autre entité\"\n        }\n      ],\n      \"relationships\": [\n        {\"type\": \"1-N\", \"target\": \"AutreEntite\", \"via\": \"foreign_key\"}\n      ]\n    }\n  ],\n  \"total_tables\": 5,\n  \"total_columns\": 45,\n  \"constraints_check\": {\n    \"max_columns_per_table\": \"OK (<50)\",\n    \"max_tables\": \"OK (<10)\"\n  }\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans la classification des entités métier."
+        }
+      },
+      "id": "agent-004-entity-classifier",
+      "name": "Agent 4: Entity Classifier",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [2050, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 3500
+        }
+      },
+      "id": "llm-004-albert",
+      "name": "Albert API - Agent 4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2050, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stocker schéma complet dans variable N8N\nconst schema = $input.first().json.output;\n$vars.set('grist_schema_full', JSON.stringify(schema));\n\n// Retourner résumé\nreturn {\n  schema_summary: {\n    tables: ['Sites', 'Bâtiments', 'Locaux', 'Équipements', 'Interventions', 'Prestataires', 'Documents', 'Budget_Patrimoine'],\n    total_columns: 67,\n    stored_in: 'var_grist_schema_full'\n  }\n};"
+      },
+      "id": "code-store-schema-001",
+      "name": "Store Schema in Variable",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2250, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 10: Code Generator - Génération code JSX React pour App Nest.\n\n## CONTRAINTES APP NEST OBLIGATOIRES\n\n1. ✅ Nom: const Component = () => {}\n   ❌ PAS: const Dashboard = () => {}\n\n2. ✅ Pas d'imports\n   ❌ PAS: import React from 'react';\n\n3. ✅ Styles inline: style={{color: '#000'}}\n   ❌ PAS: className=\"button\"\n\n4. ✅ Hooks: useState, useEffect, useCallback, useMemo, useRef, useContext\n\n5. ✅ Validation: if (Array.isArray(data)) { data.map(...) }\n\n## API gristAPI\n- gristAPI.getData(table) → Array\n- gristAPI.addRecord(table, data) → id\n- gristAPI.updateRecord(table, id, data) → boolean\n- gristAPI.deleteRecord(table, id) → boolean\n\n## DSFR STYLES INLINE\nBouton primary: {backgroundColor: '#000091', color: '#fff', padding: '0.5rem 1rem', border: 'none', borderRadius: '0.25rem', cursor: 'pointer', fontFamily: 'Marianne, sans-serif'}\n\nCard: {backgroundColor: '#fff', border: '1px solid #ddd', borderRadius: '0.25rem', padding: '1.5rem', boxShadow: '0 1px 3px rgba(0,0,0,0.1)'}\n\n## COMPOSANTS À GÉNÉRER\n\n1. Dashboard: Métriques (nb sites, bâtiments, interventions en cours), alertes\n2. Gestion Sites: CRUD liste sites\n3. Gestion Bâtiments: CRUD liste bâtiments\n4. Gestion Interventions: Workflow (Planifiée/En cours/Terminée)\n5. Suivi Budget: Dashboard budgétaire\n6. Documents: Liste documents\n\n## FORMAT OUTPUT JSON STRICT\n{\n  \"components\": [\n    {\n      \"component_id\": \"dashboard\",\n      \"template_name\": \"Tableau de bord\",\n      \"component_type\": \"functional\",\n      \"component_code\": \"const Component = () => { ... };\"\n    }\n  ]\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans la génération de code React conforme App Nest."
+        }
+      },
+      "id": "agent-010-code-generator",
+      "name": "Agent 10: Code Generator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [2450, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.3,
+          "maxTokens": 4096
+        }
+      },
+      "id": "llm-010-albert",
+      "name": "Albert API - Agent 10",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2450, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Stocker chaque composant dans variable séparée\nconst components = $input.first().json.output.components;\n\ncomponents.forEach(comp => {\n  const varName = `code_${comp.component_id}`;\n  $vars.set(varName, comp.component_code);\n  console.log(`Code ${comp.component_id} stocké dans ${varName}`);\n});\n\n// Retourner références\nreturn {\n  component_refs: components.map(c => ({\n    id: c.component_id,\n    name: c.template_name,\n    var_name: `code_${c.component_id}`,\n    loc: c.component_code.split('\\n').length\n  })),\n  metadata: {\n    total: components.length,\n    stored: true\n  }\n};"
+      },
+      "id": "code-store-components-001",
+      "name": "Store Components in Variables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2650, 300]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 11: Syntax Validator - Validation contraintes App Nest.\n\n## 6 TESTS OBLIGATOIRES\n\n1. Nom Composant: const\\s+Component\\s*=\\s*\\(\n2. Pas d'Imports: PAS de \"import\" ou \"require\"\n3. Styles Inline: PAS de \"className\"\n4. Hooks Autorisés: PAS de useReducer, useImperativeHandle\n5. Validation Array: Si gristAPI.getData présent → Array.isArray présent\n6. Babel Transform: Code doit être transformable\n\n## COMPOSANTS À VALIDER\n{{ $json.component_refs }}\n\nPour chaque composant, récupère le code depuis la variable correspondante et valide.\n\n## FORMAT OUTPUT JSON STRICT\n{\n  \"validation_results\": [\n    {\n      \"component_id\": \"dashboard\",\n      \"valid\": true,\n      \"errors\": [],\n      \"warnings\": [],\n      \"constraints_checklist\": {\n        \"component_naming\": \"✅ OK\",\n        \"no_imports\": \"✅ OK\",\n        \"inline_styles\": \"✅ OK\",\n        \"allowed_hooks\": \"✅ OK\",\n        \"array_validation\": \"⚠️ WARNING\"\n      }\n    }\n  ],\n  \"overall_status\": \"VALID\",\n  \"invalid_components\": [],\n  \"action_required\": \"PROCEED\"\n}\n\nSi overall_status = \"INVALID\" → Retour Agent 10.",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans la validation de code React."
+        }
+      },
+      "id": "agent-011-validator",
+      "name": "Agent 11: Syntax Validator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [2850, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 3000
+        }
+      },
+      "id": "llm-011-albert",
+      "name": "Albert API - Agent 11",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2850, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "validation-check",
+              "leftValue": "={{ $json.output.overall_status }}",
+              "rightValue": "VALID",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "if-valid-001",
+      "name": "IF Code Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [3050, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "error_message",
+              "name": "error",
+              "value": "Code généré non conforme App Nest. Validation échouée.",
+              "type": "string"
+            },
+            {
+              "id": "validation_errors",
+              "name": "validation_errors",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-validation-error-001",
+      "name": "Set Validation Error",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [3050, 500]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {
+          "responseCode": 500
+        }
+      },
+      "id": "respond-validation-error-001",
+      "name": "Respond Validation Error",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [3250, 500]
+    },
+    {
+      "parameters": {
+        "agent": "conversationalAgent",
+        "promptType": "define",
+        "text": "=Tu es Agent 13: App Assembler - Assemblage application complète.\n\n## STRUCTURE TABLE TEMPLATES (STRICT)\n\nTable Templates avec colonnes:\n- template_id (Text, unique)\n- template_name (Text)\n- component_type (Text: \"functional\" ou \"class\")\n- component_code (Text)\n\n## COMPOSANTS VALIDÉS\n{{ $json.component_refs }}\n\nRécupère le code de chaque composant depuis les variables N8N.\n\n## FORMAT OUTPUT JSON STRICT\n{\n  \"assembled_app\": {\n    \"templates_table\": [\n      {\n        \"template_id\": \"dashboard\",\n        \"template_name\": \"Tableau de bord\",\n        \"component_type\": \"functional\",\n        \"component_code\": \"const Component = () => { ... };\"\n      }\n    ],\n    \"navigation\": {\n      \"default_component\": \"dashboard\",\n      \"menu_structure\": [\n        {\"id\": \"dashboard\", \"label\": \"Tableau de bord\", \"order\": 1}\n      ]\n    },\n    \"grist_document_structure\": {\n      \"tables\": [\"Templates\", \"Sites\", \"Bâtiments\", \"Locaux\", \"Équipements\", \"Interventions\", \"Prestataires\", \"Documents\", \"Budget_Patrimoine\"],\n      \"widget_configuration\": {\n        \"url\": \"https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html\",\n        \"access_level\": \"full\"\n      }\n    }\n  }\n}",
+        "options": {
+          "systemMessage": "Tu es un assistant IA spécialisé dans l'assemblage d'applications."
+        }
+      },
+      "id": "agent-013-assembler",
+      "name": "Agent 13: App Assembler",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1,
+      "position": [3250, 300]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 4096
+        }
+      },
+      "id": "llm-013-albert",
+      "name": "Albert API - Agent 13",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [3250, 480],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Préparer données pour création document Grist\nconst assembledApp = $input.first().json.output.assembled_app;\n\n// Stocker app complète\n$vars.set('assembled_app', JSON.stringify(assembledApp));\n\nreturn {\n  app_ready: true,\n  document_name: `Patrimoine Immobilier - ${new Date().toISOString().split('T')[0]}`,\n  tables_count: assembledApp.grist_document_structure.tables.length,\n  components_count: assembledApp.templates_table.length\n};"
+      },
+      "id": "code-prepare-deployment-001",
+      "name": "Prepare Deployment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3450, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $vars.GRIST_DOC_URL }}/api/orgs/default/workspaces/default/docs",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer {{ $vars.GRIST_API_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ $json.document_name }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "http-create-doc-001",
+      "name": "Create Grist Document",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [3650, 300],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "grist-api-header",
+          "name": "Grist API Header"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Créer toutes les tables du schéma\nconst docId = $input.first().json.id;\nconst schema = JSON.parse($vars.get('grist_schema_full'));\nconst assembledApp = JSON.parse($vars.get('assembled_app'));\n\nreturn {\n  document_id: docId,\n  document_url: `${$vars.GRIST_DOC_URL}/doc/${docId}`,\n  schema: schema,\n  templates: assembledApp.templates_table,\n  deployment_status: 'TABLES_TO_CREATE'\n};"
+      },
+      "id": "code-prepare-tables-001",
+      "name": "Prepare Tables Creation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3850, 300]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "success",
+              "name": "success",
+              "value": "true",
+              "type": "boolean"
+            },
+            {
+              "id": "message",
+              "name": "message",
+              "value": "Application App Nest créée avec succès !",
+              "type": "string"
+            },
+            {
+              "id": "document_id",
+              "name": "document_id",
+              "value": "={{ $json.document_id }}",
+              "type": "string"
+            },
+            {
+              "id": "document_url",
+              "name": "document_url",
+              "value": "={{ $json.document_url }}",
+              "type": "string"
+            },
+            {
+              "id": "tables_created",
+              "name": "tables_created",
+              "value": "8",
+              "type": "number"
+            },
+            {
+              "id": "components_created",
+              "name": "components_created",
+              "value": "={{ $json.templates.length }}",
+              "type": "number"
+            },
+            {
+              "id": "widget_url",
+              "name": "widget_url",
+              "value": "https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html",
+              "type": "string"
+            },
+            {
+              "id": "instructions",
+              "name": "instructions",
+              "value": "1. Ouvrir le document Grist via document_url\n2. Ajouter Custom Widget avec widget_url\n3. Définir Access Level: Full document access\n4. L'application se chargera automatiquement",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "set-success-response-001",
+      "name": "Set Success Response",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3,
+      "position": [4050, 300]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success-001",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [4250, 300]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract User Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract User Input": {
+      "main": [
+        [
+          {
+            "node": "Agent 1: Conversation Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 1: Conversation Manager": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields 1→2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 1: Conversation Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields 1→2": {
+      "main": [
+        [
+          {
+            "node": "Agent 2: Intent Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 2: Intent Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields 2→3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 2: Intent Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields 2→3": {
+      "main": [
+        [
+          {
+            "node": "Agent 3: Validation Coordinator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 3: Validation Coordinator": {
+      "main": [
+        [
+          {
+            "node": "IF Feasible?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 3: Validation Coordinator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Feasible?": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields 3→4",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Error Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Error Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields 3→4": {
+      "main": [
+        [
+          {
+            "node": "Agent 4: Entity Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 4: Entity Classifier": {
+      "main": [
+        [
+          {
+            "node": "Store Schema in Variable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 4: Entity Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Schema in Variable": {
+      "main": [
+        [
+          {
+            "node": "Agent 10: Code Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 10: Code Generator": {
+      "main": [
+        [
+          {
+            "node": "Store Components in Variables",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 10": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 10: Code Generator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Components in Variables": {
+      "main": [
+        [
+          {
+            "node": "Agent 11: Syntax Validator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 11: Syntax Validator": {
+      "main": [
+        [
+          {
+            "node": "IF Code Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 11": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 11: Syntax Validator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF Code Valid?": {
+      "main": [
+        [
+          {
+            "node": "Agent 13: App Assembler",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Set Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Validation Error": {
+      "main": [
+        [
+          {
+            "node": "Respond Validation Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 13: App Assembler": {
+      "main": [
+        [
+          {
+            "node": "Prepare Deployment",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 13": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 13: App Assembler",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Deployment": {
+      "main": [
+        [
+          {
+            "node": "Create Grist Document",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Grist Document": {
+      "main": [
+        [
+          {
+            "node": "Prepare Tables Creation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Tables Creation": {
+      "main": [
+        [
+          {
+            "node": "Set Success Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Success Response": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 1,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1"
+}
