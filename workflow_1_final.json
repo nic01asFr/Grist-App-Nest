@@ -1,0 +1,568 @@
+{
+  "name": "Workflow 1: Analyse Schéma (FINAL)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appnest-analyse",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "appnest-analyse"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract user input from webhook\nconst body = $input.first().json.body;\n\nreturn {\n  conversation_id: `conv_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,\n  user_input: body.user_input || body.description || '',\n  timestamp: new Date().toISOString()\n};"
+      },
+      "id": "extract-user-input",
+      "name": "Extract User Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 460]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_input }}",
+        "options": {
+          "systemMessage": "Tu es Agent 1: Conversation Manager.\n\nTon rôle : Analyser la demande utilisateur et identifier le domaine métier et les entités principales.\n\n## TA MISSION\n\n1. Identifier le domaine métier (stock, CRM, RH, immobilier, projets, etc.)\n2. Extraire les entités principales mentionnées ou implicites\n3. Identifier les acteurs clés du système\n4. Déterminer le niveau de complexité (simple, moyen, complexe)\n\n## EXEMPLES DE DOMAINES\n\n**Gestion de Stock:**\n- Entités: Produits, Fournisseurs, Commandes, Catégories, Entrepôts\n- Acteurs: Gestionnaire de stock, Acheteur, Fournisseur\n\n**CRM (Gestion Clients):**\n- Entités: Clients, Contacts, Opportunités, Devis, Factures\n- Acteurs: Commercial, Manager, Client\n\n**RH (Ressources Humaines):**\n- Entités: Employés, Départements, Congés, Évaluations, Contrats\n- Acteurs: RH, Manager, Employé\n\n**Gestion Immobilière:**\n- Entités: Biens, Propriétaires, Locataires, Contrats, Paiements\n- Acteurs: Gestionnaire, Propriétaire, Locataire\n\n**Gestion Projets:**\n- Entités: Projets, Tâches, Équipes, Jalons, Budgets\n- Acteurs: Chef de projet, Membre équipe, Client\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON (pas de texte avant/après) :\n\n{\n  \"conversation_id\": \"{{ $json.conversation_id }}\",\n  \"business_domain\": \"domaine identifié (ex: gestion_stock, crm, rh, immobilier, projets)\",\n  \"domain_description\": \"Description en 1-2 phrases\",\n  \"extracted_entities\": [\n    {\n      \"name\": \"NomEntité1\",\n      \"description\": \"Description courte\",\n      \"priority\": \"high|medium|low\"\n    },\n    {\n      \"name\": \"NomEntité2\",\n      \"description\": \"Description courte\",\n      \"priority\": \"high|medium|low\"\n    }\n  ],\n  \"key_actors\": [\n    {\n      \"role\": \"Nom du rôle\",\n      \"description\": \"Responsabilités principales\"\n    }\n  ],\n  \"complexity_level\": \"simple|medium|complex\",\n  \"confidence_score\": 0.85\n}"
+        }
+      },
+      "id": "agent-001",
+      "name": "Agent 1: Conversation Manager",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [680, 460]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 2000
+        }
+      },
+      "id": "llm-001",
+      "name": "Albert API - Agent 1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [680, 660],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-a1",
+      "name": "Edit Fields A1",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format prompt for Agent 2 using Agent 1 output\nconst a1Output = $('Edit Fields A1').first().json.output;\n\nconst systemPrompt2 = `Tu es Agent 2: Intent Analyzer.\n\nTon rôle : Analyser les use cases métier pour le domaine \"${a1Output.business_domain}\".\n\n## CONTEXTE ACTUEL\n\n**Domaine identifié:** ${a1Output.business_domain}\n**Description:** ${a1Output.domain_description}\n**Entités extraites:** ${a1Output.extracted_entities.map(e => e.name).join(', ')}\n**Acteurs clés:** ${a1Output.key_actors.map(a => a.role).join(', ')}\n**Complexité:** ${a1Output.complexity_level}\n\n## TA MISSION\n\nPour chaque entité identifiée, définis les use cases principaux (CRUD + spécifiques).\n\n## EXEMPLES DE USE CASES PAR TYPE\n\n**CRUD Standards (pour toute entité):**\n- UC_CREATE_[ENTITY]: Créer un nouveau [entity]\n- UC_READ_[ENTITY]: Consulter les [entities]\n- UC_UPDATE_[ENTITY]: Modifier un [entity]\n- UC_DELETE_[ENTITY]: Supprimer un [entity]\n\n**Use Cases Spécifiques selon domaine:**\n\n*Stock:*\n- UC_TRACK_INVENTORY: Suivre les niveaux de stock\n- UC_REORDER_ALERT: Alertes réapprovisionnement\n- UC_RECEIVE_DELIVERY: Réceptionner livraison\n\n*CRM:*\n- UC_TRACK_PIPELINE: Suivre pipeline ventes\n- UC_GENERATE_QUOTE: Générer devis\n- UC_CONVERT_LEAD: Convertir prospect\n\n*RH:*\n- UC_APPROVE_LEAVE: Valider demandes congés\n- UC_CONDUCT_REVIEW: Mener évaluation\n- UC_ONBOARD_EMPLOYEE: Intégrer nouvel employé\n\n*Immobilier:*\n- UC_MANAGE_LEASE: Gérer bail\n- UC_TRACK_PAYMENT: Suivre paiements loyers\n- UC_SCHEDULE_VISIT: Planifier visite\n\n*Projets:*\n- UC_ASSIGN_TASK: Assigner tâche\n- UC_TRACK_PROGRESS: Suivre avancement\n- UC_MANAGE_BUDGET: Gérer budget\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON:\n\n{\n  \"business_domain\": \"${a1Output.business_domain}\",\n  \"use_cases\": [\n    {\n      \"uc_id\": \"UC_CREATE_ENTITY1\",\n      \"description\": \"Description use case\",\n      \"actor\": \"Rôle acteur\",\n      \"priority\": \"high|medium|low\",\n      \"type\": \"crud|specific\",\n      \"action\": \"create|read|update|delete|custom\",\n      \"data_required\": [\"entity1\", \"entity2\"],\n      \"estimated_complexity\": \"simple|medium|complex\"\n    }\n  ],\n  \"total_use_cases\": 0,\n  \"crud_count\": 0,\n  \"specific_count\": 0\n}`;\n\nconst userPrompt2 = `## ENTITÉS À ANALYSER\n\n${a1Output.extracted_entities.map((entity, i) => `\n${i+1}. **${entity.name}**\n   - Description: ${entity.description}\n   - Priorité: ${entity.priority}\n`).join('')}\n\n## ACTEURS SYSTÈME\n\n${a1Output.key_actors.map((actor, i) => `\n${i+1}. **${actor.role}**\n   - Responsabilités: ${actor.description}\n`).join('')}\n\nGénère les use cases pour ce domaine \"${a1Output.business_domain}\" en tenant compte des entités et acteurs identifiés.`;\n\nreturn {\n  agent1_output: a1Output,\n  system_message: systemPrompt2,\n  user_message: userPrompt2\n};"
+      },
+      "id": "code-format-a1-a2",
+      "name": "Code: Format A1→A2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 460]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "id": "agent-002",
+      "name": "Agent 2: Intent Analyzer",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [1340, 460]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.2,
+          "maxTokens": 3000
+        }
+      },
+      "id": "llm-002",
+      "name": "Albert API - Agent 2",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [1340, 660],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent1_output",
+              "name": "agent1_output",
+              "value": "={{ $json.agent1_output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-a2",
+      "name": "Edit Fields A2",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [1560, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format prompt for Agent 3 using Agent 1 and Agent 2 outputs\nconst a1Output = $('Edit Fields A1').first().json.output;\nconst a2Output = $input.first().json.output;\n\nconst systemPrompt3 = `Tu es Agent 3: Validation Coordinator.\n\nTon rôle : Valider la faisabilité des use cases et préparer les exigences techniques.\n\n## CONTEXTE\n\n**Domaine:** ${a2Output.business_domain}\n**Entités:** ${a1Output.extracted_entities.length} entités identifiées\n**Use Cases:** ${a2Output.total_use_cases} use cases (${a2Output.crud_count} CRUD, ${a2Output.specific_count} spécifiques)\n\n## TA MISSION\n\n1. Valider chaque use case (feasible: true/false)\n2. Identifier les dépendances entre use cases\n3. Prioriser les use cases pour l'implémentation\n4. Définir les contraintes techniques\n5. Créer la roadmap de composants\n\n## CRITÈRES DE VALIDATION\n\n**Feasible (réalisable):**\n- ✅ Données nécessaires identifiées\n- ✅ Acteur défini\n- ✅ Action claire\n- ✅ Pas de dépendances bloquantes\n\n**Not Feasible:**\n- ❌ Données manquantes critiques\n- ❌ Contraintes techniques impossibles\n- ❌ Dépendances circulaires\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON:\n\n{\n  \"validated_use_cases\": [\n    {\n      \"uc_id\": \"UC_XXX\",\n      \"feasible\": true,\n      \"validation_notes\": \"Notes sur faisabilité\",\n      \"technical_requirements\": [\"req1\", \"req2\"],\n      \"dependencies\": [\"UC_YYY\"],\n      \"implementation_priority\": 1,\n      \"estimated_effort\": \"low|medium|high\"\n    }\n  ],\n  \"component_roadmap\": [\n    {\n      \"component_id\": \"dashboard\",\n      \"component_name\": \"Tableau de bord\",\n      \"component_type\": \"dashboard\",\n      \"priority\": 1,\n      \"related_use_cases\": [\"UC_XXX\"],\n      \"required_tables\": [\"Table1\", \"Table2\"]\n    },\n    {\n      \"component_id\": \"crud_entity1\",\n      \"component_name\": \"Gestion Entity1\",\n      \"component_type\": \"crud\",\n      \"priority\": 2,\n      \"related_use_cases\": [\"UC_CREATE_ENTITY1\", \"UC_READ_ENTITY1\"],\n      \"required_tables\": [\"Entity1\"]\n    }\n  ],\n  \"total_components_planned\": 0,\n  \"technical_constraints\": [\n    \"Contrainte 1\",\n    \"Contrainte 2\"\n  ],\n  \"validation_summary\": {\n    \"feasible_count\": 0,\n    \"not_feasible_count\": 0,\n    \"high_priority_count\": 0\n  }\n}`;\n\nconst userPrompt3 = `## USE CASES À VALIDER\n\n${a2Output.use_cases.slice(0, 15).map((uc, i) => `\n${i+1}. **${uc.uc_id}**\n   - Description: ${uc.description}\n   - Acteur: ${uc.actor}\n   - Type: ${uc.type}\n   - Action: ${uc.action}\n   - Données requises: ${uc.data_required.join(', ')}\n   - Priorité: ${uc.priority}\n   - Complexité: ${uc.estimated_complexity}\n`).join('')}\n\n${a2Output.use_cases.length > 15 ? `\\n... et ${a2Output.use_cases.length - 15} autres use cases` : ''}\n\n## ENTITÉS DISPONIBLES\n\n${a1Output.extracted_entities.map((e, i) => `${i+1}. ${e.name} (${e.priority})`).join('\\n')}\n\nValide ces use cases et crée la roadmap de composants pour le domaine \"${a2Output.business_domain}\".`;\n\nreturn {\n  agent1_output: a1Output,\n  agent2_output: a2Output,\n  system_message: systemPrompt3,\n  user_message: userPrompt3\n};"
+      },
+      "id": "code-format-a2-a3",
+      "name": "Code: Format A2→A3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 460]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "id": "agent-003",
+      "name": "Agent 3: Validation Coordinator",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [2000, 460]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 3000
+        }
+      },
+      "id": "llm-003",
+      "name": "Albert API - Agent 3",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2000, 660],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent1_output",
+              "name": "agent1_output",
+              "value": "={{ $json.agent1_output }}",
+              "type": "object"
+            },
+            {
+              "id": "agent2_output",
+              "name": "agent2_output",
+              "value": "={{ $json.agent2_output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-a3",
+      "name": "Edit Fields A3",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2220, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format prompt for Agent 4 using all previous outputs\nconst a1Output = $('Edit Fields A1').first().json.output;\nconst a2Output = $('Edit Fields A2').first().json.output;\nconst a3Output = $input.first().json.output;\n\nconst systemPrompt4 = `Tu es Agent 4: Entity Classifier.\n\nTon rôle : Créer le schéma détaillé des tables Grist pour le domaine \"${a2Output.business_domain}\".\n\n## CONTEXTE\n\n**Domaine:** ${a2Output.business_domain}\n**Entités:** ${a1Output.extracted_entities.length}\n**Use Cases validés:** ${a3Output.validation_summary.feasible_count}\n**Composants planifiés:** ${a3Output.total_components_planned}\n\n## TA MISSION\n\nPour chaque entité, définis:\n1. **Colonnes** avec types Grist appropriés\n2. **Contraintes** (required, unique, primary)\n3. **Relations** entre tables\n4. **Formules** calculées si nécessaire\n\n## TYPES GRIST DISPONIBLES\n\n- **Text**: Texte simple\n- **Numeric**: Nombres (entiers, décimaux)\n- **Int**: Entiers uniquement\n- **Bool**: Vrai/Faux\n- **Date**: Date (YYYY-MM-DD)\n- **DateTime**: Date + Heure\n- **Choice**: Liste déroulante\n- **ChoiceList**: Sélection multiple\n- **Ref**: Référence à autre table (foreign key)\n- **RefList**: Liste de références\n- **Attachments**: Fichiers joints\n\n## COLONNES STANDARDS\n\nToute table doit avoir:\n- **id** (Int, primary=true, auto_increment): Identifiant unique\n- Colonnes métier selon l'entité\n- **created_at** (DateTime, optional): Date création\n- **updated_at** (DateTime, optional): Date modification\n\n## EXEMPLES DE SCHÉMAS\n\n**Table Produits (Stock):**\n- id (Int, primary)\n- nom (Text, required)\n- reference (Text, required, unique)\n- description (Text)\n- prix_unitaire (Numeric, required)\n- stock_actuel (Int, required)\n- stock_minimum (Int)\n- categorie_id (Ref:Categories)\n- fournisseur_id (Ref:Fournisseurs)\n- actif (Bool, default=true)\n\n**Table Clients (CRM):**\n- id (Int, primary)\n- nom (Text, required)\n- prenom (Text, required)\n- email (Text, required, unique)\n- telephone (Text)\n- entreprise (Text)\n- statut (Choice: [Prospect, Client, Inactif])\n- source (Choice: [Web, Référence, Direct])\n- date_creation (Date)\n\n**Table Employés (RH):**\n- id (Int, primary)\n- matricule (Text, required, unique)\n- nom (Text, required)\n- prenom (Text, required)\n- email (Text, required, unique)\n- departement_id (Ref:Departements)\n- poste (Text, required)\n- date_embauche (Date, required)\n- salaire (Numeric)\n- statut (Choice: [Actif, Congé, Démission])\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON:\n\n{\n  \"business_domain\": \"${a2Output.business_domain}\",\n  \"entities\": [\n    {\n      \"table_name\": \"NomTable\",\n      \"entity_type\": \"master|transaction|reference\",\n      \"description\": \"Description table\",\n      \"columns\": [\n        {\n          \"column_name\": \"id\",\n          \"column_type\": \"Int\",\n          \"is_primary\": true,\n          \"is_required\": true,\n          \"is_unique\": true,\n          \"default_value\": null,\n          \"description\": \"Identifiant unique\"\n        },\n        {\n          \"column_name\": \"nom\",\n          \"column_type\": \"Text\",\n          \"is_primary\": false,\n          \"is_required\": true,\n          \"is_unique\": false,\n          \"default_value\": null,\n          \"description\": \"Nom de l'entité\"\n        }\n      ],\n      \"relationships\": [\n        {\n          \"type\": \"many_to_one\",\n          \"target\": \"TableCible\",\n          \"via\": \"colonne_id\",\n          \"description\": \"Description relation\"\n        }\n      ]\n    }\n  ],\n  \"total_tables\": 0,\n  \"total_columns\": 0,\n  \"total_relationships\": 0\n}`;\n\nconst userPrompt4 = `## ENTITÉS À STRUCTURER\n\n${a1Output.extracted_entities.map((entity, i) => `\n${i+1}. **${entity.name}**\n   - Description: ${entity.description}\n   - Priorité: ${entity.priority}\n   - Composants associés: ${a3Output.component_roadmap.filter(c => c.required_tables.includes(entity.name)).map(c => c.component_id).join(', ') || 'Aucun'}\n`).join('')}\n\n## USE CASES PAR ENTITÉ\n\n${a1Output.extracted_entities.map(entity => {\n  const relatedUCs = a2Output.use_cases.filter(uc => \n    uc.data_required.includes(entity.name) || \n    uc.uc_id.includes(entity.name.toUpperCase())\n  );\n  return `**${entity.name}:** ${relatedUCs.length} use cases\\n${relatedUCs.slice(0, 5).map(uc => `  - ${uc.uc_id}: ${uc.action}`).join('\\n')}`;\n}).join('\\n\\n')}\n\n## RELATIONS POSSIBLES\n\n${a3Output.component_roadmap.map(comp => \n  `Composant \"${comp.component_name}\" utilise: ${comp.required_tables.join(', ')}`\n).join('\\n')}\n\nCrée le schéma complet des tables Grist pour ce domaine \"${a2Output.business_domain}\".`;\n\nreturn {\n  agent1_output: a1Output,\n  agent2_output: a2Output,\n  agent3_output: a3Output,\n  system_message: systemPrompt4,\n  user_message: userPrompt4\n};"
+      },
+      "id": "code-format-a3-a4",
+      "name": "Code: Format A3→A4",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2440, 460]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.user_message }}",
+        "options": {
+          "systemMessage": "={{ $json.system_message }}"
+        }
+      },
+      "id": "agent-004",
+      "name": "Agent 4: Entity Classifier",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2.2,
+      "position": [2660, 460]
+    },
+    {
+      "parameters": {
+        "model": "albert-code",
+        "options": {
+          "temperature": 0.1,
+          "maxTokens": 4096
+        }
+      },
+      "id": "llm-004",
+      "name": "Albert API - Agent 4",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1,
+      "position": [2660, 660],
+      "credentials": {
+        "openAiApi": {
+          "id": "albert-api-header",
+          "name": "Header Albert API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "output",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "object"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "edit-fields-a4",
+      "name": "Edit Fields A4",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [2880, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final output with all agent results\nconst a1Output = $('Edit Fields A1').first().json.output;\nconst a2Output = $('Edit Fields A2').first().json.output;\nconst a3Output = $('Edit Fields A3').first().json.output;\nconst a4Output = $input.first().json.output;\n\nreturn {\n  success: true,\n  conversation_id: a1Output.conversation_id,\n  workflow: 'workflow_1_analyse_schema',\n  business_domain: a4Output.business_domain,\n  domain_description: a1Output.domain_description,\n  \n  // Étape 1: Analyse conversation\n  analysis: {\n    extracted_entities: a1Output.extracted_entities,\n    key_actors: a1Output.key_actors,\n    complexity_level: a1Output.complexity_level,\n    confidence_score: a1Output.confidence_score\n  },\n  \n  // Étape 2: Use cases\n  use_cases: {\n    all_use_cases: a2Output.use_cases,\n    total_count: a2Output.total_use_cases,\n    crud_count: a2Output.crud_count,\n    specific_count: a2Output.specific_count\n  },\n  \n  // Étape 3: Validation et roadmap\n  validation: {\n    validated_use_cases: a3Output.validated_use_cases,\n    component_roadmap: a3Output.component_roadmap,\n    total_components_planned: a3Output.total_components_planned,\n    technical_constraints: a3Output.technical_constraints,\n    validation_summary: a3Output.validation_summary\n  },\n  \n  // Étape 4: Schéma base de données\n  schema: {\n    entities: a4Output.entities,\n    total_tables: a4Output.total_tables,\n    total_columns: a4Output.total_columns,\n    total_relationships: a4Output.total_relationships\n  },\n  \n  // Métadonnées\n  metadata: {\n    generated_at: new Date().toISOString(),\n    workflow_version: '1.0-final',\n    agents_executed: ['Agent 1', 'Agent 2', 'Agent 3', 'Agent 4']\n  },\n  \n  // Prochaines étapes\n  next_steps: {\n    workflow: 'workflow_2_orchestrateur_composants',\n    action: 'Générer les composants selon la roadmap',\n    components_to_generate: a3Output.total_components_planned\n  }\n};"
+      },
+      "id": "code-prepare-final-output",
+      "name": "Code: Prepare Final Output",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3100, 460]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [3320, 460]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract User Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract User Input": {
+      "main": [
+        [
+          {
+            "node": "Agent 1: Conversation Manager",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 1: Conversation Manager": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields A1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 1: Conversation Manager",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields A1": {
+      "main": [
+        [
+          {
+            "node": "Code: Format A1→A2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Format A1→A2": {
+      "main": [
+        [
+          {
+            "node": "Agent 2: Intent Analyzer",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 2: Intent Analyzer": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields A2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 2: Intent Analyzer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields A2": {
+      "main": [
+        [
+          {
+            "node": "Code: Format A2→A3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Format A2→A3": {
+      "main": [
+        [
+          {
+            "node": "Agent 3: Validation Coordinator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 3: Validation Coordinator": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields A3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 3: Validation Coordinator",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields A3": {
+      "main": [
+        [
+          {
+            "node": "Code: Format A3→A4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Format A3→A4": {
+      "main": [
+        [
+          {
+            "node": "Agent 4: Entity Classifier",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent 4: Entity Classifier": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields A4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Albert API - Agent 4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Agent 4: Entity Classifier",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields A4": {
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Final Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Prepare Final Output": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Agent 1: Conversation Manager": [
+      {
+        "output": {
+          "conversation_id": "conv_1704585600000_abc123def",
+          "business_domain": "gestion_stock",
+          "domain_description": "Système de gestion des stocks et inventaire pour suivre les produits, commandes et fournisseurs.",
+          "extracted_entities": [
+            {
+              "name": "Produits",
+              "description": "Articles en stock avec références et quantités",
+              "priority": "high"
+            },
+            {
+              "name": "Fournisseurs",
+              "description": "Entreprises fournissant les produits",
+              "priority": "high"
+            },
+            {
+              "name": "Commandes",
+              "description": "Ordres d'achat et réapprovisionnement",
+              "priority": "medium"
+            },
+            {
+              "name": "Categories",
+              "description": "Classification des produits",
+              "priority": "low"
+            }
+          ],
+          "key_actors": [
+            {
+              "role": "Gestionnaire de stock",
+              "description": "Supervise les niveaux de stock et réapprovisionnements"
+            },
+            {
+              "role": "Acheteur",
+              "description": "Passe les commandes auprès des fournisseurs"
+            }
+          ],
+          "complexity_level": "medium",
+          "confidence_score": 0.92
+        }
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "1.0-final"
+}
