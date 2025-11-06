@@ -67,34 +67,40 @@ Ce système de 5 workflows N8N génère automatiquement des applications App Nes
 
 ### Import des Workflows
 
-1. **Workflow 1: Analyse Schéma**
+1. **Workflow 1: Analyse Schéma** (Point d'entrée)
    ```bash
    # Importer workflow_1_final.json dans N8N
+   # Trigger: Webhook
    # Webhook URL: https://n8n.colaig.fr/webhook/appnest-analyse
    ```
 
-2. **Workflow 2: Orchestrateur**
+2. **Workflow 2: Orchestrateur** (Appelé par W1)
    ```bash
    # Importer workflow_2_orchestrateur_final.json
-   # Webhook URL: https://n8n.colaig.fr/webhook/appnest-orchestrateur
+   # Trigger: "When Executed by Another Workflow"
+   # Appelé automatiquement par le Workflow 1
    ```
 
-3. **Workflow 3: Génération Composant**
+3. **Workflow 3: Génération Composant** (Appelé par W2 en boucle)
    ```bash
    # Importer workflow_3_generation_composant_final.json
-   # Webhook URL: https://n8n.colaig.fr/webhook/appnest-generate-component
+   # Trigger: "When Executed by Another Workflow"
+   # Appelé automatiquement par le Workflow 2 pour chaque composant
    ```
 
-4. **Workflow 4: Validation (Optionnel)**
+4. **Workflow 4: Validation** (Optionnel - Standalone)
    ```bash
    # Importer workflow_4_validation_composant_final.json
+   # Trigger: Webhook
    # Webhook URL: https://n8n.colaig.fr/webhook/appnest-validate-component
+   # Utilisable indépendamment pour valider un composant
    ```
 
-5. **Workflow 5: Assemblage Final**
+5. **Workflow 5: Assemblage Final** (Appelé par W2)
    ```bash
    # Importer workflow_5_assemblage_final.json
-   # Webhook URL: https://n8n.colaig.fr/webhook/appnest-assemble
+   # Trigger: "When Executed by Another Workflow"
+   # Appelé automatiquement par le Workflow 2 après génération
    ```
 
 ### Configuration
@@ -108,12 +114,19 @@ Pour chaque workflow, vérifier :
 
 ## 🚀 Utilisation
 
-### Scénario 1 : Workflow Complet Automatique
+> **⚡ Important :** Les workflows s'enchaînent automatiquement !
+> - **Workflow 1** (webhook) → appelle automatiquement → **Workflow 2** (Execute Workflow)
+> - **Workflow 2** → boucle sur → **Workflow 3** (Execute Workflow, ×N composants)
+> - **Workflow 2** → appelle automatiquement → **Workflow 5** (Execute Workflow)
+>
+> **Vous n'avez qu'à appeler le Workflow 1** et tout le reste s'exécute automatiquement !
 
-**Objectif :** Générer une application complète de A à Z
+### Scénario 1 : Génération Complète Automatique
+
+**Objectif :** Générer une application complète de A à Z en un seul appel
 
 ```bash
-# Étape 1 : Lancer le Workflow 1 (Analyse)
+# UN SEUL APPEL suffit - Le Workflow 1 orchestre tout le reste
 curl -X POST https://n8n.colaig.fr/webhook/appnest-analyse \
   -H "Content-Type: application/json" \
   -d '{
@@ -121,76 +134,15 @@ curl -X POST https://n8n.colaig.fr/webhook/appnest-analyse \
   }'
 ```
 
-**Réponse Workflow 1 :**
-```json
-{
-  "success": true,
-  "conversation_id": "conv_1704585600000_abc123def",
-  "business_domain": "gestion_stock",
-  "domain_description": "Système de gestion des stocks...",
-  "analysis": {
-    "extracted_entities": [
-      {"name": "Produits", "priority": "high"},
-      {"name": "Fournisseurs", "priority": "high"},
-      {"name": "Commandes", "priority": "medium"}
-    ]
-  },
-  "use_cases": {
-    "total_count": 15,
-    "crud_count": 12,
-    "specific_count": 3
-  },
-  "validation": {
-    "total_components_planned": 6
-  },
-  "schema": {
-    "total_tables": 4,
-    "total_columns": 25,
-    "entities": [...]
-  }
-}
-```
+**🔄 Ce qui se passe en arrière-plan :**
 
-```bash
-# Étape 2 : Lancer le Workflow 2 (Orchestrateur) avec la réponse du W1
-curl -X POST https://n8n.colaig.fr/webhook/appnest-orchestrateur \
-  -H "Content-Type: application/json" \
-  -d @workflow1_response.json
-```
+1. ✅ **Workflow 1** analyse la demande (4 agents)
+2. ✅ **Workflow 2** est automatiquement appelé (via Execute Workflow)
+3. ✅ **Workflow 3** génère chaque composant un par un (boucle)
+4. ✅ **Workflow 5** assemble le package final (automatique)
+5. ✅ Vous recevez le résultat complet avec tous les fichiers
 
-**Réponse Workflow 2 :**
-```json
-{
-  "success": true,
-  "generated_components": [
-    {
-      "component_id": "dashboard",
-      "component_name": "Tableau de bord",
-      "component_code": "const Component = () => { ... }",
-      "validation_result": {"is_valid": true}
-    },
-    {
-      "component_id": "gestion_produits",
-      "component_name": "Gestion Produits",
-      "component_code": "const Component = () => { ... }",
-      "validation_result": {"is_valid": true}
-    }
-  ],
-  "summary": {
-    "total_components_generated": 6,
-    "all_validated": true
-  }
-}
-```
-
-```bash
-# Étape 3 : Lancer le Workflow 5 (Assemblage) avec la réponse du W2
-curl -X POST https://n8n.colaig.fr/webhook/appnest-assemble \
-  -H "Content-Type: application/json" \
-  -d @workflow2_response.json
-```
-
-**Réponse Workflow 5 :**
+**Réponse Finale (après exécution de W1 → W2 → W3 → W5) :**
 ```json
 {
   "success": true,
