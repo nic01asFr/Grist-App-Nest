@@ -82,7 +82,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Composant validé - Retourner avec infos validation\nconst validation = $input.first().json.output;\nconst originalComponent = JSON.parse($vars.get('component_being_validated'));\n\nreturn {\n  ...originalComponent,\n  validation_status: validation.validation_status,\n  validation_result: {\n    valid: validation.valid,\n    warnings: validation.warnings || [],\n    constraints_checklist: validation.constraints_checklist,\n    validated_at: new Date().toISOString()\n  }\n};"
+        "jsCode": "// Composant validé - Retourner avec infos validation\nconst validation = $input.first().json.output;\nconst originalComponent = JSON.parse($execution.customData.get('component_being_validated'));\n\nreturn {\n  ...originalComponent,\n  validation_status: validation.validation_status,\n  validation_result: {\n    valid: validation.valid,\n    warnings: validation.warnings || [],\n    constraints_checklist: validation.constraints_checklist,\n    validated_at: new Date().toISOString()\n  }\n};"
       },
       "id": "code-component-valid",
       "name": "Code: Component Valid",
@@ -92,7 +92,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Composant invalide - Retourner erreurs\nconst validation = $input.first().json.output;\nconst originalComponent = JSON.parse($vars.get('component_being_validated'));\n\nreturn {\n  ...originalComponent,\n  validation_status: 'INVALID',\n  validation_result: {\n    valid: false,\n    errors: validation.errors || [],\n    warnings: validation.warnings || [],\n    constraints_checklist: validation.constraints_checklist,\n    validated_at: new Date().toISOString()\n  },\n  retry_possible: true\n};"
+        "jsCode": "// Composant invalide - Retourner erreurs\nconst validation = $input.first().json.output;\nconst originalComponent = JSON.parse($execution.customData.get('component_being_validated'));\n\nreturn {\n  ...originalComponent,\n  validation_status: 'INVALID',\n  validation_result: {\n    valid: false,\n    errors: validation.errors || [],\n    warnings: validation.warnings || [],\n    constraints_checklist: validation.constraints_checklist,\n    validated_at: new Date().toISOString()\n  },\n  retry_possible: true\n};"
       },
       "id": "code-component-invalid",
       "name": "Code: Component Invalid",
@@ -102,7 +102,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Stocker composant en cours de validation\nconst component = $input.first().json.component_to_validate;\n$vars.set('component_being_validated', JSON.stringify(component));\n\nreturn $input.first().json;"
+        "jsCode": "// Stocker composant en cours de validation\nconst component = $input.first().json.component_to_validate;\n$execution.customData.set('component_being_validated', JSON.stringify(component));\n\nreturn $input.first().json;"
       },
       "id": "code-store-component",
       "name": "Code: Store Component",

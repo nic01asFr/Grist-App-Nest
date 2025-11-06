@@ -348,7 +348,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Stocker schéma complet dans variable N8N\nconst schema = $input.first().json.output;\n$vars.set('grist_schema_full', JSON.stringify(schema));\n\n// Retourner résumé\nreturn {\n  schema_summary: {\n    tables: ['Sites', 'Bâtiments', 'Locaux', 'Équipements', 'Interventions', 'Prestataires', 'Documents', 'Budget_Patrimoine'],\n    total_columns: 67,\n    stored_in: 'var_grist_schema_full'\n  }\n};"
+        "jsCode": "// Stocker schéma complet dans variable N8N\nconst schema = $input.first().json.output;\n$execution.customData.set('grist_schema_full', JSON.stringify(schema));\n\n// Retourner résumé\nreturn {\n  schema_summary: {\n    tables: ['Sites', 'Bâtiments', 'Locaux', 'Équipements', 'Interventions', 'Prestataires', 'Documents', 'Budget_Patrimoine'],\n    total_columns: 67,\n    stored_in: 'var_grist_schema_full'\n  }\n};"
       },
       "id": "code-store-schema-001",
       "name": "Store Schema in Variable",
@@ -393,7 +393,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Stocker chaque composant dans variable séparée\nconst components = $input.first().json.output.components;\n\ncomponents.forEach(comp => {\n  const varName = `code_${comp.component_id}`;\n  $vars.set(varName, comp.component_code);\n  console.log(`Code ${comp.component_id} stocké dans ${varName}`);\n});\n\n// Retourner références\nreturn {\n  component_refs: components.map(c => ({\n    id: c.component_id,\n    name: c.template_name,\n    var_name: `code_${c.component_id}`,\n    loc: c.component_code.split('\\n').length\n  })),\n  metadata: {\n    total: components.length,\n    stored: true\n  }\n};"
+        "jsCode": "// Stocker chaque composant dans variable séparée\nconst components = $input.first().json.output.components;\n\ncomponents.forEach(comp => {\n  const varName = `code_${comp.component_id}`;\n  $execution.customData.set(varName, comp.component_code);\n  console.log(`Code ${comp.component_id} stocké dans ${varName}`);\n});\n\n// Retourner références\nreturn {\n  component_refs: components.map(c => ({\n    id: c.component_id,\n    name: c.template_name,\n    var_name: `code_${c.component_id}`,\n    loc: c.component_code.split('\\n').length\n  })),\n  metadata: {\n    total: components.length,\n    stored: true\n  }\n};"
       },
       "id": "code-store-components-001",
       "name": "Store Components in Variables",
@@ -542,7 +542,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Préparer données pour création document Grist\nconst assembledApp = $input.first().json.output.assembled_app;\n\n// Stocker app complète\n$vars.set('assembled_app', JSON.stringify(assembledApp));\n\nreturn {\n  app_ready: true,\n  document_name: `Patrimoine Immobilier - ${new Date().toISOString().split('T')[0]}`,\n  tables_count: assembledApp.grist_document_structure.tables.length,\n  components_count: assembledApp.templates_table.length\n};"
+        "jsCode": "// Préparer données pour création document Grist\nconst assembledApp = $input.first().json.output.assembled_app;\n\n// Stocker app complète\n$execution.customData.set('assembled_app', JSON.stringify(assembledApp));\n\nreturn {\n  app_ready: true,\n  document_name: `Patrimoine Immobilier - ${new Date().toISOString().split('T')[0]}`,\n  tables_count: assembledApp.grist_document_structure.tables.length,\n  components_count: assembledApp.templates_table.length\n};"
       },
       "id": "code-prepare-deployment-001",
       "name": "Prepare Deployment",
@@ -594,7 +594,7 @@
     },
     {
       "parameters": {
-        "jsCode": "// Créer toutes les tables du schéma\nconst docId = $input.first().json.id;\nconst schema = JSON.parse($vars.get('grist_schema_full'));\nconst assembledApp = JSON.parse($vars.get('assembled_app'));\n\nreturn {\n  document_id: docId,\n  document_url: `${$vars.GRIST_DOC_URL}/doc/${docId}`,\n  schema: schema,\n  templates: assembledApp.templates_table,\n  deployment_status: 'TABLES_TO_CREATE'\n};"
+        "jsCode": "// Créer toutes les tables du schéma\nconst docId = $input.first().json.id;\nconst schema = JSON.parse($execution.customData.get('grist_schema_full'));\nconst assembledApp = JSON.parse($execution.customData.get('assembled_app'));\n\nreturn {\n  document_id: docId,\n  document_url: `${$vars.GRIST_DOC_URL}/doc/${docId}`,\n  schema: schema,\n  templates: assembledApp.templates_table,\n  deployment_status: 'TABLES_TO_CREATE'\n};"
       },
       "id": "code-prepare-tables-001",
       "name": "Prepare Tables Creation",
