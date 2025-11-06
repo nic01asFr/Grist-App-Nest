@@ -1,0 +1,116 @@
+{
+  "name": "Workflow 4: Validation Composant (FINAL)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appnest-validate-component",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-w4",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "appnest-validate-component"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input\nconst input = $input.first().json;\nconst data = input.body || input;\n\nreturn {\n  conversation_id: data.conversation_id,\n  component_id: data.component_id,\n  component_name: data.component_name,\n  component_type: data.component_type,\n  component_code: data.component_code,\n  tables_used: data.tables_used || [],\n  dependencies: data.dependencies || []\n};"
+      },
+      "id": "extract-input-w4",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Validate component code\nconst componentCode = $json.component_code;\nconst componentId = $json.component_id;\nconst componentType = $json.component_type;\n\nconst validation = {\n  is_valid: true,\n  errors: [],\n  warnings: [],\n  checks: {}\n};\n\n// Check 1: Must have 'const Component ='\nvalidation.checks.has_component_variable = componentCode.includes('const Component =');\nif (!validation.checks.has_component_variable) {\n  validation.errors.push('Le code doit contenir \"const Component = \"');\n  validation.is_valid = false;\n}\n\n// Check 2: Must have 'return ('\nvalidation.checks.has_return = componentCode.includes('return (') || componentCode.includes('return(');\nif (!validation.checks.has_return) {\n  validation.errors.push('Le composant doit avoir un return avec JSX');\n  validation.is_valid = false;\n}\n\n// Check 3: Must use gristAPI\nvalidation.checks.uses_gristapi = componentCode.includes('gristAPI');\nif (!validation.checks.uses_gristapi) {\n  validation.warnings.push('Le composant n\\'utilise pas gristAPI (peut être normal pour certains composants)');\n}\n\n// Check 4: Must use React hooks\nvalidation.checks.uses_usestate = componentCode.includes('useState');\nvalidation.checks.uses_useeffect = componentCode.includes('useEffect');\n\nif (!validation.checks.uses_usestate && !validation.checks.uses_useeffect) {\n  validation.warnings.push('Le composant n\\'utilise ni useState ni useEffect (composant statique ?)');\n}\n\n// Check 5: Should have inline styles\nvalidation.checks.uses_inline_styles = componentCode.includes('style={{');\nif (!validation.checks.uses_inline_styles) {\n  validation.warnings.push('Le composant n\\'utilise pas de styles inline (recommandé pour App Nest)');\n}\n\n// Check 6: Code length (should be reasonable)\nconst lineCount = componentCode.split('\\n').length;\nvalidation.checks.line_count = lineCount;\n\nif (lineCount < 10) {\n  validation.warnings.push(`Code très court (${lineCount} lignes) - vérifier si complet`);\n} else if (lineCount > 500) {\n  validation.warnings.push(`Code très long (${lineCount} lignes) - envisager de diviser`);\n}\n\n// Check 7: Basic syntax (brackets balance)\nconst openBraces = (componentCode.match(/{/g) || []).length;\nconst closeBraces = (componentCode.match(/}/g) || []).length;\nvalidation.checks.balanced_braces = openBraces === closeBraces;\n\nif (!validation.checks.balanced_braces) {\n  validation.errors.push(`Accolades déséquilibrées: ${openBraces} ouvrantes vs ${closeBraces} fermantes`);\n  validation.is_valid = false;\n}\n\n// Check 8: Component type specific validation\nif (componentType === 'crud') {\n  const hasCRUD = (\n    componentCode.includes('addRecord') ||\n    componentCode.includes('updateRecord') ||\n    componentCode.includes('deleteRecord')\n  );\n  \n  validation.checks.has_crud_operations = hasCRUD;\n  \n  if (!hasCRUD) {\n    validation.warnings.push('Composant CRUD mais pas d\\'opérations CRUD détectées');\n  }\n}\n\nif (componentType === 'dashboard') {\n  const hasMetrics = componentCode.includes('getData');\n  validation.checks.has_metrics = hasMetrics;\n  \n  if (!hasMetrics) {\n    validation.warnings.push('Dashboard sans appel getData détecté');\n  }\n}\n\nreturn {\n  conversation_id: $json.conversation_id,\n  component_id: componentId,\n  component_name: $json.component_name,\n  component_type: componentType,\n  component_code: componentCode,\n  tables_used: $json.tables_used,\n  dependencies: $json.dependencies,\n  validation: validation\n};"
+      },
+      "id": "validate-code",
+      "name": "Code: Validate Component",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final validation result\nconst validation = $json.validation;\n\nreturn {\n  success: true,\n  conversation_id: $json.conversation_id,\n  workflow: 'workflow_4_validation_composant',\n  \n  component_id: $json.component_id,\n  component_name: $json.component_name,\n  component_type: $json.component_type,\n  component_code: $json.component_code,\n  \n  validation_result: {\n    is_valid: validation.is_valid,\n    error_count: validation.errors.length,\n    warning_count: validation.warnings.length,\n    errors: validation.errors,\n    warnings: validation.warnings,\n    checks: validation.checks\n  },\n  \n  tables_used: $json.tables_used,\n  dependencies: $json.dependencies,\n  \n  validated_at: new Date().toISOString(),\n  \n  recommendation: validation.is_valid \n    ? 'Composant validé avec succès'\n    : 'Composant nécessite des corrections'\n};"
+      },
+      "id": "return-validation",
+      "name": "Code: Return Validation",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success-w4",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1120, 460]
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Code: Validate Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Validate Component": {
+      "main": [
+        [
+          {
+            "node": "Code: Return Validation",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Return Validation": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "4.0-final"
+}

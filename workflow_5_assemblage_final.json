@@ -1,82 +1,152 @@
 {
-  "name": "Workflow 5: Assemblage Final",
+  "name": "Workflow 5: Assemblage Final (FINAL)",
   "nodes": [
     {
-      "parameters": {},
-      "id": "execute-workflow-trigger",
-      "name": "Execute Workflow Trigger",
-      "type": "n8n-nodes-base.executeWorkflowTrigger",
-      "typeVersion": 1,
-      "position": [250, 300]
-    },
-    {
       "parameters": {
-        "jsCode": "// CODE NODE: Format Prompt Agent 13 (Assemblage)\nconst input = $input.first().json;\nconst validatedComponents = input.validated_components;\nconst schema = JSON.parse($execution.customData.get('schema_full'));\nconst businessDomain = $execution.customData.get('business_domain');\n\nconst systemPrompt = `Tu es Agent 13: App Assembler.\nTon rôle : Assembler tous les composants validés en application complète.`;\n\nconst userPrompt = `## APPLICATION À ASSEMBLER\n\n**Domaine** : ${businessDomain}\n**Tables** : ${schema.total_tables} tables, ${schema.total_columns} colonnes\n**Composants validés** : ${validatedComponents.length} composants\n\n---\n\n## COMPOSANTS DISPONIBLES\n\n${validatedComponents.map((comp, i) => `\n${i+1}. **${comp.component_id}** : ${comp.template_name}\n   - Type: ${comp.component_type}\n   - Status: ${comp.validation_status}\n   - Taille: ${comp.code_length} caractères (~${comp.estimated_tokens} tokens)\n   - Validé: ${comp.validation_result?.validated_at || 'N/A'}\n`).join('')}\n\n---\n\n## SCHÉMA DES TABLES\n\n${schema.entities.map(entity => `\n**${entity.table_name}** (${entity.entity_type})\n- Description: ${entity.description || 'N/A'}\n- Colonnes: ${entity.columns.length}\n- Relations: ${entity.relationships?.length || 0}\n`).join('')}\n\n---\n\n## TA MISSION\n\nAssemble l'application complète avec :\n\n1. **Table Templates** : Structure Grist avec ces ${validatedComponents.length} composants\n   Chaque composant doit avoir:\n   - template_id (Text)\n   - template_name (Text)\n   - component_type (Text)\n   - component_code (Text)\n\n2. **Navigation** : Menu avec ordre logique\n   - Composant par défaut: dashboard (ou premier composant)\n   - Menu ordonné par priorité\n\n3. **Structure document Grist** :\n   - Liste des tables: ${schema.entities.map(e => e.table_name).join(', ')}\n   - Widget URL: Grist_App_Nest_v5_2.html\n\n4. **Instructions déploiement** : Guide pour l'utilisateur\n\n---\n\n## FORMAT DE SORTIE\n\nRéponds UNIQUEMENT avec ce JSON :\n\n{\n  \"assembled_app\": {\n    \"templates_table\": [\n      {\n        \"template_id\": \"dashboard\",\n        \"template_name\": \"Tableau de bord\",\n        \"component_type\": \"functional\",\n        \"component_code\": \"const Component = () => { ... };\"\n      }\n    ],\n    \"navigation\": {\n      \"default_component\": \"dashboard\",\n      \"menu_structure\": [\n        {\"id\": \"dashboard\", \"label\": \"Tableau de bord\", \"icon\": \"📊\", \"order\": 1}\n      ]\n    },\n    \"grist_document_structure\": {\n      \"tables\": [${schema.entities.map(e => `\"${e.table_name}\"`).join(', ')}],\n      \"widget_configuration\": {\n        \"url\": \"https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html\",\n        \"access_level\": \"full\"\n      }\n    },\n    \"deployment_instructions\": {\n      \"step_1\": \"Créer document Grist\",\n      \"step_2\": \"Créer table Templates avec colonnes: template_id, template_name, component_type, component_code\",\n      \"step_3\": \"Importer les ${validatedComponents.length} composants dans table Templates\",\n      \"step_4\": \"Créer les ${schema.total_tables} tables métier\",\n      \"step_5\": \"Ajouter Custom Widget avec URL widget\",\n      \"step_6\": \"Définir Access Level: full\"\n    }\n  },\n  \"metadata\": {\n    \"domain\": \"${businessDomain}\",\n    \"total_components\": ${validatedComponents.length},\n    \"total_tables\": ${schema.total_tables},\n    \"total_columns\": ${schema.total_columns},\n    \"generated_at\": \"${new Date().toISOString()}\"\n  }\n}\n`;\n\nreturn {\n  system_prompt: systemPrompt,\n  user_prompt: userPrompt,\n  components_count: validatedComponents.length,\n  tables_count: schema.total_tables\n};"
-      },
-      "id": "code-format-prompt-a13",
-      "name": "Code: Format Prompt A13",
-      "type": "n8n-nodes-base.code",
-      "typeVersion": 2,
-      "position": [450, 300]
-    },
-    {
-      "parameters": {
-        "agent": "conversationalAgent",
-        "promptType": "define",
-        "text": "={{ $json.system_prompt }}\\n\\n{{ $json.user_prompt }}",
+        "httpMethod": "POST",
+        "path": "appnest-assemble",
+        "responseMode": "responseNode",
         "options": {}
       },
-      "id": "agent-013",
-      "name": "Agent 13: App Assembler",
-      "type": "@n8n/n8n-nodes-langchain.agent",
-      "typeVersion": 1,
-      "position": [650, 300]
+      "id": "webhook-trigger-w5",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "appnest-assemble"
     },
     {
       "parameters": {
-        "model": "albert-code",
-        "options": {
-          "temperature": 0.1,
-          "maxTokens": 4096
-        }
+        "jsCode": "// Extract input\nconst input = $input.first().json;\nconst data = input.body || input;\n\nreturn {\n  conversation_id: data.conversation_id,\n  business_domain: data.business_domain,\n  schema: data.schema,\n  generated_components: data.generated_components || [],\n  summary: data.summary || {}\n};"
       },
-      "id": "llm-013",
-      "name": "Albert API - Agent 13",
-      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
-      "typeVersion": 1,
-      "position": [650, 480],
-      "credentials": {
-        "openAiApi": {
-          "id": "albert-api-header",
-          "name": "Header Albert API"
-        }
-      }
-    },
-    {
-      "parameters": {
-        "jsCode": "// Préparer réponse finale complète\nconst assembledApp = $input.first().json.output.assembled_app;\nconst metadata = $input.first().json.output.metadata;\nconst conversationId = $execution.customData.get('conversation_id');\n\n// Stocker app assemblée\n$execution.customData.set('assembled_app', JSON.stringify(assembledApp));\n\nreturn {\n  success: true,\n  conversation_id: conversationId,\n  message: `Application ${metadata.domain} créée avec succès !`,\n  application: assembledApp,\n  metadata: metadata,\n  summary: {\n    domain: metadata.domain,\n    components_created: metadata.total_components,\n    tables_created: metadata.total_tables,\n    columns_total: metadata.total_columns,\n    generated_at: metadata.generated_at\n  },\n  next_steps: [\n    \"1. Créer un nouveau document Grist\",\n    `2. Créer la table 'Templates' avec les colonnes: template_id, template_name, component_type, component_code`,\n    `3. Importer les ${metadata.total_components} composants dans la table Templates`,\n    `4. Créer les ${metadata.total_tables} tables métier selon le schéma fourni`,\n    \"5. Ajouter un Custom Widget avec l'URL: \" + assembledApp.grist_document_structure.widget_configuration.url,\n    \"6. Définir Access Level du widget: full\",\n    \"7. L'application se chargera automatiquement\"\n  ],\n  widget_url: assembledApp.grist_document_structure.widget_configuration.url\n};"
-      },
-      "id": "code-prepare-final-response",
-      "name": "Code: Prepare Final Response",
+      "id": "extract-input-w5",
+      "name": "Extract Input",
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
-      "position": [850, 300]
+      "position": [460, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create Grist table schema JSON\nconst schema = $json.schema;\nconst businessDomain = $json.business_domain;\n\nconst gristSchema = {\n  document_name: `AppNest_${businessDomain}`,\n  created_at: new Date().toISOString(),\n  tables: []\n};\n\n// Add Templates table (required for App Nest)\ngristSchema.tables.push({\n  table_name: 'Templates',\n  description: 'Composants React pour App Nest',\n  columns: [\n    {\n      id: 'template_id',\n      label: 'template_id',\n      type: 'Text',\n      description: 'Identifiant unique du composant'\n    },\n    {\n      id: 'template_name',\n      label: 'template_name',\n      type: 'Text',\n      description: 'Nom affiché dans la navigation'\n    },\n    {\n      id: 'component_type',\n      label: 'component_type',\n      type: 'Text',\n      description: 'Type: functional ou class'\n    },\n    {\n      id: 'component_code',\n      label: 'component_code',\n      type: 'Text',\n      description: 'Code JSX du composant'\n    }\n  ]\n});\n\n// Add business tables\nschema.entities.forEach(entity => {\n  const table = {\n    table_name: entity.table_name,\n    description: entity.description,\n    entity_type: entity.entity_type,\n    columns: entity.columns.map(col => ({\n      id: col.column_name.toLowerCase().replace(/\\s+/g, '_'),\n      label: col.column_name,\n      type: col.column_type,\n      is_required: col.is_required || false,\n      is_unique: col.is_unique || false,\n      is_primary: col.is_primary || false,\n      default_value: col.default_value,\n      description: col.description || ''\n    })),\n    relationships: entity.relationships || []\n  };\n  \n  gristSchema.tables.push(table);\n});\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: businessDomain,\n  grist_schema: gristSchema,\n  generated_components: $json.generated_components,\n  summary: $json.summary\n};"
+      },
+      "id": "create-schema",
+      "name": "Code: Create Grist Schema",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create Templates CSV data\nconst components = $json.generated_components;\nconst businessDomain = $json.business_domain;\n\n// CSV header\nlet csvContent = 'template_id,template_name,component_type,component_code\\n';\n\n// Add each component as CSV row\ncomponents.forEach(comp => {\n  // Escape double quotes in code\n  const escapedCode = comp.component_code\n    .replace(/\"/g, '\"\"')  // CSV escape: \" becomes \"\"\n    .replace(/\\n/g, '\\\\n'); // Escape newlines\n  \n  const row = [\n    `\"${comp.component_id}\"`,\n    `\"${comp.component_name}\"`,\n    `\"functional\"`,\n    `\"${escapedCode}\"`\n  ].join(',');\n  \n  csvContent += row + '\\n';\n});\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: businessDomain,\n  grist_schema: $json.grist_schema,\n  templates_csv: csvContent,\n  templates_count: components.length,\n  generated_components: components,\n  summary: $json.summary\n};"
+      },
+      "id": "create-templates-csv",
+      "name": "Code: Create Templates CSV",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Create installation instructions\nconst businessDomain = $json.business_domain;\nconst schema = $json.grist_schema;\nconst templatesCount = $json.templates_count;\n\nconst instructions = `# Installation Guide - App Nest ${businessDomain}\n\nGénéré le: ${new Date().toISOString()}\nNombre de composants: ${templatesCount}\nNombre de tables: ${schema.tables.length - 1} (+ 1 Templates)\n\n## Étape 1: Créer le document Grist\n\n1. Connectez-vous à Grist\n2. Créez un nouveau document vide\n3. Nommez-le: \"${schema.document_name}\"\n\n## Étape 2: Créer les tables métier\n\n${schema.tables.filter(t => t.table_name !== 'Templates').map((table, i) => `\n### ${i + 1}. Table: ${table.table_name}\n\n**Description:** ${table.description}\n**Type:** ${table.entity_type}\n\n**Colonnes à créer:**\n\n${table.columns.map(col => {\n  let colDef = \\`- \\*\\*${col.label}\\*\\* (${col.type})\\`;\n  if (col.is_primary) colDef += ' - PRIMARY KEY';\n  if (col.is_required) colDef += ' - REQUIS';\n  if (col.is_unique) colDef += ' - UNIQUE';\n  if (col.description) colDef += \\`\\n  Description: ${col.description}\\`;\n  return colDef;\n}).join('\\n')}\n\n${table.relationships.length > 0 ? \\`**Relations:**\\n${table.relationships.map(rel => \\`- ${rel.type} vers ${rel.target} via ${rel.via}\\`).join('\\n')}\\` : ''}\n`).join('\\n')}\n\n## Étape 3: Créer la table Templates\n\n1. Ajoutez une nouvelle table nommée \"Templates\"\n2. Créez les colonnes suivantes:\n   - **template_id** (Text)\n   - **template_name** (Text)\n   - **component_type** (Text)\n   - **component_code** (Text)\n\n## Étape 4: Importer les composants\n\n1. Ouvrez la table \"Templates\"\n2. Cliquez sur \"Import from file\"\n3. Uploadez le fichier \"templates.csv\" fourni\n4. Vérifiez que ${templatesCount} composants ont été importés\n\n## Étape 5: Installer le widget App Nest\n\n1. Ajoutez une nouvelle page\n2. Ajoutez un widget \"Custom Widget\"\n3. URL du widget:\n   \\`\\`\\`\n   https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html\n   \\`\\`\\`\n4. Access Level: \"Read table\" (minimum)\n5. Sélectionnez la table \"Templates\"\n\n## Étape 6: Configuration initiale\n\n1. Le widget se chargera automatiquement\n2. Navigation disponible dans la sidebar\n3. Composants disponibles:\n${$json.generated_components.map((c, i) => \\`   ${i + 1}. ${c.component_name} (${c.component_type})\\`).join('\\n')}\n\n## Étape 7: Test\n\n1. Testez chaque composant\n2. Ajoutez des données de test dans les tables métier\n3. Vérifiez que les opérations CRUD fonctionnent\n\n## Support\n\nEn cas de problème:\n- Vérifiez la console navigateur (F12)\n- Vérifiez que toutes les tables existent\n- Vérifiez que les noms de colonnes correspondent au schéma\n\n## Schéma complet\n\nVoir le fichier \\`grist_schema.json\\` pour le schéma détaillé.\n`;\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: businessDomain,\n  grist_schema: $json.grist_schema,\n  templates_csv: $json.templates_csv,\n  installation_guide: instructions,\n  generated_components: $json.generated_components,\n  summary: $json.summary\n};"
+      },
+      "id": "create-instructions",
+      "name": "Code: Create Instructions",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare final package\nconst businessDomain = $json.business_domain;\nconst components = $json.generated_components;\n\nreturn {\n  success: true,\n  conversation_id: $json.conversation_id,\n  workflow: 'workflow_5_assemblage_final',\n  business_domain: businessDomain,\n  \n  package: {\n    grist_schema: $json.grist_schema,\n    templates_csv: $json.templates_csv,\n    installation_guide: $json.installation_guide\n  },\n  \n  summary: {\n    total_tables: $json.grist_schema.tables.length,\n    business_tables: $json.grist_schema.tables.length - 1,\n    total_components: components.length,\n    dashboard_count: components.filter(c => c.component_type === 'dashboard').length,\n    crud_count: components.filter(c => c.component_type === 'crud').length,\n    all_components_validated: components.every(c => c.validation_result?.is_valid)\n  },\n  \n  files_generated: [\n    {\n      filename: 'grist_schema.json',\n      description: 'Schéma complet des tables Grist',\n      size_bytes: JSON.stringify($json.grist_schema).length\n    },\n    {\n      filename: 'templates.csv',\n      description: 'Composants React pour import dans table Templates',\n      size_bytes: $json.templates_csv.length,\n      rows: components.length\n    },\n    {\n      filename: 'INSTALLATION.md',\n      description: 'Guide d\\'installation étape par étape',\n      size_bytes: $json.installation_guide.length\n    }\n  ],\n  \n  widget_url: 'https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html',\n  \n  completed_at: new Date().toISOString(),\n  \n  next_steps: [\n    '1. Télécharger les fichiers générés',\n    '2. Créer le document Grist',\n    '3. Créer les tables selon grist_schema.json',\n    '4. Importer templates.csv dans la table Templates',\n    '5. Installer le widget App Nest',\n    '6. Tester l\\'application'\n  ]\n};"
+      },
+      "id": "prepare-final-package",
+      "name": "Code: Prepare Final Package",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1340, 460]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success-w5",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [1560, 460]
     }
   ],
   "connections": {
-    "Execute Workflow Trigger": {
-      "main": [[{"node": "Code: Format Prompt A13", "type": "main", "index": 0}]]
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Code: Format Prompt A13": {
-      "main": [[{"node": "Agent 13: App Assembler", "type": "main", "index": 0}]]
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Code: Create Grist Schema",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Agent 13: App Assembler": {
-      "main": [[{"node": "Code: Prepare Final Response", "type": "main", "index": 0}]]
+    "Code: Create Grist Schema": {
+      "main": [
+        [
+          {
+            "node": "Code: Create Templates CSV",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     },
-    "Albert API - Agent 13": {
-      "ai_languageModel": [[{"node": "Agent 13: App Assembler", "type": "ai_languageModel", "index": 0}]]
+    "Code: Create Templates CSV": {
+      "main": [
+        [
+          {
+            "node": "Code: Create Instructions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Create Instructions": {
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Final Package",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Prepare Final Package": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
+  "pinData": {},
   "settings": {
     "executionOrder": "v1"
   },
@@ -84,5 +154,5 @@
   "tags": [],
   "triggerCount": 0,
   "updatedAt": "2025-01-06T00:00:00.000Z",
-  "versionId": "1"
+  "versionId": "5.0-final"
 }

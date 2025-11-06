@@ -1,0 +1,339 @@
+{
+  "name": "Workflow 2: Orchestrateur Composants (FINAL)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "appnest-orchestrateur",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-trigger-w2",
+      "name": "Webhook Trigger",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [240, 460],
+      "webhookId": "appnest-orchestrateur"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input from webhook or Execute Workflow call\nconst input = $input.first().json;\n\n// Input can come from webhook body or directly from Execute Workflow\nconst data = input.body || input;\n\nreturn {\n  conversation_id: data.conversation_id,\n  business_domain: data.business_domain,\n  schema: data.schema,\n  use_cases: data.use_cases,\n  validation: data.validation,\n  analysis: data.analysis\n};"
+      },
+      "id": "extract-input-w2",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [460, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare components list to generate\nconst schema = $json.schema;\nconst useCases = $json.use_cases;\nconst validation = $json.validation;\nconst businessDomain = $json.business_domain;\n\nconst componentsToGenerate = [\n  {\n    id: 'dashboard',\n    name: 'Tableau de bord',\n    priority: 1,\n    type: 'dashboard',\n    description: `Dashboard principal pour ${businessDomain}`\n  }\n];\n\n// Add CRUD component for each entity (max 5 to stay under token limit)\nconst entitiesToGenerate = schema.entities.slice(0, 5);\n\nentitiesToGenerate.forEach((entity, i) => {\n  componentsToGenerate.push({\n    id: `gestion_${entity.table_name.toLowerCase()}`,\n    name: `Gestion ${entity.table_name}`,\n    priority: i + 2,\n    type: 'crud',\n    entity: entity.table_name,\n    description: `Interface CRUD pour gérer les ${entity.table_name}`,\n    table_schema: entity\n  });\n});\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: businessDomain,\n  schema: schema,\n  use_cases: useCases,\n  validation: validation,\n  components_to_generate: componentsToGenerate,\n  summary: {\n    total_entities: schema.total_tables,\n    entities_with_components: entitiesToGenerate.length,\n    total_components: componentsToGenerate.length,\n    dashboard_count: 1,\n    crud_count: entitiesToGenerate.length\n  }\n};"
+      },
+      "id": "prepare-components-list",
+      "name": "Code: Prepare Components List",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [680, 460]
+    },
+    {
+      "parameters": {
+        "batchSize": 1,
+        "options": {}
+      },
+      "id": "split-components",
+      "name": "Split In Batches",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [900, 460]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare input for Workflow 3 (single component generation)\nconst component = $json.components_to_generate[$json.batchIndex];\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: $json.business_domain,\n  schema: $json.schema,\n  use_cases: $json.use_cases,\n  component_to_generate: component,\n  component_index: $json.batchIndex,\n  total_components: $json.components_to_generate.length\n};"
+      },
+      "id": "prepare-workflow3-input",
+      "name": "Code: Prepare Workflow 3 Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1120, 460]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $parameter.workflow_3_id }}",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "execute-workflow3",
+      "name": "Execute Workflow 3",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [1340, 460],
+      "notes": "Appelle le Workflow 3 pour générer UN composant"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect generated component\nconst generatedComponent = $input.first().json;\n\nreturn {\n  component_id: generatedComponent.component_id,\n  component_code: generatedComponent.component_code,\n  validation_result: generatedComponent.validation_result,\n  generated_at: generatedComponent.generated_at\n};"
+      },
+      "id": "collect-component",
+      "name": "Code: Collect Component",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1560, 460]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "loop-back",
+      "name": "Loop Back",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1560, 660],
+      "notes": "Retour vers Split In Batches pour le composant suivant"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all generated components\nconst allItems = $input.all();\n\nconst generatedComponents = allItems.map(item => ({\n  component_id: item.json.component_id,\n  component_code: item.json.component_code,\n  validation_result: item.json.validation_result,\n  generated_at: item.json.generated_at\n}));\n\n// Get original data from first item\nconst firstItem = $input.first().json;\n\nreturn {\n  success: true,\n  conversation_id: firstItem.conversation_id || `conv_${Date.now()}`,\n  business_domain: firstItem.business_domain,\n  workflow: 'workflow_2_orchestrateur',\n  \n  generated_components: generatedComponents,\n  \n  summary: {\n    total_components_generated: generatedComponents.length,\n    all_validated: generatedComponents.every(c => c.validation_result?.is_valid),\n    generation_completed_at: new Date().toISOString()\n  },\n  \n  next_steps: {\n    workflow: 'workflow_5_assemblage_final',\n    action: 'Assembler tous les composants dans un fichier Templates Grist'\n  }\n};"
+      },
+      "id": "aggregate-results",
+      "name": "Code: Aggregate Results",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1780, 460]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ $json }}",
+        "options": {}
+      },
+      "id": "respond-success-w2",
+      "name": "Respond Success",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [2000, 460]
+    },
+    {
+      "parameters": {
+        "workflowId": "={{ $parameter.workflow_5_id }}",
+        "options": {}
+      },
+      "id": "execute-workflow5",
+      "name": "Execute Workflow 5",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [2000, 660],
+      "notes": "Optionnel: Appelle le Workflow 5 pour assemblage final"
+    }
+  ],
+  "connections": {
+    "Webhook Trigger": {
+      "main": [
+        [
+          {
+            "node": "Extract Input",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Input": {
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Components List",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Prepare Components List": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split In Batches": {
+      "main": [
+        [
+          {
+            "node": "Code: Prepare Workflow 3 Input",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Code: Aggregate Results",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Prepare Workflow 3 Input": {
+      "main": [
+        [
+          {
+            "node": "Execute Workflow 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Execute Workflow 3": {
+      "main": [
+        [
+          {
+            "node": "Code: Collect Component",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Collect Component": {
+      "main": [
+        [
+          {
+            "node": "Loop Back",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Back": {
+      "main": [
+        [
+          {
+            "node": "Split In Batches",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code: Aggregate Results": {
+      "main": [
+        [
+          {
+            "node": "Respond Success",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Execute Workflow 5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "Extract Input": [
+      {
+        "conversation_id": "conv_1704585600000_abc123def",
+        "business_domain": "gestion_stock",
+        "schema": {
+          "entities": [
+            {
+              "table_name": "Produits",
+              "entity_type": "master",
+              "description": "Articles en stock",
+              "columns": [
+                {
+                  "column_name": "id",
+                  "column_type": "Int",
+                  "is_primary": true,
+                  "is_required": true
+                },
+                {
+                  "column_name": "nom",
+                  "column_type": "Text",
+                  "is_required": true
+                },
+                {
+                  "column_name": "stock_actuel",
+                  "column_type": "Int",
+                  "is_required": true
+                }
+              ],
+              "relationships": []
+            },
+            {
+              "table_name": "Fournisseurs",
+              "entity_type": "master",
+              "description": "Entreprises fournissant les produits",
+              "columns": [
+                {
+                  "column_name": "id",
+                  "column_type": "Int",
+                  "is_primary": true
+                },
+                {
+                  "column_name": "nom",
+                  "column_type": "Text",
+                  "is_required": true
+                }
+              ],
+              "relationships": []
+            }
+          ],
+          "total_tables": 4,
+          "total_columns": 25,
+          "total_relationships": 3
+        },
+        "use_cases": {
+          "all_use_cases": [
+            {
+              "uc_id": "UC_CREATE_PRODUITS",
+              "description": "Créer un nouveau produit",
+              "actor": "Gestionnaire",
+              "priority": "high",
+              "type": "crud"
+            }
+          ],
+          "total_count": 15,
+          "crud_count": 12,
+          "specific_count": 3
+        },
+        "validation": {
+          "component_roadmap": [
+            {
+              "component_id": "dashboard",
+              "component_name": "Tableau de bord",
+              "priority": 1
+            }
+          ],
+          "total_components_planned": 6
+        },
+        "analysis": {
+          "extracted_entities": [
+            {
+              "name": "Produits",
+              "priority": "high"
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "tags": [],
+  "triggerCount": 0,
+  "updatedAt": "2025-01-06T00:00:00.000Z",
+  "versionId": "2.0-final"
+}
