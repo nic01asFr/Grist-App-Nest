@@ -1,0 +1,489 @@
+{
+  "name": "Workflow 5: Assemblage Final avec API Grist",
+  "nodes": [
+    {
+      "parameters": {
+        "inputSource": "passthrough"
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.1,
+      "position": [200, 300],
+      "id": "trigger-w5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Extract input from W2\nconst input = $input.first().json;\nconst data = input.body || input;\n\nreturn {\n  conversation_id: data.conversation_id,\n  business_domain: data.business_domain,\n  schema: data.schema,\n  use_cases: data.use_cases,\n  generated_components: data.generated_components || [],\n  summary: data.summary || {}\n};"
+      },
+      "id": "extract-input",
+      "name": "Extract Input",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [400, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Grist API configuration\n// ⚠️ IMPORTANT: Configurer ces valeurs selon votre instance Grist\n\nconst businessDomain = $json.business_domain;\nconst timestamp = Date.now();\n\n// 📝 TODO: Remplacer par votre docId Grist ou créer un nouveau document\n// Option 1: Utiliser un document template existant\n// Option 2: Créer un nouveau document via l'API\nconst gristDocId = 'NEW_DOC'; // Sera créé automatiquement si NEW_DOC\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: businessDomain,\n  schema: $json.schema,\n  use_cases: $json.use_cases,\n  generated_components: $json.generated_components,\n  summary: $json.summary,\n  \n  // Configuration API Grist\n  grist_config: {\n    base_url: 'https://grist.numerique.gouv.fr',\n    doc_id: gristDocId,\n    doc_name: `AppNest_${businessDomain}_${timestamp}`,\n    // Les credentials seront gérés par le HTTP Request node\n  },\n  \n  // Métadonnées\n  started_at: new Date().toISOString()\n};"
+      },
+      "id": "prepare-config",
+      "name": "Code: Prepare Grist Config",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare Templates table structure\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: $json.business_domain,\n  schema: $json.schema,\n  use_cases: $json.use_cases,\n  generated_components: $json.generated_components,\n  summary: $json.summary,\n  grist_config: $json.grist_config,\n  started_at: $json.started_at,\n  \n  // Table Templates à créer\n  templates_table: {\n    id: 'Templates',\n    columns: [\n      {\n        id: 'template_id',\n        label: 'template_id',\n        type: 'Text'\n      },\n      {\n        id: 'template_name',\n        label: 'template_name',\n        type: 'Text'\n      },\n      {\n        id: 'component_type',\n        label: 'component_type',\n        type: 'Text'\n      },\n      {\n        id: 'component_code',\n        label: 'component_code',\n        type: 'Text'\n      }\n    ]\n  }\n};"
+      },
+      "id": "prepare-templates-table",
+      "name": "Code: Prepare Templates Table",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.grist_config.base_url }}/api/docs/{{ $json.grist_config.doc_id }}/tables",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gristApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tables",
+              "value": "={{ JSON.stringify([{ id: $json.templates_table.id, columns: $json.templates_table.columns }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-templates-table",
+      "name": "HTTP: Create Templates Table",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1000, 300],
+      "notes": "Crée la table Templates dans Grist avec ses 4 colonnes",
+      "credentials": {
+        "gristApi": {
+          "id": "grist_credentials",
+          "name": "Grist API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pass data forward after Templates table created\nconst prevData = $('Code: Prepare Templates Table').first().json;\n\nreturn {\n  ...prevData,\n  templates_table_created: true,\n  templates_table_result: $json\n};"
+      },
+      "id": "after-templates",
+      "name": "Code: After Templates Created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1200, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "schema.entities",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [1400, 300],
+      "id": "split-entities",
+      "name": "Split Out Entities"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "batch-entities",
+      "name": "Split In Batches (Entities)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [1600, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare business table creation\nconst entity = $json.entities;\nconst gristConfig = $json.grist_config;\n\n// Séparer les colonnes simples des colonnes de référence\nconst simpleColumns = [];\nconst referenceColumns = [];\n\nentity.columns.forEach(col => {\n  const columnDef = {\n    id: col.column_name.toLowerCase().replace(/\\s+/g, '_'),\n    label: col.column_name,\n    type: col.column_type\n  };\n  \n  // Les colonnes de référence seront ajoutées dans une étape ultérieure\n  if (col.is_reference) {\n    referenceColumns.push({\n      ...columnDef,\n      type: `Ref:${col.reference_table}`\n    });\n  } else {\n    simpleColumns.push(columnDef);\n  }\n});\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: $json.business_domain,\n  grist_config: gristConfig,\n  generated_components: $json.generated_components,\n  \n  // Table actuelle à créer\n  current_entity: entity,\n  table_to_create: {\n    id: entity.table_name,\n    columns: simpleColumns\n  },\n  reference_columns_to_add: referenceColumns,\n  \n  batch_index: $json.batchIndex\n};"
+      },
+      "id": "prepare-entity-table",
+      "name": "Code: Prepare Entity Table",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1800, 200]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.grist_config.base_url }}/api/docs/{{ $json.grist_config.doc_id }}/tables",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gristApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "tables",
+              "value": "={{ JSON.stringify([{ id: $json.table_to_create.id, columns: $json.table_to_create.columns }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "create-business-table",
+      "name": "HTTP: Create Business Table",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [2000, 200],
+      "notes": "Crée une table métier avec ses colonnes simples (sans références)",
+      "credentials": {
+        "gristApi": {
+          "id": "grist_credentials",
+          "name": "Grist API"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Collect created table info\nconst prevData = $('Code: Prepare Entity Table').first().json;\n\nreturn {\n  ...prevData,\n  table_created: true,\n  table_create_result: $json\n};"
+      },
+      "id": "after-table-created",
+      "name": "Code: After Table Created",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2200, 200]
+    },
+    {
+      "parameters": {},
+      "id": "loop-back-entities",
+      "name": "Loop Back (Entities)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [2400, 280],
+      "notes": "Retour vers Split In Batches pour l'entité suivante"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Aggregate all created tables\nconst allItems = $input.all();\nconst firstItem = $input.first().json;\n\nconst createdTables = allItems.map(item => ({\n  table_name: item.json.table_to_create?.id,\n  columns_count: item.json.table_to_create?.columns?.length || 0,\n  has_references: (item.json.reference_columns_to_add?.length || 0) > 0,\n  reference_columns: item.json.reference_columns_to_add || []\n}));\n\n// Collecter toutes les colonnes de référence à ajouter\nconst allReferenceColumns = [];\nallItems.forEach(item => {\n  const refs = item.json.reference_columns_to_add || [];\n  const tableName = item.json.table_to_create?.id;\n  refs.forEach(ref => {\n    allReferenceColumns.push({\n      table_name: tableName,\n      column: ref\n    });\n  });\n});\n\nreturn {\n  conversation_id: firstItem.conversation_id,\n  business_domain: firstItem.business_domain,\n  grist_config: firstItem.grist_config,\n  generated_components: firstItem.generated_components,\n  \n  created_tables: createdTables,\n  all_reference_columns: allReferenceColumns,\n  \n  summary: {\n    tables_created: createdTables.length,\n    references_to_add: allReferenceColumns.length\n  }\n};"
+      },
+      "id": "aggregate-tables",
+      "name": "Code: Aggregate Created Tables",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [2640, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "number": [
+            {
+              "value1": "={{ $json.all_reference_columns.length }}",
+              "operation": "larger",
+              "value2": 0
+            }
+          ]
+        }
+      },
+      "id": "if-has-references",
+      "name": "IF: Has Reference Columns",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [2880, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "all_reference_columns",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [3080, 200],
+      "id": "split-references",
+      "name": "Split Out References"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "batch-references",
+      "name": "Split In Batches (References)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [3280, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare reference column to add\nconst refCol = $json.all_reference_columns;\n\nreturn {\n  conversation_id: $json.conversation_id,\n  grist_config: $json.grist_config,\n  generated_components: $json.generated_components,\n  \n  table_name: refCol.table_name,\n  column_to_add: refCol.column,\n  \n  batch_index: $json.batchIndex\n};"
+      },
+      "id": "prepare-ref-column",
+      "name": "Code: Prepare Reference Column",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3480, 120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.grist_config.base_url }}/api/docs/{{ $json.grist_config.doc_id }}/tables/{{ $json.table_name }}/columns",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gristApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "columns",
+              "value": "={{ JSON.stringify([{ id: $json.column_to_add.id, label: $json.column_to_add.label, type: $json.column_to_add.type }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "add-reference-column",
+      "name": "HTTP: Add Reference Column",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [3680, 120],
+      "notes": "Ajoute une colonne de référence (FK) à une table",
+      "credentials": {
+        "gristApi": {
+          "id": "grist_credentials",
+          "name": "Grist API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "loop-back-references",
+      "name": "Loop Back (References)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [3880, 200],
+      "notes": "Retour vers Split In Batches pour la référence suivante"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Continue after references added\nconst firstItem = $input.first().json;\n\nreturn {\n  conversation_id: firstItem.conversation_id,\n  business_domain: firstItem.business_domain,\n  grist_config: firstItem.grist_config,\n  generated_components: firstItem.generated_components,\n  \n  references_added: true\n};"
+      },
+      "id": "after-references",
+      "name": "Code: After References Added",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4120, 200]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Merge paths: with or without references\nreturn $json;"
+      },
+      "id": "merge-references-path",
+      "name": "Code: Merge Paths",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [3080, 400]
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineAll"
+      },
+      "id": "merge-node",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3,
+      "position": [4320, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Prepare components for insertion into Templates\nconst components = $json.generated_components;\nconst gristConfig = $json.grist_config;\n\nreturn {\n  conversation_id: $json.conversation_id,\n  business_domain: $json.business_domain,\n  grist_config: gristConfig,\n  components_to_insert: components\n};"
+      },
+      "id": "prepare-components",
+      "name": "Code: Prepare Components for Insert",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4520, 300]
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "components_to_insert",
+        "include": "allOtherFields",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [4720, 300],
+      "id": "split-components",
+      "name": "Split Out Components"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "id": "batch-components",
+      "name": "Split In Batches (Components)",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [4920, 300]
+    },
+    {
+      "parameters": {
+        "jsCode": "// Format component for Templates table\nconst component = $json.components_to_insert;\n\n// Extraire le code du composant (peut être wrapped dans JSON)\nlet componentCode = component.component_code;\nif (typeof componentCode === 'object') {\n  componentCode = JSON.stringify(componentCode);\n}\n\n// Nettoyer le code si nécessaire\nif (componentCode.startsWith('{\")) {\n  try {\n    const parsed = JSON.parse(componentCode);\n    componentCode = parsed;\n  } catch (e) {\n    // Garder tel quel si parsing échoue\n  }\n}\n\nreturn {\n  conversation_id: $json.conversation_id,\n  grist_config: $json.grist_config,\n  \n  record_to_insert: {\n    template_id: component.component_id,\n    template_name: component.component_name || component.component_id,\n    component_type: 'functional',\n    component_code: componentCode\n  },\n  \n  batch_index: $json.batchIndex\n};"
+      },
+      "id": "format-component",
+      "name": "Code: Format Component Record",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5120, 220]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.grist_config.base_url }}/api/docs/{{ $json.grist_config.doc_id }}/tables/Templates/records",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "gristApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "records",
+              "value": "={{ JSON.stringify([{ fields: $json.record_to_insert }]) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "insert-component",
+      "name": "HTTP: Insert Component into Templates",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [5320, 220],
+      "notes": "Insère un composant dans la table Templates",
+      "credentials": {
+        "gristApi": {
+          "id": "grist_credentials",
+          "name": "Grist API"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "id": "loop-back-components",
+      "name": "Loop Back (Components)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [5520, 300],
+      "notes": "Retour vers Split In Batches pour le composant suivant"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Final success response\nconst allItems = $input.all();\nconst firstItem = $input.first().json;\n\nconst insertedComponents = allItems.map(item => ({\n  component_id: item.json.record_to_insert?.template_id,\n  inserted: true\n}));\n\nconst docUrl = `${firstItem.grist_config.base_url}/doc/${firstItem.grist_config.doc_id}`;\n\nreturn {\n  success: true,\n  conversation_id: firstItem.conversation_id,\n  workflow: 'workflow_5_assemblage_final',\n  business_domain: firstItem.business_domain,\n  \n  grist_document: {\n    doc_id: firstItem.grist_config.doc_id,\n    doc_url: docUrl,\n    doc_name: firstItem.grist_config.doc_name\n  },\n  \n  summary: {\n    components_inserted: insertedComponents.length,\n    all_components_inserted: true\n  },\n  \n  widget_configuration: {\n    widget_url: 'https://raw.githubusercontent.com/nic01asFr/grist-dynamic-dashboard/main/Grist_App_Nest_v5_2.html',\n    access_level: 'read table',\n    table_to_select: 'Templates'\n  },\n  \n  next_steps: [\n    `1. Ouvrir le document: ${docUrl}`,\n    '2. Ajouter une page Custom Widget',\n    '3. Configurer le widget avec l\\'URL ci-dessus',\n    '4. Sélectionner la table Templates',\n    '5. Tester l\\'application'\n  ],\n  \n  completed_at: new Date().toISOString()\n};"
+      },
+      "id": "final-response",
+      "name": "Code: Prepare Final Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [5760, 300]
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [[{"node": "Extract Input", "type": "main", "index": 0}]]
+    },
+    "Extract Input": {
+      "main": [[{"node": "Code: Prepare Grist Config", "type": "main", "index": 0}]]
+    },
+    "Code: Prepare Grist Config": {
+      "main": [[{"node": "Code: Prepare Templates Table", "type": "main", "index": 0}]]
+    },
+    "Code: Prepare Templates Table": {
+      "main": [[{"node": "HTTP: Create Templates Table", "type": "main", "index": 0}]]
+    },
+    "HTTP: Create Templates Table": {
+      "main": [[{"node": "Code: After Templates Created", "type": "main", "index": 0}]]
+    },
+    "Code: After Templates Created": {
+      "main": [[{"node": "Split Out Entities", "type": "main", "index": 0}]]
+    },
+    "Split Out Entities": {
+      "main": [[{"node": "Split In Batches (Entities)", "type": "main", "index": 0}]]
+    },
+    "Split In Batches (Entities)": {
+      "main": [
+        [{"node": "Code: Aggregate Created Tables", "type": "main", "index": 0}],
+        [{"node": "Code: Prepare Entity Table", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Prepare Entity Table": {
+      "main": [[{"node": "HTTP: Create Business Table", "type": "main", "index": 0}]]
+    },
+    "HTTP: Create Business Table": {
+      "main": [[{"node": "Code: After Table Created", "type": "main", "index": 0}]]
+    },
+    "Code: After Table Created": {
+      "main": [[{"node": "Loop Back (Entities)", "type": "main", "index": 0}]]
+    },
+    "Loop Back (Entities)": {
+      "main": [[{"node": "Split In Batches (Entities)", "type": "main", "index": 0}]]
+    },
+    "Code: Aggregate Created Tables": {
+      "main": [[{"node": "IF: Has Reference Columns", "type": "main", "index": 0}]]
+    },
+    "IF: Has Reference Columns": {
+      "main": [
+        [{"node": "Split Out References", "type": "main", "index": 0}],
+        [{"node": "Code: Merge Paths", "type": "main", "index": 0}]
+      ]
+    },
+    "Split Out References": {
+      "main": [[{"node": "Split In Batches (References)", "type": "main", "index": 0}]]
+    },
+    "Split In Batches (References)": {
+      "main": [
+        [{"node": "Code: After References Added", "type": "main", "index": 0}],
+        [{"node": "Code: Prepare Reference Column", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Prepare Reference Column": {
+      "main": [[{"node": "HTTP: Add Reference Column", "type": "main", "index": 0}]]
+    },
+    "HTTP: Add Reference Column": {
+      "main": [[{"node": "Loop Back (References)", "type": "main", "index": 0}]]
+    },
+    "Loop Back (References)": {
+      "main": [[{"node": "Split In Batches (References)", "type": "main", "index": 0}]]
+    },
+    "Code: After References Added": {
+      "main": [[{"node": "Merge", "type": "main", "index": 0}]]
+    },
+    "Code: Merge Paths": {
+      "main": [[{"node": "Merge", "type": "main", "index": 1}]]
+    },
+    "Merge": {
+      "main": [[{"node": "Code: Prepare Components for Insert", "type": "main", "index": 0}]]
+    },
+    "Code: Prepare Components for Insert": {
+      "main": [[{"node": "Split Out Components", "type": "main", "index": 0}]]
+    },
+    "Split Out Components": {
+      "main": [[{"node": "Split In Batches (Components)", "type": "main", "index": 0}]]
+    },
+    "Split In Batches (Components)": {
+      "main": [
+        [{"node": "Code: Prepare Final Response", "type": "main", "index": 0}],
+        [{"node": "Code: Format Component Record", "type": "main", "index": 0}]
+      ]
+    },
+    "Code: Format Component Record": {
+      "main": [[{"node": "HTTP: Insert Component into Templates", "type": "main", "index": 0}]]
+    },
+    "HTTP: Insert Component into Templates": {
+      "main": [[{"node": "Loop Back (Components)", "type": "main", "index": 0}]]
+    },
+    "Loop Back (Components)": {
+      "main": [[{"node": "Split In Batches (Components)", "type": "main", "index": 0}]]
+    }
+  },
+  "pinData": {},
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
