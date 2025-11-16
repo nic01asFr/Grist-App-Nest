@@ -7,13 +7,14 @@ import type { LogLevel, LogEntry } from './types';
 class Logger {
   private static formatTimestamp(): string {
     const now = new Date();
-    return now.toLocaleTimeString('fr-FR', {
+    const time = now.toLocaleTimeString('fr-FR', {
       hour12: false,
       hour: '2-digit',
       minute: '2-digit',
       second: '2-digit',
-      fractionalSecondDigits: 3,
     });
+    const ms = now.getMilliseconds().toString().padStart(3, '0');
+    return `${time}.${ms}`;
   }
 
   private static createLogEntry(

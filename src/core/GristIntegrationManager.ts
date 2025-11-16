@@ -12,7 +12,6 @@ import Logger from './Logger';
 import type {
   ConfigRecord,
   PageRecord,
-  TemplateRecord,
   ClientRecord,
   ProductRecord,
   SaleRecord,
@@ -100,12 +99,42 @@ class GristIntegrationManager extends GristSchemaManager {
     Logger.success('Config populated');
   }
 
-  // ===== PAGES DATA (will be populated dynamically in the future) =====
+  // ===== PAGES DATA =====
 
   private async populatePages(): Promise<void> {
-    // Pages will be created by the application
-    // For now we just log that we're ready
-    Logger.info('Pages table ready (will be populated by app)');
+    const pages: Partial<PageRecord>[] = [
+      {
+        page_id: 'home',
+        page_name: 'Accueil',
+        icon: '🏠',
+        order: 1,
+        component_code: '', // Loaded from built component
+      },
+      {
+        page_id: 'clients',
+        page_name: 'Clients',
+        icon: '👥',
+        order: 2,
+        component_code: '', // Loaded from built component
+      },
+      {
+        page_id: 'products',
+        page_name: 'Produits',
+        icon: '📦',
+        order: 3,
+        component_code: '', // Loaded from built component
+      },
+      {
+        page_id: 'sales',
+        page_name: 'Ventes',
+        icon: '💰',
+        order: 4,
+        component_code: '', // Loaded from built component
+      },
+    ];
+
+    await this.addRecords('Pages', pages);
+    Logger.success(`Pages populated: ${pages.length} records`);
   }
 
   // ===== TEMPLATES DATA (will be populated dynamically in the future) =====
