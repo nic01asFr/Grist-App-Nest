@@ -24,6 +24,7 @@ export type ColumnType =
   | 'Date'
   | 'DateTime'
   | 'Bool'
+  | 'Toggle'
   | 'Choice'
   | `Ref:${string}`;
 
@@ -41,72 +42,127 @@ export interface TableDefinition {
   columns: ColumnDefinition[];
 }
 
-// ===== ARCHITECTURE COMPONENTS =====
+// ===== CRM APPLICATION RECORDS =====
 
-export interface PageRecord extends GristRecord {
-  page_id: string;
-  page_name: string;
-  icon: string;
-  order: number;
-  component_code: string;
+export interface CompanyRecord extends GristRecord {
+  name: string;
+  industry?: string;
+  size?: string;
+  website?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+  country?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ContactRecord extends GristRecord {
+  company_id: number; // Ref:Companies
+  first_name: string;
+  last_name: string;
+  email: string;
+  phone?: string;
+  position?: string;
+  status?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface OpportunityRecord extends GristRecord {
+  company_id: number; // Ref:Companies
+  contact_id?: number; // Ref:Contacts
+  title: string;
+  amount?: number;
+  stage?: string;
+  probability?: number;
+  expected_close_date?: string;
+  actual_close_date?: string;
+  description?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface ActivityRecord extends GristRecord {
+  company_id?: number; // Ref:Companies
+  contact_id?: number; // Ref:Contacts
+  opportunity_id?: number; // Ref:Opportunities
+  type: string;
+  subject: string;
+  description?: string;
+  scheduled_date?: string;
+  completed?: boolean;
   created_at?: string;
 }
 
 export interface TemplateRecord extends GristRecord {
   template_id: string;
   template_name: string;
-  category: 'display' | 'data' | 'charts' | 'forms' | 'ui';
+  category: 'pages' | 'widgets' | 'layouts' | 'charts' | 'forms';
   description?: string;
-  component_code: string;
-  props_schema?: string; // JSON
+  component_code: string; // JSX code as string
+  props_schema?: string; // JSON schema
+  is_active?: boolean;
   created_at?: string;
+  updated_at?: string;
 }
 
-export interface PageTemplateRecord extends GristRecord {
-  page_id: number; // Ref to Pages
-  template_id: number; // Ref to Templates
-  order?: number;
-  config?: string; // JSON
-}
-
-export interface ConfigRecord extends GristRecord {
+export interface AppConfigRecord extends GristRecord {
   config_key: string;
   config_value: string;
-  config_type: 'text' | 'number' | 'boolean' | 'json';
+  config_type: 'string' | 'number' | 'boolean' | 'json';
   description?: string;
-  updated_at?: string;
 }
 
-// ===== BUSINESS DATA =====
+// ===== COMPONENT PROPS =====
 
-export interface ClientRecord extends GristRecord {
-  nom: string;
-  email: string;
-  entreprise?: string;
-  statut: 'Actif' | 'Inactif';
-  created_at?: string;
-  updated_at?: string;
+export interface StatsCardProps {
+  title: string;
+  value: string | number;
+  icon: string;
+  color?: 'blue' | 'green' | 'orange' | 'purple' | 'red' | 'gray';
+  trend?: number;
 }
 
-export interface ProductRecord extends GristRecord {
-  nom: string;
-  prix: number;
-  stock: number;
-  categorie: 'Informatique' | 'Accessoires' | 'Audio';
-  description?: string;
-  created_at?: string;
-  updated_at?: string;
+export interface DataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+  render?: (value: any, row: any) => React.ReactNode;
 }
 
-export interface SaleRecord extends GristRecord {
-  client_id: number; // Ref to Clients
-  produit_id: number; // Ref to Products
-  quantite: number;
-  prix_unitaire: number;
-  montant_total?: number; // Computed
-  date: string;
-  created_at?: string;
-  notes?: string;
+export interface DataTableProps<T> {
+  data: T[];
+  columns: DataTableColumn[];
+  onRowClick?: (row: T) => void;
+}
+
+export interface ButtonProps {
+  variant?: 'primary' | 'secondary' | 'success' | 'danger';
+  size?: 'sm' | 'md' | 'lg';
+  onClick?: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+}
+
+// ===== CACHING =====
+
+export interface CacheEntry<T = GristRecord[]> {
+  data: T;
+  timestamp: number;
+  ttl: number;
+}
+
+// ===== LOGGING =====
+
+export type LogLevel = 'log' | 'info' | 'success' | 'warn' | 'error' | 'debug';
+
+export interface LogEntry {
+  level: LogLevel;
+  timestamp: string;
+  icon: string;
+  message: string;
+  data?: unknown;
 }
 
 // ===== GRIST API =====
@@ -122,95 +178,44 @@ export interface GristAPI {
   navigate: (pageId: string) => void;
 
   // Component loading
-  getChildComponent: (templateId: string) => Promise<React.ComponentType<any> | null>;
-  getPage: (pageId: string) => Promise<PageData | null>;
-  getPages: () => Promise<PageRecord[]>;
+  getTemplate: (templateId: string) => Promise<TemplateRecord | null>;
   getTemplates: (category?: string) => Promise<TemplateRecord[]>;
 }
 
 export interface PageData {
-  page: PageRecord;
-  templates: Record<string, React.ComponentType<any>>;
+  template: TemplateRecord;
+  component: React.ComponentType<any>;
 }
 
-// ===== LOGGER =====
+// ===== BACKWARD COMPATIBILITY (old schema types) =====
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'debug';
+// These are kept for compatibility with existing pages/components
+// They map to the new CRM types or are deprecated
 
-export interface LogEntry {
-  timestamp: string;
-  level: LogLevel;
+export interface PageRecord extends GristRecord {
+  page_id: string;
+  page_name: string;
   icon: string;
-  message: string;
-  data?: unknown;
+  order: number;
+  component_code: string;
+  created_at?: string;
 }
 
-// ===== CACHE =====
+export type ConfigRecord = AppConfigRecord; // Alias
+export type ClientRecord = ContactRecord; // Alias (clients → contacts)
+export type ProductRecord = OpportunityRecord; // Deprecated, use OpportunityRecord
+export type SaleRecord = ActivityRecord; // Deprecated, use ActivityRecord
 
-export interface CacheEntry<T> {
-  data: T;
-  timestamp: number;
-  ttl?: number; // Time to live in ms
+// ===== GLOBAL WINDOW =====
+
+declare global {
+  interface Window {
+    grist: any;
+    gristAPI: GristAPI;
+    Babel: any;
+    React: any;
+    ReactDOM: any;
+  }
 }
 
-// ===== TEMPLATE PROPS =====
-
-export interface StatsCardProps {
-  title: string;
-  value: string | number;
-  icon: string;
-  color?: 'blue' | 'green' | 'red' | 'orange' | 'purple' | 'gray';
-  trend?: number;
-}
-
-export interface DataTableColumn<T = any> {
-  key: string;
-  label: string;
-  render?: (value: any, row: T) => React.ReactNode;
-  sortable?: boolean;
-}
-
-export interface DataTableProps<T = any> {
-  data: T[];
-  columns: DataTableColumn<T>[];
-  onRowClick?: (row: T) => void;
-}
-
-export interface ChartDataPoint {
-  [key: string]: string | number;
-}
-
-export interface LineChartProps {
-  data: ChartDataPoint[];
-  xKey: string;
-  yKey: string;
-  title?: string;
-  color?: string;
-}
-
-export interface PieChartProps {
-  data: ChartDataPoint[];
-  nameKey: string;
-  valueKey: string;
-  title?: string;
-}
-
-export interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  variant?: 'primary' | 'secondary' | 'success' | 'danger';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-}
-
-export interface ModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  title?: string;
-  children: React.ReactNode;
-}
-
-export interface BadgeProps {
-  children: React.ReactNode;
-  variant?: 'success' | 'warning' | 'danger' | 'info';
-}
+export {};

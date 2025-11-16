@@ -1,9 +1,17 @@
 /**
- * Grist Schema Manager
+ * Grist Schema Manager - CRM Application
  *
- * Manages database schema creation in 2 steps:
- * 1. Create tables WITH columns (non-Ref columns)
- * 2. Add Ref columns (relations between tables)
+ * Creates a relational database schema for a CRM application:
+ * - Companies (enterprises)
+ * - Contacts (people at companies)
+ * - Opportunities (sales opportunities)
+ * - Activities (interactions/tasks)
+ * - Templates (UI components stored as JSX)
+ * - AppConfig (application configuration)
+ *
+ * Process:
+ * 1. Create tables WITH columns (non-Ref)
+ * 2. Add Ref columns (foreign keys with labels)
  */
 
 import GristWidgetBase from './GristWidgetBase';
@@ -12,19 +20,19 @@ import type { ColumnDefinition } from './types';
 
 class GristSchemaManager extends GristWidgetBase {
   /**
-   * Create all tables with complete schema and relations
+   * Create complete CRM schema
    */
   async createCompleteSchema(): Promise<void> {
-    Logger.log('🗄️', 'Creating complete schema with relations');
+    Logger.log('🗄️', 'Creating CRM schema with relations');
 
     try {
-      // Step 1: Create all tables WITH their columns (non-Ref)
+      // Step 1: Create tables WITH their columns (non-Ref)
       await this.createAllTablesWithColumns();
 
-      // Step 2: Add Ref columns (relations)
+      // Step 2: Add Ref columns (foreign keys)
       await this.addAllRelations();
 
-      Logger.success('Complete schema created successfully');
+      Logger.success('CRM schema created successfully');
     } catch (error) {
       Logger.error('Error creating schema:', error);
       throw error;
@@ -32,203 +40,298 @@ class GristSchemaManager extends GristWidgetBase {
   }
 
   /**
-   * Step 1: Create all tables WITH their columns (non-Ref columns)
+   * Step 1: Create all tables WITH their base columns
    */
   private async createAllTablesWithColumns(): Promise<void> {
     Logger.log('📋', 'Step 1: Creating tables with columns');
 
-    // Config table
-    if (!(await this.tableExists('Config'))) {
-      await this.createTable('Config', this.getConfigColumns());
-      Logger.success('Table created: Config');
-    } else {
-      Logger.info('Table already exists: Config');
+    // Core tables (no dependencies)
+    const coreTables = [
+      { name: 'Companies', columns: this.getCompaniesColumns() },
+      { name: 'Templates', columns: this.getTemplatesColumns() },
+      { name: 'AppConfig', columns: this.getAppConfigColumns() },
+    ];
+
+    for (const { name, columns } of coreTables) {
+      if (!(await this.tableExists(name))) {
+        await this.createTable(name, columns);
+        Logger.success(`Table created: ${name} (${columns.length} columns)`);
+      } else {
+        Logger.info(`Table already exists: ${name}`);
+      }
     }
 
-    // Pages table
-    if (!(await this.tableExists('Pages'))) {
-      await this.createTable('Pages', this.getPagesColumns());
-      Logger.success('Table created: Pages');
-    } else {
-      Logger.info('Table already exists: Pages');
-    }
+    // Dependent tables (will have Ref columns added in step 2)
+    const dependentTables = [
+      { name: 'Contacts', columns: this.getContactsColumns() },
+      { name: 'Opportunities', columns: this.getOpportunitiesColumns() },
+      { name: 'Activities', columns: this.getActivitiesColumns() },
+    ];
 
-    // Templates table
-    if (!(await this.tableExists('Templates'))) {
-      await this.createTable('Templates', this.getTemplatesColumns());
-      Logger.success('Table created: Templates');
-    } else {
-      Logger.info('Table already exists: Templates');
-    }
-
-    // Clients table
-    if (!(await this.tableExists('Clients'))) {
-      await this.createTable('Clients', this.getClientsColumns());
-      Logger.success('Table created: Clients');
-    } else {
-      Logger.info('Table already exists: Clients');
-    }
-
-    // Produits table
-    if (!(await this.tableExists('Produits'))) {
-      await this.createTable('Produits', this.getProduitsColumns());
-      Logger.success('Table created: Produits');
-    } else {
-      Logger.info('Table already exists: Produits');
-    }
-
-    // PageTemplates table (without Ref columns yet)
-    if (!(await this.tableExists('PageTemplates'))) {
-      await this.createTable('PageTemplates', this.getPageTemplatesColumns());
-      Logger.success('Table created: PageTemplates');
-    } else {
-      Logger.info('Table already exists: PageTemplates');
-    }
-
-    // Ventes table (without Ref columns yet)
-    if (!(await this.tableExists('Ventes'))) {
-      await this.createTable('Ventes', this.getVentesColumns());
-      Logger.success('Table created: Ventes');
-    } else {
-      Logger.info('Table already exists: Ventes');
+    for (const { name, columns } of dependentTables) {
+      if (!(await this.tableExists(name))) {
+        await this.createTable(name, columns);
+        Logger.success(`Table created: ${name} (${columns.length} base columns)`);
+      } else {
+        Logger.info(`Table already exists: ${name}`);
+      }
     }
   }
 
   /**
-   * Step 2: Add Ref columns (relations between tables)
+   * Step 2: Add Ref columns (foreign keys with labels)
    */
   private async addAllRelations(): Promise<void> {
-    Logger.log('🔗', 'Step 2: Adding relations (Ref columns)');
+    Logger.log('🔗', 'Step 2: Adding foreign key relations');
 
-    await this.addPageTemplatesRelations();
-    await this.addVentesRelations();
+    // Contacts → Companies
+    await this.addContactsRelations();
+
+    // Opportunities → Companies + Contacts
+    await this.addOpportunitiesRelations();
+
+    // Activities → Companies + Contacts + Opportunities
+    await this.addActivitiesRelations();
+
+    Logger.success('All relations added');
   }
 
   // ===== COLUMN DEFINITIONS =====
 
-  private getConfigColumns(): ColumnDefinition[] {
+  /**
+   * Companies table (enterprises)
+   */
+  private getCompaniesColumns(): ColumnDefinition[] {
     return [
-      { id: 'config_key', type: 'Text' },
-      { id: 'config_value', type: 'Text' },
+      { id: 'name', type: 'Text', label: 'Company Name' },
       {
-        id: 'config_type',
+        id: 'industry',
         type: 'Choice',
+        label: 'Industry',
         widgetOptions: JSON.stringify({
-          choices: ['text', 'number', 'boolean', 'json'],
+          choices: ['Technology', 'Finance', 'Healthcare', 'Retail', 'Manufacturing', 'Other'],
         }),
       },
-      { id: 'description', type: 'Text' },
-      { id: 'updated_at', type: 'DateTime' },
+      {
+        id: 'size',
+        type: 'Choice',
+        label: 'Company Size',
+        widgetOptions: JSON.stringify({
+          choices: ['1-10', '11-50', '51-200', '201-1000', '1000+'],
+        }),
+      },
+      { id: 'website', type: 'Text', label: 'Website' },
+      { id: 'phone', type: 'Text', label: 'Phone' },
+      { id: 'address', type: 'Text', label: 'Address' },
+      { id: 'city', type: 'Text', label: 'City' },
+      { id: 'country', type: 'Text', label: 'Country' },
+      { id: 'created_at', type: 'DateTime', label: 'Created At' },
+      { id: 'updated_at', type: 'DateTime', label: 'Updated At' },
     ];
   }
 
-  private getPagesColumns(): ColumnDefinition[] {
+  /**
+   * Contacts table (people) - base columns only
+   */
+  private getContactsColumns(): ColumnDefinition[] {
     return [
-      { id: 'page_id', type: 'Text' },
-      { id: 'page_name', type: 'Text' },
-      { id: 'icon', type: 'Text' },
-      { id: 'order', type: 'Int' },
-      { id: 'component_code', type: 'Text' },
-      { id: 'created_at', type: 'DateTime' },
+      { id: 'first_name', type: 'Text', label: 'First Name' },
+      { id: 'last_name', type: 'Text', label: 'Last Name' },
+      {
+        id: 'full_name',
+        type: 'Text',
+        label: 'Full Name',
+        formula: '$first_name + " " + $last_name',
+      },
+      { id: 'email', type: 'Text', label: 'Email' },
+      { id: 'phone', type: 'Text', label: 'Phone' },
+      { id: 'position', type: 'Text', label: 'Position' },
+      {
+        id: 'status',
+        type: 'Choice',
+        label: 'Status',
+        widgetOptions: JSON.stringify({
+          choices: ['Active', 'Inactive', 'Lead'],
+        }),
+      },
+      { id: 'created_at', type: 'DateTime', label: 'Created At' },
+      { id: 'updated_at', type: 'DateTime', label: 'Updated At' },
     ];
   }
 
+  /**
+   * Opportunities table (sales opportunities) - base columns only
+   */
+  private getOpportunitiesColumns(): ColumnDefinition[] {
+    return [
+      { id: 'title', type: 'Text', label: 'Opportunity Title' },
+      { id: 'amount', type: 'Numeric', label: 'Amount' },
+      {
+        id: 'stage',
+        type: 'Choice',
+        label: 'Stage',
+        widgetOptions: JSON.stringify({
+          choices: [
+            'Prospecting',
+            'Qualification',
+            'Proposal',
+            'Negotiation',
+            'Closed Won',
+            'Closed Lost',
+          ],
+        }),
+      },
+      { id: 'probability', type: 'Int', label: 'Probability (%)' },
+      { id: 'expected_close_date', type: 'Date', label: 'Expected Close Date' },
+      { id: 'actual_close_date', type: 'Date', label: 'Actual Close Date' },
+      { id: 'description', type: 'Text', label: 'Description' },
+      { id: 'created_at', type: 'DateTime', label: 'Created At' },
+      { id: 'updated_at', type: 'DateTime', label: 'Updated At' },
+    ];
+  }
+
+  /**
+   * Activities table (interactions) - base columns only
+   */
+  private getActivitiesColumns(): ColumnDefinition[] {
+    return [
+      {
+        id: 'type',
+        type: 'Choice',
+        label: 'Activity Type',
+        widgetOptions: JSON.stringify({
+          choices: ['Call', 'Email', 'Meeting', 'Task', 'Note'],
+        }),
+      },
+      { id: 'subject', type: 'Text', label: 'Subject' },
+      { id: 'description', type: 'Text', label: 'Description' },
+      { id: 'scheduled_date', type: 'DateTime', label: 'Scheduled Date' },
+      { id: 'completed', type: 'Toggle', label: 'Completed' },
+      { id: 'created_at', type: 'DateTime', label: 'Created At' },
+    ];
+  }
+
+  /**
+   * Templates table (UI components as JSX)
+   */
   private getTemplatesColumns(): ColumnDefinition[] {
     return [
-      { id: 'template_id', type: 'Text' },
-      { id: 'template_name', type: 'Text' },
+      { id: 'template_id', type: 'Text', label: 'Template ID' },
+      { id: 'template_name', type: 'Text', label: 'Name' },
       {
         id: 'category',
         type: 'Choice',
+        label: 'Category',
         widgetOptions: JSON.stringify({
-          choices: ['display', 'data', 'charts', 'forms', 'ui'],
+          choices: ['pages', 'widgets', 'layouts', 'charts', 'forms'],
         }),
       },
-      { id: 'description', type: 'Text' },
-      { id: 'component_code', type: 'Text' },
-      { id: 'props_schema', type: 'Text' },
-      { id: 'created_at', type: 'DateTime' },
+      { id: 'description', type: 'Text', label: 'Description' },
+      { id: 'component_code', type: 'Text', label: 'JSX Code' },
+      { id: 'props_schema', type: 'Text', label: 'Props Schema (JSON)' },
+      { id: 'is_active', type: 'Toggle', label: 'Active' },
+      { id: 'created_at', type: 'DateTime', label: 'Created At' },
+      { id: 'updated_at', type: 'DateTime', label: 'Updated At' },
     ];
   }
 
-  private getClientsColumns(): ColumnDefinition[] {
+  /**
+   * AppConfig table (application configuration)
+   */
+  private getAppConfigColumns(): ColumnDefinition[] {
     return [
-      { id: 'nom', type: 'Text' },
-      { id: 'email', type: 'Text' },
-      { id: 'entreprise', type: 'Text' },
+      { id: 'config_key', type: 'Text', label: 'Key' },
+      { id: 'config_value', type: 'Text', label: 'Value' },
       {
-        id: 'statut',
+        id: 'config_type',
         type: 'Choice',
+        label: 'Type',
         widgetOptions: JSON.stringify({
-          choices: ['Actif', 'Inactif'],
+          choices: ['string', 'number', 'boolean', 'json'],
         }),
       },
-      { id: 'created_at', type: 'DateTime' },
-      { id: 'updated_at', type: 'DateTime' },
+      { id: 'description', type: 'Text', label: 'Description' },
     ];
   }
 
-  private getProduitsColumns(): ColumnDefinition[] {
-    return [
-      { id: 'nom', type: 'Text' },
-      { id: 'prix', type: 'Numeric' },
-      { id: 'stock', type: 'Int' },
-      {
-        id: 'categorie',
-        type: 'Choice',
-        widgetOptions: JSON.stringify({
-          choices: ['Informatique', 'Accessoires', 'Audio', 'Autre'],
-        }),
-      },
-      { id: 'description', type: 'Text' },
-      { id: 'created_at', type: 'DateTime' },
-    ];
-  }
+  // ===== FOREIGN KEY RELATIONS =====
 
-  private getPageTemplatesColumns(): ColumnDefinition[] {
-    // Only non-Ref columns here
-    return [
-      { id: 'order', type: 'Int' },
-      { id: 'config', type: 'Text' }, // JSON config
-    ];
-  }
-
-  private getVentesColumns(): ColumnDefinition[] {
-    // Only non-Ref columns here
-    return [
-      { id: 'date', type: 'Date' },
-      { id: 'quantite', type: 'Int' },
-      { id: 'prix_unitaire', type: 'Numeric' },
-      { id: 'montant_total', type: 'Numeric' },
-    ];
-  }
-
-  // ===== REF RELATIONS =====
-
-  private async addPageTemplatesRelations(): Promise<void> {
+  /**
+   * Add foreign keys to Contacts table
+   */
+  private async addContactsRelations(): Promise<void> {
     const relations: ColumnDefinition[] = [
-      { id: 'page_id', type: 'Ref:Pages', visibleCol: 'page_name' },
-      { id: 'template_id', type: 'Ref:Templates', visibleCol: 'template_name' },
+      {
+        id: 'company_id',
+        type: 'Ref:Companies',
+        label: 'Company',
+        visibleCol: 'name',
+      },
     ];
 
     for (const col of relations) {
-      await this.addColumn('PageTemplates', col);
+      await this.addColumn('Contacts', col);
     }
 
-    Logger.success('Relations added: PageTemplates');
+    Logger.success('Relations added: Contacts → Companies');
   }
 
-  private async addVentesRelations(): Promise<void> {
+  /**
+   * Add foreign keys to Opportunities table
+   */
+  private async addOpportunitiesRelations(): Promise<void> {
     const relations: ColumnDefinition[] = [
-      { id: 'client_id', type: 'Ref:Clients', visibleCol: 'nom' },
-      { id: 'produit_id', type: 'Ref:Produits', visibleCol: 'nom' },
+      {
+        id: 'company_id',
+        type: 'Ref:Companies',
+        label: 'Company',
+        visibleCol: 'name',
+      },
+      {
+        id: 'contact_id',
+        type: 'Ref:Contacts',
+        label: 'Contact',
+        visibleCol: 'full_name',
+      },
     ];
 
     for (const col of relations) {
-      await this.addColumn('Ventes', col);
+      await this.addColumn('Opportunities', col);
     }
 
-    Logger.success('Relations added: Ventes');
+    Logger.success('Relations added: Opportunities → Companies, Contacts');
+  }
+
+  /**
+   * Add foreign keys to Activities table
+   */
+  private async addActivitiesRelations(): Promise<void> {
+    const relations: ColumnDefinition[] = [
+      {
+        id: 'company_id',
+        type: 'Ref:Companies',
+        label: 'Company',
+        visibleCol: 'name',
+      },
+      {
+        id: 'contact_id',
+        type: 'Ref:Contacts',
+        label: 'Contact',
+        visibleCol: 'full_name',
+      },
+      {
+        id: 'opportunity_id',
+        type: 'Ref:Opportunities',
+        label: 'Opportunity',
+        visibleCol: 'title',
+      },
+    ];
+
+    for (const col of relations) {
+      await this.addColumn('Activities', col);
+    }
+
+    Logger.success('Relations added: Activities → Companies, Contacts, Opportunities');
   }
 }
 

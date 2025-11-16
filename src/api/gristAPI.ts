@@ -4,7 +4,7 @@
  */
 
 import { GristIntegrationManager } from '@core';
-import type { GristAPI, GristRecord, PageRecord, TemplateRecord } from '@core/types';
+import type { GristAPI, GristRecord, TemplateRecord } from '@core/types';
 
 let gristManager: GristIntegrationManager | null = null;
 
@@ -57,21 +57,10 @@ export const gristAPI: GristAPI = {
     window.dispatchEvent(new CustomEvent('navigate', { detail: { pageId } }));
   },
 
-  async getChildComponent(_templateId: string): Promise<React.ComponentType<any> | null> {
-    // Will be implemented when we have template compiler
-    console.warn('getChildComponent not yet implemented');
-    return null;
-  },
-
-  async getPage(_pageId: string) {
-    // Will be implemented when we have pages
-    console.warn('getPage not yet implemented');
-    return null;
-  },
-
-  async getPages(): Promise<PageRecord[]> {
+  async getTemplate(templateId: string): Promise<TemplateRecord | null> {
     if (!gristManager) throw new Error('Grist API not initialized');
-    return gristManager.fetchTable<PageRecord>('Pages', true);
+    const templates = await gristManager.fetchTable<TemplateRecord>('Templates', true);
+    return templates.find((t) => t.template_id === templateId) || null;
   },
 
   async getTemplates(category?: string): Promise<TemplateRecord[]> {
