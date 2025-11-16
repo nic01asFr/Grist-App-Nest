@@ -163,10 +163,20 @@ class GristWidgetBase {
    */
   async createTable(tableName: string, columns: ColumnDefinition[] = []): Promise<void> {
     try {
-      const colDefs = columns.map((col) => ({
-        id: col.id,
-        type: col.type,
-      }));
+      const colDefs = columns.map((col) => {
+        const colInfo: any = {
+          id: col.id,
+          type: col.type,
+        };
+
+        // Add optional properties if they exist
+        if (col.label) colInfo.label = col.label;
+        if (col.formula) colInfo.formula = col.formula;
+        if (col.widgetOptions) colInfo.widgetOptions = col.widgetOptions;
+        if (col.visibleCol) colInfo.visibleCol = col.visibleCol;
+
+        return colInfo;
+      });
 
       await window.grist.docApi.applyUserActions([['AddTable', tableName, colDefs]]);
 

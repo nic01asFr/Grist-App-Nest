@@ -1,10 +1,9 @@
 /**
  * Grist Schema Manager
  *
- * Manages database schema creation in 3 steps:
- * 1. Create empty tables
- * 2. Add columns (Text, Numeric, Int, Date, Choice, etc.)
- * 3. Add Ref columns (relations between tables)
+ * Manages database schema creation in 2 steps:
+ * 1. Create tables WITH columns (non-Ref columns)
+ * 2. Add Ref columns (relations between tables)
  */
 
 import GristWidgetBase from './GristWidgetBase';
@@ -19,13 +18,10 @@ class GristSchemaManager extends GristWidgetBase {
     Logger.log('🗄️', 'Creating complete schema with relations');
 
     try {
-      // Step 1: Create all empty tables
-      await this.createAllTables();
+      // Step 1: Create all tables WITH their columns (non-Ref)
+      await this.createAllTablesWithColumns();
 
-      // Step 2: Add columns to each table
-      await this.addAllColumns();
-
-      // Step 3: Add Ref columns (relations)
+      // Step 2: Add Ref columns (relations)
       await this.addAllRelations();
 
       Logger.success('Complete schema created successfully');
@@ -36,60 +32,82 @@ class GristSchemaManager extends GristWidgetBase {
   }
 
   /**
-   * Step 1: Create all empty tables (no columns yet)
+   * Step 1: Create all tables WITH their columns (non-Ref columns)
    */
-  private async createAllTables(): Promise<void> {
-    Logger.log('📋', 'Step 1: Creating empty tables');
+  private async createAllTablesWithColumns(): Promise<void> {
+    Logger.log('📋', 'Step 1: Creating tables with columns');
 
-    const tables = [
-      'Config', // No dependencies
-      'Pages', // No dependencies
-      'Templates', // No dependencies
-      'Clients', // No dependencies
-      'Produits', // No dependencies
-      'PageTemplates', // Will depend on Pages & Templates
-      'Ventes', // Will depend on Clients & Produits
-    ];
+    // Config table
+    if (!(await this.tableExists('Config'))) {
+      await this.createTable('Config', this.getConfigColumns());
+      Logger.success('Table created: Config');
+    } else {
+      Logger.info('Table already exists: Config');
+    }
 
-    for (const tableName of tables) {
-      if (!(await this.tableExists(tableName))) {
-        await window.grist.docApi.applyUserActions([['AddTable', tableName, []]]);
-        Logger.success(`Table created: ${tableName}`);
-      } else {
-        Logger.info(`Table already exists: ${tableName}`);
-      }
+    // Pages table
+    if (!(await this.tableExists('Pages'))) {
+      await this.createTable('Pages', this.getPagesColumns());
+      Logger.success('Table created: Pages');
+    } else {
+      Logger.info('Table already exists: Pages');
+    }
+
+    // Templates table
+    if (!(await this.tableExists('Templates'))) {
+      await this.createTable('Templates', this.getTemplatesColumns());
+      Logger.success('Table created: Templates');
+    } else {
+      Logger.info('Table already exists: Templates');
+    }
+
+    // Clients table
+    if (!(await this.tableExists('Clients'))) {
+      await this.createTable('Clients', this.getClientsColumns());
+      Logger.success('Table created: Clients');
+    } else {
+      Logger.info('Table already exists: Clients');
+    }
+
+    // Produits table
+    if (!(await this.tableExists('Produits'))) {
+      await this.createTable('Produits', this.getProduitsColumns());
+      Logger.success('Table created: Produits');
+    } else {
+      Logger.info('Table already exists: Produits');
+    }
+
+    // PageTemplates table (without Ref columns yet)
+    if (!(await this.tableExists('PageTemplates'))) {
+      await this.createTable('PageTemplates', this.getPageTemplatesColumns());
+      Logger.success('Table created: PageTemplates');
+    } else {
+      Logger.info('Table already exists: PageTemplates');
+    }
+
+    // Ventes table (without Ref columns yet)
+    if (!(await this.tableExists('Ventes'))) {
+      await this.createTable('Ventes', this.getVentesColumns());
+      Logger.success('Table created: Ventes');
+    } else {
+      Logger.info('Table already exists: Ventes');
     }
   }
 
   /**
-   * Step 2: Add columns to all tables (non-Ref columns)
-   */
-  private async addAllColumns(): Promise<void> {
-    Logger.log('📝', 'Step 2: Adding columns');
-
-    await this.addConfigColumns();
-    await this.addPagesColumns();
-    await this.addTemplatesColumns();
-    await this.addClientsColumns();
-    await this.addProduitsColumns();
-    await this.addPageTemplatesColumns(); // Non-Ref columns only
-    await this.addVentesColumns(); // Non-Ref columns only
-  }
-
-  /**
-   * Step 3: Add Ref columns (relations between tables)
+   * Step 2: Add Ref columns (relations between tables)
    */
   private async addAllRelations(): Promise<void> {
-    Logger.log('🔗', 'Step 3: Adding relations (Ref columns)');
+    Logger.log('🔗', 'Step 2: Adding relations (Ref columns)');
 
     await this.addPageTemplatesRelations();
     await this.addVentesRelations();
   }
 
-  // ===== CONFIG TABLE =====
+  // ===== COLUMN DEFINITIONS =====
 
-  private async addConfigColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getConfigColumns(): ColumnDefinition[] {
+    return [
       { id: 'config_key', type: 'Text' },
       { id: 'config_value', type: 'Text' },
       {
@@ -102,16 +120,10 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'description', type: 'Text' },
       { id: 'updated_at', type: 'DateTime' },
     ];
-
-    for (const col of columns) {
-      await this.addColumn('Config', col);
-    }
   }
 
-  // ===== PAGES TABLE =====
-
-  private async addPagesColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getPagesColumns(): ColumnDefinition[] {
+    return [
       { id: 'page_id', type: 'Text' },
       { id: 'page_name', type: 'Text' },
       { id: 'icon', type: 'Text' },
@@ -119,16 +131,10 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'component_code', type: 'Text' },
       { id: 'created_at', type: 'DateTime' },
     ];
-
-    for (const col of columns) {
-      await this.addColumn('Pages', col);
-    }
   }
 
-  // ===== TEMPLATES TABLE =====
-
-  private async addTemplatesColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getTemplatesColumns(): ColumnDefinition[] {
+    return [
       { id: 'template_id', type: 'Text' },
       { id: 'template_name', type: 'Text' },
       {
@@ -143,16 +149,10 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'props_schema', type: 'Text' },
       { id: 'created_at', type: 'DateTime' },
     ];
-
-    for (const col of columns) {
-      await this.addColumn('Templates', col);
-    }
   }
 
-  // ===== CLIENTS TABLE =====
-
-  private async addClientsColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getClientsColumns(): ColumnDefinition[] {
+    return [
       { id: 'nom', type: 'Text' },
       { id: 'email', type: 'Text' },
       { id: 'entreprise', type: 'Text' },
@@ -166,16 +166,10 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'created_at', type: 'DateTime' },
       { id: 'updated_at', type: 'DateTime' },
     ];
-
-    for (const col of columns) {
-      await this.addColumn('Clients', col);
-    }
   }
 
-  // ===== PRODUITS TABLE =====
-
-  private async addProduitsColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getProduitsColumns(): ColumnDefinition[] {
+    return [
       { id: 'nom', type: 'Text' },
       { id: 'prix', type: 'Numeric' },
       { id: 'stock', type: 'Int' },
@@ -183,89 +177,58 @@ class GristSchemaManager extends GristWidgetBase {
         id: 'categorie',
         type: 'Choice',
         widgetOptions: JSON.stringify({
-          choices: ['Informatique', 'Accessoires', 'Audio'],
+          choices: ['Informatique', 'Accessoires', 'Audio', 'Autre'],
         }),
       },
       { id: 'description', type: 'Text' },
       { id: 'created_at', type: 'DateTime' },
-      { id: 'updated_at', type: 'DateTime' },
     ];
-
-    for (const col of columns) {
-      await this.addColumn('Produits', col);
-    }
   }
 
-  // ===== PAGE_TEMPLATES TABLE (liaison) =====
-
-  private async addPageTemplatesColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
+  private getPageTemplatesColumns(): ColumnDefinition[] {
+    // Only non-Ref columns here
+    return [
       { id: 'order', type: 'Int' },
-      { id: 'config', type: 'Text' },
+      { id: 'config', type: 'Text' }, // JSON config
     ];
-
-    for (const col of columns) {
-      await this.addColumn('PageTemplates', col);
-    }
   }
+
+  private getVentesColumns(): ColumnDefinition[] {
+    // Only non-Ref columns here
+    return [
+      { id: 'date', type: 'Date' },
+      { id: 'quantite', type: 'Int' },
+      { id: 'prix_unitaire', type: 'Numeric' },
+      { id: 'montant_total', type: 'Numeric' },
+    ];
+  }
+
+  // ===== REF RELATIONS =====
 
   private async addPageTemplatesRelations(): Promise<void> {
     const relations: ColumnDefinition[] = [
-      {
-        id: 'page_id',
-        type: 'Ref:Pages',
-        visibleCol: 'page_name',
-      },
-      {
-        id: 'template_id',
-        type: 'Ref:Templates',
-        visibleCol: 'template_name',
-      },
+      { id: 'page_id', type: 'Ref:Pages', visibleCol: 'page_name' },
+      { id: 'template_id', type: 'Ref:Templates', visibleCol: 'template_name' },
     ];
 
     for (const col of relations) {
       await this.addColumn('PageTemplates', col);
     }
-  }
 
-  // ===== VENTES TABLE =====
-
-  private async addVentesColumns(): Promise<void> {
-    const columns: ColumnDefinition[] = [
-      { id: 'quantite', type: 'Int' },
-      { id: 'prix_unitaire', type: 'Numeric' },
-      {
-        id: 'montant_total',
-        type: 'Numeric',
-        formula: '$quantite * $prix_unitaire',
-      },
-      { id: 'date', type: 'Date' },
-      { id: 'created_at', type: 'DateTime' },
-      { id: 'notes', type: 'Text' },
-    ];
-
-    for (const col of columns) {
-      await this.addColumn('Ventes', col);
-    }
+    Logger.success('Relations added: PageTemplates');
   }
 
   private async addVentesRelations(): Promise<void> {
     const relations: ColumnDefinition[] = [
-      {
-        id: 'client_id',
-        type: 'Ref:Clients',
-        visibleCol: 'nom',
-      },
-      {
-        id: 'produit_id',
-        type: 'Ref:Produits',
-        visibleCol: 'nom',
-      },
+      { id: 'client_id', type: 'Ref:Clients', visibleCol: 'nom' },
+      { id: 'produit_id', type: 'Ref:Produits', visibleCol: 'nom' },
     ];
 
     for (const col of relations) {
       await this.addColumn('Ventes', col);
     }
+
+    Logger.success('Relations added: Ventes');
   }
 }
 
