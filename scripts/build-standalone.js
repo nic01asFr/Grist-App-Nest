@@ -21,10 +21,12 @@ console.log('🔨 Building standalone HTML...');
 // Read the built index.html
 let html = fs.readFileSync(htmlFile, 'utf-8');
 
+// Store all replacements to do (tag -> marker -> content)
+const replacements = [];
+
 // Find all script tags with src
-const scriptRegex = /<script[^>]*src="([^"]*)"[^>]*><\/script>/g;
+const scriptRegex = /<script[^>]*\ssrc="([^"]*)"[^>]*><\/script>/g;
 let match;
-const scripts = [];
 
 while ((match = scriptRegex.exec(html)) !== null) {
   const src = match[1];
@@ -32,14 +34,18 @@ while ((match = scriptRegex.exec(html)) !== null) {
 
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, 'utf-8');
-    scripts.push({ tag: match[0], content });
+    const marker = `<!--INLINE_SCRIPT_${replacements.length}-->`;
+    replacements.push({
+      tag: match[0],
+      marker: marker,
+      replacement: `<script type="module">${content}</script>`
+    });
     console.log(`  ✓ Inlined JS: ${src}`);
   }
 }
 
 // Find all link tags with rel="stylesheet"
 const cssRegex = /<link[^>]*rel="stylesheet"[^>]*href="([^"]*)"[^>]*>/g;
-const styles = [];
 
 while ((match = cssRegex.exec(html)) !== null) {
   const href = match[1];
@@ -47,22 +53,26 @@ while ((match = cssRegex.exec(html)) !== null) {
 
   if (fs.existsSync(fullPath)) {
     const content = fs.readFileSync(fullPath, 'utf-8');
-    styles.push({ tag: match[0], content });
+    const marker = `<!--INLINE_STYLE_${replacements.length}-->`;
+    replacements.push({
+      tag: match[0],
+      marker: marker,
+      replacement: `<style>${content}</style>`
+    });
     console.log(`  ✓ Inlined CSS: ${href}`);
   }
 }
 
-// Replace CSS links with inline styles
-styles.forEach(({ tag, content }) => {
-  html = html.replace(tag, `<style>${content}</style>`);
+// First pass: Replace all tags with markers
+// Use function form to avoid special character interpretation
+replacements.forEach(({ tag, marker }) => {
+  html = html.replace(tag, () => marker);
 });
 
-// Replace script tags with inline scripts
-scripts.forEach(({ tag, content }) => {
-  html = html.replace(
-    tag,
-    `<script type="module">${content}</script>`
-  );
+// Second pass: Replace all markers with actual inlined content
+// Use function form to avoid special character interpretation ($&, $1, etc.)
+replacements.forEach(({ marker, replacement }) => {
+  html = html.replace(marker, () => replacement);
 });
 
 // Write standalone file
