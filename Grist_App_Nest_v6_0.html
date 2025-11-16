@@ -3,91 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Grist App Nest v6.0 - Optimized</title>
-
-    <!-- Grist Plugin API -->
+    <title>Grist App Nest v6.0</title>
     <script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
-
-    <!-- React 18 -->
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-
-    <!-- Babel Standalone -->
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-
-    <!-- SortableJS for optimized drag & drop -->
-    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-
     <style>
-        /* ===== RESET & BASE ===== */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
 
-        :root {
-            --primary: #667eea;
-            --primary-dark: #5568d3;
-            --secondary: #764ba2;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --info: #3b82f6;
-
-            --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-tertiary: #f1f5f9;
-
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-tertiary: #94a3b8;
-
-            --border-color: #e2e8f0;
-            --border-color-hover: #cbd5e1;
-
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-
-            --radius-sm: 4px;
-            --radius-md: 6px;
-            --radius-lg: 8px;
-
-            --spacing-xs: 4px;
-            --spacing-sm: 8px;
-            --spacing-md: 16px;
-            --spacing-lg: 24px;
-            --spacing-xl: 32px;
-        }
-
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+            background: #f8fafc;
             height: 100vh;
-            overflow: hidden;
             display: grid;
             grid-template-rows: 60px 1fr;
+            overflow: hidden;
         }
 
         /* ===== HEADER ===== */
         .header {
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             display: flex;
             align-items: center;
-            padding: 0 var(--spacing-lg);
-            box-shadow: var(--shadow-lg);
+            padding: 0 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             z-index: 100;
         }
 
-        .header-title {
+        .header h1 {
             font-size: 1.5rem;
             font-weight: 600;
             display: flex;
             align-items: center;
-            gap: var(--spacing-md);
+            gap: 10px;
         }
 
         .version-badge {
@@ -98,10 +51,10 @@
             font-weight: 500;
         }
 
-        .header-nav {
+        .nav {
             margin-left: auto;
             display: flex;
-            gap: var(--spacing-sm);
+            gap: 10px;
             align-items: center;
         }
 
@@ -110,7 +63,7 @@
             border: none;
             color: white;
             padding: 8px 16px;
-            border-radius: var(--radius-md);
+            border-radius: 6px;
             cursor: pointer;
             transition: all 0.2s;
             font-size: 14px;
@@ -119,365 +72,113 @@
 
         .nav-btn:hover {
             background: rgba(255,255,255,0.3);
+            transform: translateY(-1px);
         }
 
         .nav-btn.active {
             background: rgba(255,255,255,0.4);
             font-weight: 600;
-        }
-
-        .nav-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
         }
 
         /* ===== MAIN CONTENT ===== */
         .main {
-            display: grid;
-            grid-template-columns: 280px 1fr 320px;
-            gap: 0;
+            position: relative;
             overflow: hidden;
+            background: white;
         }
 
-        /* ===== SIDEBAR (Component Library) ===== */
-        .sidebar {
-            background: var(--bg-primary);
-            border-right: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .sidebar-header {
-            padding: var(--spacing-md);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .sidebar-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--spacing-md);
-        }
-
-        .component-library {
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
-        .component-item {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            cursor: move;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .component-item:hover {
-            border-color: var(--primary);
-            box-shadow: var(--shadow-sm);
-            transform: translateY(-1px);
-        }
-
-        .component-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 16px;
-        }
-
-        .component-label {
-            flex: 1;
-            font-size: 13px;
-            font-weight: 500;
-        }
-
-        /* ===== CANVAS (Drop Zones) ===== */
-        .canvas {
-            background: var(--bg-secondary);
-            overflow-y: auto;
-            padding: var(--spacing-lg);
-        }
-
-        .canvas-inner {
-            max-width: 1200px;
-            margin: 0 auto;
-            background: var(--bg-primary);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-md);
-            min-height: calc(100vh - 60px - 48px);
-        }
-
-        .drop-zone {
-            min-height: 120px;
-            padding: var(--spacing-md);
-            border: 2px dashed var(--border-color);
-            border-radius: var(--radius-md);
-            margin: var(--spacing-md);
-            transition: all 0.2s;
-        }
-
-        .drop-zone.drag-over {
-            border-color: var(--primary);
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        .drop-zone-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text-tertiary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: var(--spacing-sm);
-        }
-
-        .drop-zone-empty {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            min-height: 80px;
-            color: var(--text-tertiary);
-            font-size: 13px;
-        }
-
-        .dropped-component {
-            background: var(--bg-primary);
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            margin-bottom: var(--spacing-sm);
-            cursor: move;
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-md);
-            transition: all 0.2s;
-        }
-
-        .dropped-component:hover {
-            border-color: var(--primary);
-            box-shadow: var(--shadow-sm);
-        }
-
-        .dropped-component-icon {
-            width: 32px;
-            height: 32px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            font-size: 18px;
-        }
-
-        .dropped-component-content {
-            flex: 1;
-        }
-
-        .dropped-component-label {
-            font-weight: 600;
-            font-size: 14px;
-            margin-bottom: 4px;
-        }
-
-        .dropped-component-type {
-            font-size: 12px;
-            color: var(--text-secondary);
-        }
-
-        .dropped-component-actions {
-            display: flex;
-            gap: var(--spacing-xs);
-        }
-
-        .component-action-btn {
-            width: 28px;
-            height: 28px;
-            border: none;
-            background: var(--bg-secondary);
-            border-radius: var(--radius-sm);
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-
-        .component-action-btn:hover {
-            background: var(--bg-tertiary);
-        }
-
-        /* ===== PROPERTIES PANEL ===== */
-        .properties-panel {
-            background: var(--bg-primary);
-            border-left: 1px solid var(--border-color);
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-
-        .properties-header {
-            padding: var(--spacing-md);
-            border-bottom: 1px solid var(--border-color);
-            font-weight: 600;
-            font-size: 14px;
-            color: var(--text-secondary);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-        }
-
-        .properties-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--spacing-md);
-        }
-
-        .property-group {
-            margin-bottom: var(--spacing-lg);
-        }
-
-        .property-group-title {
-            font-weight: 600;
-            font-size: 13px;
-            color: var(--text-primary);
-            margin-bottom: var(--spacing-md);
-            padding-bottom: var(--spacing-sm);
-            border-bottom: 1px solid var(--border-color);
-        }
-
-        .property-field {
-            margin-bottom: var(--spacing-md);
-        }
-
-        .property-label {
-            display: block;
-            font-size: 12px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: var(--spacing-xs);
-        }
-
-        .property-input,
-        .property-select,
-        .property-textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid var(--border-color);
-            border-radius: var(--radius-sm);
-            font-size: 13px;
-            font-family: inherit;
-            transition: all 0.2s;
-        }
-
-        .property-input:focus,
-        .property-select:focus,
-        .property-textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-
-        .property-textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-
-        .property-checkbox {
-            display: flex;
-            align-items: center;
-            gap: var(--spacing-sm);
-        }
-
-        .property-checkbox input[type="checkbox"] {
-            width: 16px;
-            height: 16px;
-            cursor: pointer;
-        }
-
-        /* ===== SORTABLE STYLES ===== */
-        .sortable-ghost {
-            opacity: 0.4;
-            background: var(--bg-tertiary);
-        }
-
-        .sortable-drag {
-            opacity: 1;
-            cursor: move;
-        }
-
-        .sortable-chosen {
-            background: rgba(102, 126, 234, 0.05);
-        }
-
-        /* ===== LOADING ===== */
-        .loading {
-            position: fixed;
+        .component-container {
+            position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(255, 255, 255, 0.95);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            flex-direction: column;
-            gap: var(--spacing-md);
+            padding: 20px;
+            background: white;
+            overflow-y: auto;
         }
 
-        .loading.hidden {
-            display: none;
+        /* ===== LOADING STATE ===== */
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: #64748b;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.1);
         }
 
         .spinner {
-            width: 48px;
-            height: 48px;
-            border: 4px solid var(--border-color);
-            border-top-color: var(--primary);
+            width: 40px;
+            height: 40px;
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #667eea;
             border-radius: 50%;
             animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
         }
 
-        .loading-text {
-            color: var(--text-secondary);
-            font-size: 14px;
+        /* ===== ERROR STATE ===== */
+        .error-container {
+            background: #fee2e2;
+            color: #dc2626;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px;
+            border: 1px solid #fecaca;
+        }
+
+        .error-container h3 {
+            margin-bottom: 10px;
+        }
+
+        .error-container pre {
+            background: #fef2f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            overflow-x: auto;
+            margin-top: 10px;
         }
 
         /* ===== TOAST NOTIFICATIONS ===== */
-        .toast-container {
-            position: fixed;
-            top: 80px;
-            right: 20px;
-            z-index: 1001;
-            display: flex;
-            flex-direction: column;
-            gap: var(--spacing-sm);
-        }
-
         .toast {
-            background: var(--bg-primary);
-            border-radius: var(--radius-md);
-            padding: var(--spacing-md);
-            box-shadow: var(--shadow-lg);
-            min-width: 300px;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: white;
+            color: #1f2937;
+            padding: 16px 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
             display: flex;
             align-items: center;
-            gap: var(--spacing-md);
-            animation: slideIn 0.3s ease-out;
+            gap: 12px;
+            max-width: 400px;
+        }
+
+        .toast.success {
+            border-left: 4px solid #10b981;
+        }
+
+        .toast.error {
+            border-left: 4px solid #ef4444;
+        }
+
+        .toast.info {
+            border-left: 4px solid #3b82f6;
         }
 
         @keyframes slideIn {
@@ -491,659 +192,191 @@
             }
         }
 
-        .toast.success { border-left: 4px solid var(--success); }
-        .toast.error { border-left: 4px solid var(--error); }
-        .toast.warning { border-left: 4px solid var(--warning); }
-        .toast.info { border-left: 4px solid var(--info); }
-
-        .toast-icon {
-            width: 24px;
-            height: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 18px;
+        /* ===== WELCOME SCREEN ===== */
+        .welcome-container {
+            padding: 40px;
+            text-align: center;
+            max-width: 800px;
+            margin: 0 auto;
         }
 
-        .toast-message {
-            flex: 1;
-            font-size: 14px;
-        }
-
-        .toast-close {
-            width: 24px;
-            height: 24px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-size: 18px;
-            color: var(--text-tertiary);
-        }
-
-        .toast-close:hover {
-            color: var(--text-primary);
-        }
-
-        /* ===== MODAL ===== */
-        .modal-overlay {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1002;
-        }
-
-        .modal-overlay.hidden {
-            display: none;
-        }
-
-        .modal {
-            background: var(--bg-primary);
-            border-radius: var(--radius-lg);
-            box-shadow: var(--shadow-lg);
-            max-width: 600px;
-            width: 90%;
-            max-height: 80vh;
-            display: flex;
-            flex-direction: column;
-        }
-
-        .modal-header {
-            padding: var(--spacing-lg);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .modal-title {
-            font-size: 18px;
-            font-weight: 600;
-        }
-
-        .modal-close {
-            width: 32px;
-            height: 32px;
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            font-size: 24px;
-            color: var(--text-tertiary);
-        }
-
-        .modal-close:hover {
-            color: var(--text-primary);
-        }
-
-        .modal-body {
-            flex: 1;
-            overflow-y: auto;
-            padding: var(--spacing-lg);
-        }
-
-        .modal-footer {
-            padding: var(--spacing-lg);
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            gap: var(--spacing-sm);
-            justify-content: flex-end;
-        }
-
-        /* ===== BUTTONS ===== */
-        .btn {
-            padding: 8px 16px;
-            border: none;
-            border-radius: var(--radius-md);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: inline-flex;
-            align-items: center;
-            gap: var(--spacing-xs);
-        }
-
-        .btn-primary {
-            background: var(--primary);
+        .welcome-hero {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
+            padding: 40px;
+            border-radius: 16px;
+            margin-bottom: 40px;
         }
 
-        .btn-primary:hover {
-            background: var(--primary-dark);
+        .welcome-hero h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
         }
 
-        .btn-secondary {
-            background: var(--bg-secondary);
-            color: var(--text-primary);
+        .welcome-hero p {
+            font-size: 1.2rem;
+            opacity: 0.9;
         }
 
-        .btn-secondary:hover {
-            background: var(--bg-tertiary);
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
         }
 
-        .btn-danger {
-            background: var(--error);
-            color: white;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
-
-        /* ===== KEYBOARD HINT ===== */
-        .keyboard-hint {
-            position: fixed;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 8px 16px;
-            border-radius: var(--radius-md);
-            font-size: 12px;
-            z-index: 999;
-            opacity: 0;
-            animation: fadeInOut 3s ease-in-out;
-        }
-
-        @keyframes fadeInOut {
-            0%, 100% { opacity: 0; }
-            10%, 90% { opacity: 1; }
-        }
-
-        /* ===== SCROLLBAR ===== */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: var(--bg-secondary);
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: var(--border-color-hover);
-            border-radius: 4px;
-        }
-
-        ::-webkit-scrollbar-thumb:hover {
-            background: var(--text-tertiary);
-        }
-
-        /* ===== UTILITY CLASSES ===== */
-        .hidden {
-            display: none !important;
-        }
-
-        .text-center {
+        .feature-card {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
             text-align: center;
         }
 
-        .text-muted {
-            color: var(--text-secondary);
+        .feature-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
         }
 
-        .mt-1 { margin-top: var(--spacing-xs); }
-        .mt-2 { margin-top: var(--spacing-sm); }
-        .mt-3 { margin-top: var(--spacing-md); }
-        .mt-4 { margin-top: var(--spacing-lg); }
+        .feature-card h3 {
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
 
-        .mb-1 { margin-bottom: var(--spacing-xs); }
-        .mb-2 { margin-bottom: var(--spacing-sm); }
-        .mb-3 { margin-bottom: var(--spacing-md); }
-        .mb-4 { margin-bottom: var(--spacing-lg); }
+        .feature-card p {
+            color: #6b7280;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
-    <!-- Header -->
     <div class="header">
-        <div class="header-title">
+        <h1>
             🪺 Grist App Nest
             <span class="version-badge">v6.0</span>
-        </div>
-        <div class="header-nav">
-            <button class="nav-btn" id="btn-undo" title="Annuler (Ctrl+Z)" disabled>↶ Undo</button>
-            <button class="nav-btn" id="btn-redo" title="Rétablir (Ctrl+Shift+Z)" disabled>↷ Redo</button>
-            <button class="nav-btn" id="btn-save" title="Sauvegarder (Ctrl+S)">💾 Save</button>
-            <button class="nav-btn" id="btn-load">📂 Load</button>
-            <button class="nav-btn" id="btn-preview">👁️ Preview</button>
-            <button class="nav-btn" id="btn-help" title="Aide (Ctrl+/)">❓</button>
-        </div>
+        </h1>
+        <nav class="nav" id="navigation"></nav>
     </div>
 
-    <!-- Main Content -->
-    <div class="main">
-        <!-- Sidebar: Component Library -->
-        <div class="sidebar">
-            <div class="sidebar-header">
-                📦 Composants Disponibles
-            </div>
-            <div class="sidebar-content">
-                <div class="component-library" id="component-library">
-                    <!-- Components will be populated here -->
-                </div>
-            </div>
-        </div>
-
-        <!-- Canvas: Drop Zones -->
-        <div class="canvas">
-            <div class="canvas-inner">
-                <!-- Header Zone -->
-                <div class="drop-zone" id="zone-header" data-zone="header">
-                    <div class="drop-zone-label">📌 En-tête</div>
-                    <div class="drop-zone-content">
-                        <!-- Components will be dropped here -->
-                    </div>
-                </div>
-
-                <!-- Body Zone -->
-                <div class="drop-zone" id="zone-body" data-zone="body">
-                    <div class="drop-zone-label">📄 Corps</div>
-                    <div class="drop-zone-content">
-                        <!-- Components will be dropped here -->
-                    </div>
-                </div>
-
-                <!-- Footer Zone -->
-                <div class="drop-zone" id="zone-footer" data-zone="footer">
-                    <div class="drop-zone-label">📍 Pied de page</div>
-                    <div class="drop-zone-content">
-                        <!-- Components will be dropped here -->
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Properties Panel -->
-        <div class="properties-panel">
-            <div class="properties-header">
-                ⚙️ Propriétés
-            </div>
-            <div class="properties-content" id="properties-content">
-                <div class="text-center text-muted" style="padding: 40px 0;">
-                    Sélectionnez un composant pour éditer ses propriétés
-                </div>
-            </div>
+    <div class="main" id="main-content">
+        <div class="loading">
+            <div class="spinner"></div>
+            <p>Chargement de Grist App Nest v6.0...</p>
         </div>
     </div>
-
-    <!-- Loading Screen -->
-    <div class="loading" id="loading">
-        <div class="spinner"></div>
-        <div class="loading-text">Chargement de Grist App Nest v6.0...</div>
-    </div>
-
-    <!-- Toast Container -->
-    <div class="toast-container" id="toast-container"></div>
-
-    <!-- Modal -->
-    <div class="modal-overlay hidden" id="modal-overlay">
-        <div class="modal">
-            <div class="modal-header">
-                <div class="modal-title" id="modal-title">Modal</div>
-                <button class="modal-close" onclick="closeModal()">×</button>
-            </div>
-            <div class="modal-body" id="modal-body">
-                <!-- Modal content -->
-            </div>
-            <div class="modal-footer" id="modal-footer">
-                <button class="btn btn-secondary" onclick="closeModal()">Fermer</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- Keyboard Hint -->
-    <div class="keyboard-hint" id="keyboard-hint"></div>
 
     <script>
-        // ===== GRIST APP NEST v6.0 - OPTIMIZED =====
-
         // ===== UTILITIES =====
-        const GristUtils = {
-            /**
-             * Convertit le format columnar de Grist en tableau d'objets
-             */
-            convertColumnarToRows(gristData) {
-                if (!gristData || typeof gristData !== 'object' || Array.isArray(gristData)) {
-                    return [];
-                }
-
-                const columns = Object.keys(gristData);
-                if (columns.length === 0) return [];
-
-                const firstArrayCol = columns.find(col => Array.isArray(gristData[col]));
-                if (!firstArrayCol) return [];
-
-                const rowCount = gristData[firstArrayCol].length;
-
-                return Array.from({ length: rowCount }, (_, i) =>
-                    Object.fromEntries(
-                        columns.map(col => [
-                            col,
-                            Array.isArray(gristData[col]) ? gristData[col][i] : gristData[col]
-                        ])
-                    )
-                );
-            },
-
-            /**
-             * Sanitize un ID pour Grist
-             */
-            sanitizeId(str) {
-                if (!str) return '';
-                return str
-                    .toLowerCase()
-                    .normalize('NFD')
-                    .replace(/[\u0300-\u036f]/g, '')
-                    .replace(/[^a-z0-9]+/g, '_')
-                    .replace(/^_+|_+$/g, '')
-                    .substring(0, 63);
-            },
-
-            /**
-             * Échappe le HTML
-             */
-            escapeHtml(str) {
-                if (!str) return '';
-                const div = document.createElement('div');
-                div.textContent = str;
-                return div.innerHTML;
-            },
-
-            /**
-             * Génère un ID unique
-             */
-            generateId(prefix = 'id') {
-                return `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-            },
-
-            /**
-             * Mappe les types UI vers Grist
-             */
-            mapUITypeToGrist(uiType) {
-                const mapping = {
-                    'input-text': 'Text',
-                    'input-number': 'Numeric',
-                    'input-email': 'Text',
-                    'textarea': 'Text',
-                    'select': 'Choice',
-                    'checkbox': 'Bool',
-                    'date': 'Date',
-                    'datetime': 'DateTime'
-                };
-                return mapping[uiType] || 'Text';
-            },
-
-            /**
-             * Valide un email
-             */
-            isValidEmail(email) {
-                if (!email) return false;
-                return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-            },
-
-            /**
-             * Debounce
-             */
-            debounce(func, wait) {
-                let timeout;
-                return function executedFunction(...args) {
-                    const later = () => {
-                        clearTimeout(timeout);
-                        func(...args);
-                    };
-                    clearTimeout(timeout);
-                    timeout = setTimeout(later, wait);
-                };
-            },
-
-            /**
-             * Deep clone
-             */
-            deepClone(obj) {
-                return JSON.parse(JSON.stringify(obj));
-            }
-        };
-
-        // ===== LOGGER =====
-        const Logger = {
-            config: {
-                enabled: true,
-                logLevel: 'info',
-                showTimestamps: true
-            },
-
-            levels: {
-                debug: 0,
-                info: 1,
-                warn: 2,
-                error: 3
-            },
-
-            shouldLog(level) {
-                if (!this.config.enabled) return false;
-                return this.levels[level] >= this.levels[this.config.logLevel];
-            },
-
-            getTimestamp() {
-                if (!this.config.showTimestamps) return '';
-                const now = new Date();
-                return `[${now.toLocaleTimeString('fr-FR')}.${now.getMilliseconds()}]`;
-            },
-
-            debug(message, data = null) {
-                if (!this.shouldLog('debug')) return;
-                console.log(`${this.getTimestamp()} 🐛 ${message}`, data || '');
-            },
-
-            info(message, data = null) {
-                if (!this.shouldLog('info')) return;
-                console.log(`${this.getTimestamp()} ℹ️ ${message}`, data || '');
-            },
-
-            success(message, data = null) {
-                if (!this.shouldLog('info')) return;
-                console.log(`${this.getTimestamp()} ✅ ${message}`, data || '');
-            },
-
-            warn(message, data = null) {
-                if (!this.shouldLog('warn')) return;
-                console.warn(`${this.getTimestamp()} ⚠️ ${message}`, data || '');
-            },
-
-            error(message, error = null) {
-                if (!this.shouldLog('error')) return;
-                console.error(`${this.getTimestamp()} ❌ ${message}`, error || '');
-            },
-
-            perf(label, duration) {
-                if (!this.shouldLog('info')) return;
-                const color = duration < 100 ? '⚡' : duration < 500 ? '🐢' : '🐌';
-                console.log(`${this.getTimestamp()} ${color} ${label}: ${duration.toFixed(2)}ms`);
-            },
-
-            startTimer(label) {
-                const start = performance.now();
-                return {
-                    end: () => {
-                        const duration = performance.now() - start;
-                        this.perf(label, duration);
-                        return duration;
-                    }
-                };
-            },
-
-            group(label, collapsed = false) {
-                if (!this.shouldLog('info')) return;
-                if (collapsed) {
-                    console.groupCollapsed(`${this.getTimestamp()} 📁 ${label}`);
+        class Logger {
+            static log(icon, message, data = null) {
+                const timestamp = new Date().toLocaleTimeString('fr-FR', {
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    fractionalSecondDigits: 3
+                });
+                const logMessage = `[${timestamp}] ${icon} ${message}`;
+                if (data) {
+                    console.log(logMessage, data);
                 } else {
-                    console.group(`${this.getTimestamp()} 📁 ${label}`);
+                    console.log(logMessage);
                 }
-            },
-
-            groupEnd() {
-                console.groupEnd();
             }
-        };
+        }
 
-        // ===== DATA VALIDATOR =====
-        const DataValidator = {
-            schemas: {
-                component: {
-                    id: { required: true, type: 'string' },
-                    type: { required: true, type: 'string' },
-                    label: { required: true, type: 'string', minLength: 2 },
-                    zone: { required: true, type: 'string' },
-                    properties: { type: 'object', default: {} }
-                }
-            },
-
-            validate(data, schema) {
-                const schemaObj = typeof schema === 'string' ? this.schemas[schema] : schema;
-                if (!schemaObj) {
-                    return { valid: false, errors: ['Schéma invalide'], data: {} };
-                }
-
-                const errors = [];
-                const cleaned = {};
-
-                for (const [field, rules] of Object.entries(schemaObj)) {
-                    let value = data[field];
-
-                    if (rules.required && (value === undefined || value === null || value === '')) {
-                        errors.push(`${field}: requis`);
-                        continue;
-                    }
-
-                    if (value === undefined || value === null || value === '') {
-                        if (rules.default !== undefined) {
-                            cleaned[field] = rules.default;
-                        }
-                        continue;
-                    }
-
-                    if (rules.type === 'string' && typeof value !== 'string') {
-                        errors.push(`${field}: doit être une chaîne`);
-                        continue;
-                    }
-
-                    if (rules.type === 'number') {
-                        const num = Number(value);
-                        if (isNaN(num)) {
-                            errors.push(`${field}: doit être un nombre`);
-                            continue;
-                        }
-                        value = num;
-                    }
-
-                    if (rules.type === 'boolean') {
-                        value = Boolean(value);
-                    }
-
-                    if (typeof value === 'string') {
-                        if (rules.minLength && value.length < rules.minLength) {
-                            errors.push(`${field}: minimum ${rules.minLength} caractères`);
-                        }
-                        if (rules.maxLength && value.length > rules.maxLength) {
-                            errors.push(`${field}: maximum ${rules.maxLength} caractères`);
-                        }
-                    }
-
-                    if (typeof value === 'number') {
-                        if (rules.min !== undefined && value < rules.min) {
-                            errors.push(`${field}: minimum ${rules.min}`);
-                        }
-                        if (rules.max !== undefined && value > rules.max) {
-                            errors.push(`${field}: maximum ${rules.max}`);
-                        }
-                    }
-
-                    if (rules.pattern && typeof value === 'string') {
-                        if (!rules.pattern.test(value)) {
-                            errors.push(`${field}: format invalide`);
-                        }
-                    }
-
-                    cleaned[field] = value;
-                }
-
-                return {
-                    valid: errors.length === 0,
-                    errors,
-                    data: cleaned
-                };
-            },
-
-            registerSchema(name, schema) {
-                this.schemas[name] = schema;
-            }
-        };
-
-        // ===== GRIST WIDGET BASE =====
+        // ===== GRIST WIDGET BASE CLASS =====
         class GristWidgetBase {
             constructor() {
-                this.grist = null;
                 this.cache = new Map();
-                this.isReady = false;
+                this.initialized = false;
             }
 
             async initialize(options = {}) {
-                await grist.ready({ requiredAccess: options.access || 'full' });
-                this.grist = grist;
-                this.isReady = true;
+                if (this.initialized) return;
+
+                Logger.log('⚙️', 'Initializing Grist Widget Base');
+
+                const access = options.access || 'read table';
+                await grist.ready({ requiredAccess: access });
+
+                this.initialized = true;
+                Logger.log('✅', 'Grist Widget Base initialized');
             }
 
             async fetchTable(tableName, useCache = true) {
                 if (useCache && this.cache.has(tableName)) {
+                    Logger.log('💾', `Cache hit for table: ${tableName}`);
                     return this.cache.get(tableName);
                 }
 
                 try {
-                    const rawData = await grist.docApi.fetchTable(tableName);
-                    const records = GristUtils.convertColumnarToRows(rawData);
+                    const result = await grist.docApi.fetchTable(tableName);
+                    Logger.log('🔍', `Fetched table: ${tableName}`, result);
+
+                    // Convert columnar format to array of objects
+                    const data = this.convertColumnarToArray(result);
 
                     if (useCache) {
-                        this.cache.set(tableName, records);
+                        this.cache.set(tableName, data);
                     }
 
-                    return records;
+                    return data;
                 } catch (error) {
-                    Logger.warn(`Table ${tableName} not found or empty`);
+                    Logger.log('⚠️', `Table ${tableName} not found or error:`, error);
                     return [];
                 }
+            }
+
+            convertColumnarToArray(columnarData) {
+                if (Array.isArray(columnarData)) return columnarData;
+                if (!columnarData || typeof columnarData !== 'object') return [];
+
+                const columns = Object.keys(columnarData);
+                const isColumnar = columns.some(col => Array.isArray(columnarData[col]));
+
+                if (!isColumnar) return [];
+
+                const firstArrayCol = columns.find(col => Array.isArray(columnarData[col]));
+                const rowCount = columnarData[firstArrayCol]?.length || 0;
+                const rows = [];
+
+                for (let i = 0; i < rowCount; i++) {
+                    const row = {};
+                    columns.forEach(col => {
+                        row[col] = Array.isArray(columnarData[col]) ? columnarData[col][i] : columnarData[col];
+                    });
+                    rows.push(row);
+                }
+
+                Logger.log('✅', `Converted ${rowCount} rows from columnar format`);
+                return rows;
             }
 
             async listTables() {
                 try {
                     const tables = await grist.docApi.listTables();
-                    return tables.filter(t => !t.startsWith('_grist'));
+                    Logger.log('📋', `Found ${tables.length} tables`, tables);
+                    return tables;
                 } catch (error) {
-                    Logger.error('Error listing tables', error);
+                    Logger.log('❌', 'Error listing tables:', error);
                     return [];
                 }
             }
 
-            async createTable(tableName, columns) {
+            async createTable(tableName, columns = []) {
                 try {
                     await grist.docApi.applyUserActions([
-                        ['AddTable', tableName, columns]
+                        ['AddTable', tableName, columns.map(col => ({
+                            id: col.id,
+                            type: col.type || 'Text'
+                        }))]
                     ]);
-                    Logger.success(`Table created: ${tableName}`);
+                    Logger.log('✅', `Table created: ${tableName}`);
                     return true;
                 } catch (error) {
-                    Logger.error(`Error creating table ${tableName}`, error);
-                    return false;
+                    Logger.log('❌', `Error creating table ${tableName}:`, error);
+                    throw error;
                 }
             }
 
@@ -1153,108 +386,112 @@
                         ['AddRecord', tableName, null, record]
                     );
                     await grist.docApi.applyUserActions(actions);
-                    this.cache.delete(tableName);
+                    Logger.log('✅', `Added ${records.length} records to ${tableName}`);
                     return true;
                 } catch (error) {
-                    Logger.error(`Error adding records to ${tableName}`, error);
-                    return false;
+                    Logger.log('❌', `Error adding records to ${tableName}:`, error);
+                    throw error;
                 }
             }
 
             invalidateCache(tableName = null) {
                 if (tableName) {
                     this.cache.delete(tableName);
+                    Logger.log('🗑️', `Cache invalidated for: ${tableName}`);
                 } else {
                     this.cache.clear();
+                    Logger.log('🗑️', 'All cache cleared');
                 }
             }
         }
 
         // ===== GRIST INTEGRATION MANAGER =====
         class GristIntegrationManager extends GristWidgetBase {
-            constructor() {
-                super();
-                this.demoDataInitialized = false;
+            async checkAndInitializeDemoData() {
+                Logger.log('ℹ️', 'Checking for demo data...');
+
+                const hasTemplates = await this.tableExists('Templates');
+                const hasClients = await this.tableExists('Clients');
+                const hasProduits = await this.tableExists('Produits');
+                const hasVentes = await this.tableExists('Ventes');
+
+                if (!hasTemplates || !hasClients || !hasProduits || !hasVentes) {
+                    Logger.log('ℹ️', 'Demo data not found, initializing...');
+                    await this.initializeDemoData();
+                    return true;
+                } else {
+                    Logger.log('ℹ️', 'Demo data already exists');
+                    return false;
+                }
             }
 
-            async checkAndInitializeDemoData() {
-                Logger.info('Checking for demo data...');
-
-                const tables = await this.listTables();
-                const hasTemplates = tables.includes('Templates');
-                const hasClients = tables.includes('Clients');
-                const hasProduits = tables.includes('Produits');
-
-                if (!hasTemplates || !hasClients || !hasProduits) {
-                    Logger.info('Demo data not found, initializing...');
-                    await this.initializeDemoData();
-                    this.demoDataInitialized = true;
-                } else {
-                    Logger.info('Demo data already exists');
+            async tableExists(tableName) {
+                try {
+                    await grist.docApi.fetchTable(tableName);
+                    return true;
+                } catch (error) {
+                    return false;
                 }
             }
 
             async initializeDemoData() {
-                Logger.group('Initializing demo data');
+                Logger.log('📁', 'Initializing demo data');
 
-                // 1. Create Templates table
-                if (!await this.tableExists('Templates')) {
-                    await this.createTable('Templates', [
-                        { id: 'template_id', type: 'Text' },
-                        { id: 'template_name', type: 'Text' },
-                        { id: 'component_type', type: 'Text' },
-                        { id: 'component_code', type: 'Text' }
-                    ]);
+                try {
+                    // Create Templates table
+                    if (!await this.tableExists('Templates')) {
+                        await this.createTable('Templates', [
+                            { id: 'template_id', type: 'Text' },
+                            { id: 'template_name', type: 'Text' },
+                            { id: 'component_type', type: 'Text' },
+                            { id: 'component_code', type: 'Text' }
+                        ]);
+                        await this.addRecords('Templates', this.getDemoTemplates());
+                        Logger.log('✅', 'Templates table created and populated');
+                    }
 
-                    await this.addRecords('Templates', this.getDemoTemplates());
-                    Logger.success('Templates table created and populated');
+                    // Create Clients table
+                    if (!await this.tableExists('Clients')) {
+                        await this.createTable('Clients', [
+                            { id: 'nom', type: 'Text' },
+                            { id: 'email', type: 'Text' },
+                            { id: 'entreprise', type: 'Text' },
+                            { id: 'statut', type: 'Text' }
+                        ]);
+                        await this.addRecords('Clients', this.getDemoClients());
+                        Logger.log('✅', 'Clients table created and populated');
+                    }
+
+                    // Create Produits table
+                    if (!await this.tableExists('Produits')) {
+                        await this.createTable('Produits', [
+                            { id: 'nom', type: 'Text' },
+                            { id: 'prix', type: 'Numeric' },
+                            { id: 'stock', type: 'Numeric' },
+                            { id: 'categorie', type: 'Text' }
+                        ]);
+                        await this.addRecords('Produits', this.getDemoProduits());
+                        Logger.log('✅', 'Produits table created and populated');
+                    }
+
+                    // Create Ventes table
+                    if (!await this.tableExists('Ventes')) {
+                        await this.createTable('Ventes', [
+                            { id: 'client', type: 'Text' },
+                            { id: 'produit', type: 'Text' },
+                            { id: 'montant', type: 'Numeric' },
+                            { id: 'date', type: 'Date' }
+                        ]);
+                        await this.addRecords('Ventes', this.getDemoVentes());
+                        Logger.log('✅', 'Ventes table created and populated');
+                    }
+
+                    Logger.log('🎉', 'Demo data initialization complete');
+                    return true;
+                } catch (error) {
+                    Logger.log('❌', 'Error initializing demo data:', error);
+                    throw error;
                 }
-
-                // 2. Create Clients table
-                if (!await this.tableExists('Clients')) {
-                    await this.createTable('Clients', [
-                        { id: 'nom', type: 'Text' },
-                        { id: 'email', type: 'Text' },
-                        { id: 'entreprise', type: 'Text' },
-                        { id: 'statut', type: 'Text' }
-                    ]);
-
-                    await this.addRecords('Clients', this.getDemoClients());
-                    Logger.success('Clients table created and populated');
-                }
-
-                // 3. Create Produits table
-                if (!await this.tableExists('Produits')) {
-                    await this.createTable('Produits', [
-                        { id: 'nom', type: 'Text' },
-                        { id: 'prix', type: 'Numeric' },
-                        { id: 'stock', type: 'Numeric' },
-                        { id: 'categorie', type: 'Text' }
-                    ]);
-
-                    await this.addRecords('Produits', this.getDemoProduits());
-                    Logger.success('Produits table created and populated');
-                }
-
-                // 4. Create Ventes table
-                if (!await this.tableExists('Ventes')) {
-                    await this.createTable('Ventes', [
-                        { id: 'client', type: 'Text' },
-                        { id: 'produit', type: 'Text' },
-                        { id: 'montant', type: 'Numeric' },
-                        { id: 'date', type: 'Date' }
-                    ]);
-
-                    await this.addRecords('Ventes', this.getDemoVentes());
-                    Logger.success('Ventes table created and populated');
-                }
-
-                Logger.groupEnd();
-            }
-
-            async tableExists(tableName) {
-                const tables = await this.listTables();
-                return tables.includes(tableName);
             }
 
             getDemoTemplates() {
@@ -1264,42 +501,53 @@
                         template_name: 'Dashboard Principal',
                         component_type: 'functional',
                         component_code: `const Component = () => {
-  const [metrics, setMetrics] = React.useState({ clients: 0, produits: 0, ventes: 0, ca: 0 });
+  const [metrics, setMetrics] = React.useState({
+    clients: 0,
+    produits: 0,
+    ventes: 0,
+    ca: 0
+  });
 
   React.useEffect(() => {
     const loadMetrics = async () => {
-      const clients = await gristAPI.getData('Clients');
-      const produits = await gristAPI.getData('Produits');
-      const ventes = await gristAPI.getData('Ventes');
-      const ca = ventes.reduce((sum, v) => sum + (v.montant || 0), 0);
+      try {
+        const clients = await gristAPI.getData('Clients');
+        const produits = await gristAPI.getData('Produits');
+        const ventes = await gristAPI.getData('Ventes');
 
-      setMetrics({
-        clients: clients.length,
-        produits: produits.length,
-        ventes: ventes.length,
-        ca: ca
-      });
+        const ca = ventes.reduce((sum, v) => sum + (v.montant || 0), 0);
+
+        setMetrics({
+          clients: clients.length,
+          produits: produits.length,
+          ventes: ventes.length,
+          ca: ca
+        });
+      } catch (error) {
+        console.error('Erreur chargement métriques:', error);
+      }
     };
+
     loadMetrics();
   }, []);
 
-  const cardStyle = {
-    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+  const cardStyle = (gradient) => ({
+    background: gradient,
     color: 'white',
     padding: '24px',
     borderRadius: '12px',
-    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
     textAlign: 'center'
-  };
+  });
 
   const valueStyle = {
-    fontSize: '36px',
-    fontWeight: 'bold',
+    fontSize: '2.5rem',
+    fontWeight: '700',
     marginBottom: '8px'
   };
 
   const labelStyle = {
-    fontSize: '14px',
+    fontSize: '0.9rem',
     opacity: 0.9,
     textTransform: 'uppercase',
     letterSpacing: '1px'
@@ -1307,23 +555,40 @@
 
   return (
     <div style={{ padding: '20px' }}>
-      <h1 style={{ marginBottom: '30px', color: '#1e293b' }}>📊 Dashboard Grist App Nest</h1>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-        <div style={cardStyle}>
+      <h1 style={{
+        fontSize: '2rem',
+        marginBottom: '30px',
+        color: '#1f2937',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        📊 Dashboard Grist App Nest
+      </h1>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+        gap: '20px'
+      }}>
+        <div style={cardStyle('linear-gradient(135deg, #667eea 0%, #764ba2 100%)')}>
           <div style={valueStyle}>{metrics.clients}</div>
           <div style={labelStyle}>👥 Clients</div>
         </div>
-        <div style={{...cardStyle, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
+
+        <div style={cardStyle('linear-gradient(135deg, #f093fb 0%, #f5576c 100%)')}>
           <div style={valueStyle}>{metrics.produits}</div>
           <div style={labelStyle}>📦 Produits</div>
         </div>
-        <div style={{...cardStyle, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
+
+        <div style={cardStyle('linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)')}>
           <div style={valueStyle}>{metrics.ventes}</div>
           <div style={labelStyle}>💰 Ventes</div>
         </div>
-        <div style={{...cardStyle, background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'}}>
+
+        <div style={cardStyle('linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)')}>
           <div style={valueStyle}>{metrics.ca.toLocaleString('fr-FR')} €</div>
-          <div style={labelStyle}>💵 CA Total</div>
+          <div style={labelStyle}>💵 Chiffre d'affaires</div>
         </div>
       </div>
     </div>
@@ -1339,50 +604,65 @@
 
   React.useEffect(() => {
     const loadClients = async () => {
-      const data = await gristAPI.getData('Clients');
-      setClients(data);
+      try {
+        const data = await gristAPI.getData('Clients');
+        setClients(data);
+      } catch (error) {
+        console.error('Erreur chargement clients:', error);
+      }
     };
+
     loadClients();
   }, []);
 
   const tableStyle = {
     width: '100%',
     borderCollapse: 'collapse',
-    backgroundColor: 'white',
-    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    background: 'white',
     borderRadius: '8px',
-    overflow: 'hidden'
+    overflow: 'hidden',
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)'
   };
 
   const thStyle = {
-    backgroundColor: '#667eea',
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     color: 'white',
     padding: '16px',
     textAlign: 'left',
     fontWeight: '600',
     textTransform: 'uppercase',
-    fontSize: '12px',
-    letterSpacing: '1px'
+    fontSize: '0.85rem',
+    letterSpacing: '0.5px'
   };
 
   const tdStyle = {
-    padding: '16px',
-    borderBottom: '1px solid #e2e8f0'
+    padding: '14px 16px',
+    borderBottom: '1px solid #e5e7eb'
   };
 
   const statusStyle = (statut) => ({
+    display: 'inline-block',
     padding: '4px 12px',
-    borderRadius: '12px',
-    fontSize: '12px',
-    fontWeight: '600',
+    borderRadius: '20px',
+    fontSize: '0.85rem',
+    fontWeight: '500',
     backgroundColor: statut === 'Actif' ? '#10b981' : '#ef4444',
-    color: 'white',
-    display: 'inline-block'
+    color: 'white'
   });
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2 style={{ marginBottom: '20px', color: '#1e293b' }}>👥 Liste des Clients</h2>
+      <h1 style={{
+        fontSize: '2rem',
+        marginBottom: '30px',
+        color: '#1f2937',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        👥 Liste des Clients
+      </h1>
+
       <table style={tableStyle}>
         <thead>
           <tr>
@@ -1393,13 +673,15 @@
           </tr>
         </thead>
         <tbody>
-          {clients.map((client, idx) => (
-            <tr key={idx}>
+          {clients.map((client, index) => (
+            <tr key={index}>
               <td style={tdStyle}>{client.nom}</td>
               <td style={tdStyle}>{client.email}</td>
               <td style={tdStyle}>{client.entreprise}</td>
               <td style={tdStyle}>
-                <span style={statusStyle(client.statut)}>{client.statut}</span>
+                <span style={statusStyle(client.statut)}>
+                  {client.statut === 'Actif' ? '✅' : '❌'} {client.statut}
+                </span>
               </td>
             </tr>
           ))}
@@ -1418,46 +700,91 @@
 
   React.useEffect(() => {
     const loadProduits = async () => {
-      const data = await gristAPI.getData('Produits');
-      setProduits(data);
+      try {
+        const data = await gristAPI.getData('Produits');
+        setProduits(data);
+      } catch (error) {
+        console.error('Erreur chargement produits:', error);
+      }
     };
+
     loadProduits();
   }, []);
 
   const cardStyle = {
-    backgroundColor: 'white',
-    borderRadius: '8px',
+    background: 'white',
+    borderRadius: '12px',
     padding: '20px',
-    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    border: '1px solid #e2e8f0',
-    transition: 'transform 0.2s'
-  };
-
-  const priceStyle = {
-    fontSize: '24px',
-    fontWeight: 'bold',
-    color: '#667eea',
-    marginBottom: '8px'
+    boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
+    transition: 'transform 0.2s, box-shadow 0.2s',
+    cursor: 'pointer'
   };
 
   const stockStyle = (stock) => ({
-    fontSize: '14px',
     color: stock > 10 ? '#10b981' : stock > 0 ? '#f59e0b' : '#ef4444',
     fontWeight: '600'
   });
 
   return (
     <div style={{ padding: '20px' }}>
-      <h2 style={{ marginBottom: '20px', color: '#1e293b' }}>📦 Catalogue Produits</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-        {produits.map((produit, idx) => (
-          <div key={idx} style={cardStyle}>
-            <h3 style={{ marginBottom: '12px', color: '#1e293b' }}>{produit.nom}</h3>
-            <div style={priceStyle}>{produit.prix} €</div>
+      <h1 style={{
+        fontSize: '2rem',
+        marginBottom: '30px',
+        color: '#1f2937',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        📦 Catalogue Produits
+      </h1>
+
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
+        gap: '20px'
+      }}>
+        {produits.map((produit, index) => (
+          <div
+            key={index}
+            style={cardStyle}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 25px rgba(0,0,0,0.15)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 2px 10px rgba(0,0,0,0.1)';
+            }}
+          >
+            <h3 style={{
+              fontSize: '1.2rem',
+              marginBottom: '12px',
+              color: '#1f2937'
+            }}>
+              {produit.nom}
+            </h3>
+            <div style={{
+              fontSize: '1.8rem',
+              fontWeight: '700',
+              color: '#667eea',
+              marginBottom: '12px'
+            }}>
+              {produit.prix} €
+            </div>
             <div style={stockStyle(produit.stock)}>
               Stock: {produit.stock} unités
             </div>
-            <div style={{ marginTop: '12px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
+            <div style={{
+              marginTop: '12px',
+              padding: '6px 12px',
+              background: '#f3f4f6',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              color: '#6b7280',
+              textAlign: 'center',
+              textTransform: 'uppercase',
+              fontWeight: '500'
+            }}>
               {produit.categorie}
             </div>
           </div>
@@ -1503,877 +830,312 @@
             }
         }
 
-        // ===== STATE MANAGER =====
-        class AppNestStateManager {
-            constructor(initialState = {}) {
-                this.state = {
-                    components: [],
-                    selectedComponentId: null,
-                    zones: {
-                        header: [],
-                        body: [],
-                        footer: []
-                    },
-                    config: {},
-                    ...initialState
-                };
-
-                this.listeners = new Map();
-                this.history = [];
-                this.historyIndex = -1;
-                this.maxHistory = 50;
-
-                // Save initial state
-                this.saveStateToHistory('Initialisation');
-            }
-
-            // Getters
-            getState() {
-                return GristUtils.deepClone(this.state);
-            }
-
-            get(path) {
-                return path.split('.').reduce((obj, key) => obj?.[key], this.state);
-            }
-
-            getComponent(componentId) {
-                return this.state.components.find(c => c.id === componentId);
-            }
-
-            getComponents() {
-                return [...this.state.components];
-            }
-
-            getComponentsForZone(zoneId) {
-                const componentIds = this.state.zones[zoneId] || [];
-                return componentIds.map(id => this.getComponent(id)).filter(Boolean);
-            }
-
-            getSelectedComponent() {
-                return this.state.selectedComponentId
-                    ? this.getComponent(this.state.selectedComponentId)
-                    : null;
-            }
-
-            // Setters
-            setState(updates, description = 'Update') {
-                this.saveStateToHistory(description);
-                this.state = { ...this.state, ...updates };
-                this.notifyListeners();
-            }
-
-            set(path, value, description = 'Update') {
-                const keys = path.split('.');
-                const lastKey = keys.pop();
-                const target = keys.reduce((obj, key) => {
-                    if (!obj[key]) obj[key] = {};
-                    return obj[key];
-                }, this.state);
-
-                this.saveStateToHistory(description);
-                target[lastKey] = value;
-                this.notifyListeners();
-            }
-
-            // Component actions
-            addComponent(component, description = 'Ajouter composant') {
-                const validation = DataValidator.validate(component, 'component');
-                if (!validation.valid) {
-                    Logger.error('Validation failed', validation.errors);
-                    throw new Error(validation.errors.join(', '));
-                }
-
-                this.saveStateToHistory(description);
-                this.state.components.push(validation.data);
-
-                // Add to zone
-                const zone = validation.data.zone || 'body';
-                if (!this.state.zones[zone].includes(validation.data.id)) {
-                    this.state.zones[zone].push(validation.data.id);
-                }
-
-                this.notifyListeners();
-                Logger.success(`Component added: ${validation.data.id}`);
-            }
-
-            updateComponent(componentId, updates, description = 'Modifier composant') {
-                this.saveStateToHistory(description);
-                const index = this.state.components.findIndex(c => c.id === componentId);
-                if (index !== -1) {
-                    this.state.components[index] = {
-                        ...this.state.components[index],
-                        ...updates
-                    };
-                    this.notifyListeners();
-                    Logger.info(`Component updated: ${componentId}`);
-                }
-            }
-
-            deleteComponent(componentId, description = 'Supprimer composant') {
-                this.saveStateToHistory(description);
-
-                // Remove from components
-                this.state.components = this.state.components.filter(c => c.id !== componentId);
-
-                // Remove from all zones
-                Object.keys(this.state.zones).forEach(zone => {
-                    this.state.zones[zone] = this.state.zones[zone].filter(id => id !== componentId);
-                });
-
-                // Deselect if selected
-                if (this.state.selectedComponentId === componentId) {
-                    this.state.selectedComponentId = null;
-                }
-
-                this.notifyListeners();
-                Logger.success(`Component deleted: ${componentId}`);
-            }
-
-            moveComponent(componentId, fromZone, toZone, newIndex, description = 'Déplacer composant') {
-                this.saveStateToHistory(description);
-
-                // Remove from source zone
-                this.state.zones[fromZone] = this.state.zones[fromZone].filter(id => id !== componentId);
-
-                // Add to target zone at specific index
-                this.state.zones[toZone].splice(newIndex, 0, componentId);
-
-                // Update component's zone
-                const component = this.getComponent(componentId);
-                if (component) {
-                    component.zone = toZone;
-                }
-
-                this.notifyListeners();
-                Logger.info(`Component moved: ${componentId} from ${fromZone} to ${toZone}`);
-            }
-
-            selectComponent(componentId, description = 'Sélectionner composant') {
-                this.saveStateToHistory(description);
-                this.state.selectedComponentId = componentId;
-                this.notifyListeners();
-            }
-
-            // Observables
-            subscribe(path, callback) {
-                if (!this.listeners.has(path)) {
-                    this.listeners.set(path, []);
-                }
-                this.listeners.get(path).push(callback);
-
-                return () => {
-                    const listeners = this.listeners.get(path);
-                    const index = listeners.indexOf(callback);
-                    if (index > -1) {
-                        listeners.splice(index, 1);
-                    }
-                };
-            }
-
-            notifyListeners() {
-                this.listeners.forEach((callbacks, path) => {
-                    const value = this.get(path);
-                    callbacks.forEach(callback => callback(value, this.state));
-                });
-            }
-
-            // History (Undo/Redo)
-            saveStateToHistory(description) {
-                this.history = this.history.slice(0, this.historyIndex + 1);
-                this.history.push({
-                    state: GristUtils.deepClone(this.state),
-                    description,
-                    timestamp: Date.now()
-                });
-
-                if (this.history.length > this.maxHistory) {
-                    this.history.shift();
-                } else {
-                    this.historyIndex++;
-                }
-            }
-
-            undo() {
-                if (this.historyIndex > 0) {
-                    this.historyIndex--;
-                    this.state = GristUtils.deepClone(this.history[this.historyIndex].state);
-                    this.notifyListeners();
-                    Logger.info(`Undo: ${this.history[this.historyIndex].description}`);
-                    return true;
-                }
-                return false;
-            }
-
-            redo() {
-                if (this.historyIndex < this.history.length - 1) {
-                    this.historyIndex++;
-                    this.state = GristUtils.deepClone(this.history[this.historyIndex].state);
-                    this.notifyListeners();
-                    Logger.info(`Redo: ${this.history[this.historyIndex].description}`);
-                    return true;
-                }
-                return false;
-            }
-
-            canUndo() {
-                return this.historyIndex > 0;
-            }
-
-            canRedo() {
-                return this.historyIndex < this.history.length - 1;
-            }
-
-            getHistory() {
-                return this.history.map((entry, index) => ({
-                    ...entry,
-                    isCurrent: index === this.historyIndex
-                }));
-            }
-        }
-
-        // ===== DRAG & DROP ENGINE =====
-        class DragDropEngine {
-            constructor(stateManager) {
-                this.state = stateManager;
-                this.sortables = new Map();
-                this.zoneCache = new Map();
-            }
-
-            initializeSortable(dropZoneElement, zoneId, options = {}) {
-                const sortable = new Sortable(dropZoneElement, {
-                    group: {
-                        name: 'shared',
-                        put: true
-                    },
-                    animation: 150,
-                    ghostClass: 'sortable-ghost',
-                    dragClass: 'sortable-drag',
-                    chosenClass: 'sortable-chosen',
-                    handle: '.dropped-component',
-                    onEnd: (evt) => {
-                        const componentId = evt.item.dataset.componentId;
-                        const fromZone = evt.from.dataset.zone;
-                        const toZone = evt.to.dataset.zone;
-                        const newIndex = evt.newDraggableIndex;
-
-                        Logger.debug(`Drag end: ${componentId} from ${fromZone} to ${toZone}`);
-
-                        if (componentId) {
-                            this.state.moveComponent(componentId, fromZone, toZone, newIndex);
-
-                            // Re-render only modified zones
-                            if (fromZone !== toZone) {
-                                this.renderZone(fromZone);
-                                this.renderZone(toZone);
-                            } else {
-                                this.renderZone(fromZone);
-                            }
-                        }
-                    },
-                    ...options
-                });
-
-                this.sortables.set(zoneId, sortable);
-                return sortable;
-            }
-
-            initializeLibrarySortable(libraryElement) {
-                new Sortable(libraryElement, {
-                    group: {
-                        name: 'shared',
-                        pull: 'clone',
-                        put: false
-                    },
-                    animation: 150,
-                    sort: false,
-                    onEnd: (evt) => {
-                        const componentType = evt.item.dataset.type;
-                        const toZone = evt.to.dataset.zone;
-
-                        if (componentType && toZone && evt.to !== evt.from) {
-                            // Create new component
-                            const newComponent = {
-                                id: GristUtils.generateId('comp'),
-                                type: componentType,
-                                label: evt.item.dataset.label || componentType,
-                                zone: toZone,
-                                properties: {}
-                            };
-
-                            this.state.addComponent(newComponent);
-                            this.renderZone(toZone);
-                        }
-
-                        // Remove the cloned element if it's in the library
-                        if (evt.to === evt.from) {
-                            evt.item.remove();
-                        }
-                    }
-                });
-            }
-
-            renderZone(zoneId) {
-                const zone = document.querySelector(`[data-zone="${zoneId}"]`);
-                if (!zone) {
-                    Logger.warn(`Zone not found: ${zoneId}`);
-                    return;
-                }
-
-                const components = this.state.getComponentsForZone(zoneId);
-                const cacheKey = JSON.stringify(components.map(c => ({ id: c.id, label: c.label })));
-
-                if (this.zoneCache.get(zoneId) === cacheKey) {
-                    Logger.debug(`Skip render ${zoneId} (no changes)`);
-                    return;
-                }
-
-                const content = zone.querySelector('.drop-zone-content') || zone;
-                content.innerHTML = components.length === 0
-                    ? '<div class="drop-zone-empty">Glissez des composants ici</div>'
-                    : components.map(component => this.renderComponent(component)).join('');
-
-                this.zoneCache.set(zoneId, cacheKey);
-                Logger.debug(`Rendered zone ${zoneId} (${components.length} components)`);
-            }
-
-            renderComponent(component) {
-                const iconMap = {
-                    'input-text': '📝',
-                    'input-number': '🔢',
-                    'input-email': '📧',
-                    'textarea': '📄',
-                    'select': '📋',
-                    'checkbox': '☑️',
-                    'button': '🔘',
-                    'title': '🎯',
-                    'paragraph': '📰'
-                };
-
-                const icon = iconMap[component.type] || '📦';
-                const safeLabel = GristUtils.escapeHtml(component.label);
-
-                return `
-                    <div class="dropped-component" data-component-id="${component.id}">
-                        <div class="dropped-component-icon">${icon}</div>
-                        <div class="dropped-component-content">
-                            <div class="dropped-component-label">${safeLabel}</div>
-                            <div class="dropped-component-type">${component.type}</div>
-                        </div>
-                        <div class="dropped-component-actions">
-                            <button class="component-action-btn" onclick="appNest.editComponent('${component.id}')" title="Éditer">
-                                ✏️
-                            </button>
-                            <button class="component-action-btn" onclick="appNest.duplicateComponent('${component.id}')" title="Dupliquer">
-                                📋
-                            </button>
-                            <button class="component-action-btn" onclick="appNest.deleteComponent('${component.id}')" title="Supprimer">
-                                🗑️
-                            </button>
-                        </div>
-                    </div>
-                `;
-            }
-
-            renderAllZones() {
-                ['header', 'body', 'footer'].forEach(zone => this.renderZone(zone));
-            }
-
-            destroy() {
-                this.sortables.forEach(sortable => sortable.destroy());
-                this.sortables.clear();
-                this.zoneCache.clear();
-            }
-        }
-
-        // ===== MAIN APPLICATION =====
+        // ===== MAIN APPLICATION CLASS =====
         class GristAppNest {
             constructor() {
-                this.state = new AppNestStateManager();
-                this.dragDrop = new DragDropEngine(this.state);
-                this.grist = null;
+                this.components = new Map();
+                this.currentComponent = null;
                 this.gristManager = new GristIntegrationManager();
-                this.isReady = false;
                 this.demoTemplates = [];
-
-                // Component library
-                this.componentLibrary = [
-                    { type: 'title', label: 'Titre', icon: '🎯' },
-                    { type: 'paragraph', label: 'Paragraphe', icon: '📰' },
-                    { type: 'input-text', label: 'Texte', icon: '📝' },
-                    { type: 'input-number', label: 'Nombre', icon: '🔢' },
-                    { type: 'input-email', label: 'Email', icon: '📧' },
-                    { type: 'textarea', label: 'Zone de texte', icon: '📄' },
-                    { type: 'select', label: 'Liste déroulante', icon: '📋' },
-                    { type: 'checkbox', label: 'Case à cocher', icon: '☑️' },
-                    { type: 'button', label: 'Bouton', icon: '🔘' }
-                ];
             }
 
             async init() {
-                Logger.info('🪺 Initialisation Grist App Nest v6.0');
-                const timer = Logger.startTimer('Initialisation complète');
+                const startTime = performance.now();
 
                 try {
-                    // Initialize Grist with FULL access
-                    await grist.ready({ requiredAccess: 'full' });
-                    this.grist = grist;
-                    await this.gristManager.initialize({ access: 'full' });
-                    Logger.success('Grist API prête');
+                    Logger.log('🪺', 'Initializing Grist App Nest v6.0');
 
-                    // Setup global gristAPI for React components
+                    // Initialize Grist with FULL access for table creation
+                    await grist.ready({ requiredAccess: 'full' });
+                    await this.gristManager.initialize({ access: 'full' });
+
+                    // Setup global gristAPI for components
                     this.setupGlobalGristAPI();
 
-                    // Check and initialize demo data
-                    await this.gristManager.checkAndInitializeDemoData();
+                    // Check and initialize demo data if needed
+                    const demoInitialized = await this.gristManager.checkAndInitializeDemoData();
 
-                    // Load demo templates from Grist
+                    // Load templates from Grist
                     await this.loadDemoTemplates();
 
-                    // Setup UI
-                    this.setupUI();
-                    this.setupEventListeners();
-                    this.setupKeyboardShortcuts();
+                    // Setup navigation
+                    this.setupNavigation();
 
-                    // Subscribe to state changes
-                    this.subscribeToState();
+                    // Load first component
+                    if (this.components.size > 0) {
+                        await this.loadDefaultComponent();
+                    }
 
-                    // Show demo app
-                    await this.showDemoApp();
-
-                    this.isReady = true;
+                    // Hide loading
                     this.hideLoading();
-                    timer.end();
 
-                    Logger.success('✨ Grist App Nest v6.0 prêt !');
+                    const endTime = performance.now();
+                    const duration = (endTime - startTime).toFixed(2);
 
-                    if (this.gristManager.demoDataInitialized) {
-                        this.showToast('App de démo initialisée avec succès ! 🎉', 'success');
+                    Logger.log('⚡', `Initialisation complète: ${duration}ms`);
+                    Logger.log('✅', '✨ Grist App Nest v6.0 prêt !');
+
+                    // Show notification
+                    if (demoInitialized) {
+                        this.showToast('success', 'App de démo initialisée avec succès ! 🎉');
                     } else {
-                        this.showToast('Grist App Nest v6.0 chargé avec succès', 'success');
+                        this.showToast('success', 'Grist App Nest v6.0 chargé avec succès');
                     }
 
                 } catch (error) {
-                    Logger.error('Erreur initialisation', error);
-                    this.showToast('Erreur lors de l\'initialisation: ' + error.message, 'error');
+                    Logger.log('❌', 'Erreur initialisation:', error);
+                    this.showError('Erreur Initialisation', error.message);
                 }
             }
 
             setupGlobalGristAPI() {
-                // Global gristAPI for React components
+                const self = this;
+
                 window.gristAPI = {
                     getData: async (tableName) => {
                         try {
-                            const rawData = await grist.docApi.fetchTable(tableName);
-                            return GristUtils.convertColumnarToRows(rawData);
+                            const data = await self.gristManager.fetchTable(tableName, true);
+                            Logger.log('✅', `Données récupérées pour ${tableName}:`, data);
+                            return data;
                         } catch (error) {
-                            Logger.warn(`Table ${tableName} not found`);
+                            Logger.log('❌', `Erreur getData ${tableName}:`, error);
                             return [];
                         }
                     },
 
                     addRecord: async (tableName, record) => {
-                        await grist.docApi.applyUserActions([
-                            ['AddRecord', tableName, null, record]
-                        ]);
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['AddRecord', tableName, null, record]
+                            ]);
+                            self.gristManager.invalidateCache(tableName);
+                            Logger.log('✅', `Record ajouté à ${tableName}`);
+                            return true;
+                        } catch (error) {
+                            Logger.log('❌', `Erreur addRecord ${tableName}:`, error);
+                            throw error;
+                        }
                     },
 
                     updateRecord: async (tableName, recordId, updates) => {
-                        await grist.docApi.applyUserActions([
-                            ['UpdateRecord', tableName, recordId, updates]
-                        ]);
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['UpdateRecord', tableName, recordId, updates]
+                            ]);
+                            self.gristManager.invalidateCache(tableName);
+                            Logger.log('✅', `Record ${recordId} modifié dans ${tableName}`);
+                            return true;
+                        } catch (error) {
+                            Logger.log('❌', `Erreur updateRecord ${tableName}:`, error);
+                            throw error;
+                        }
                     },
 
                     deleteRecord: async (tableName, recordId) => {
-                        await grist.docApi.applyUserActions([
-                            ['RemoveRecord', tableName, recordId]
-                        ]);
+                        try {
+                            await grist.docApi.applyUserActions([
+                                ['RemoveRecord', tableName, recordId]
+                            ]);
+                            self.gristManager.invalidateCache(tableName);
+                            Logger.log('✅', `Record ${recordId} supprimé de ${tableName}`);
+                            return true;
+                        } catch (error) {
+                            Logger.log('❌', `Erreur deleteRecord ${tableName}:`, error);
+                            throw error;
+                        }
+                    },
+
+                    navigate: (componentId) => {
+                        self.loadComponent(componentId);
                     }
                 };
 
-                Logger.success('Global gristAPI configured');
+                Logger.log('🌐', 'Global gristAPI exposed');
             }
 
             async loadDemoTemplates() {
                 try {
-                    this.demoTemplates = await this.gristManager.fetchTable('Templates');
-                    Logger.success(`Loaded ${this.demoTemplates.length} demo templates`);
+                    const templates = await this.gristManager.fetchTable('Templates', false);
+
+                    if (!templates || templates.length === 0) {
+                        Logger.log('⚠️', 'No templates found');
+                        return;
+                    }
+
+                    this.demoTemplates = templates;
+
+                    for (const template of templates) {
+                        const component = {
+                            id: template.template_id,
+                            name: template.template_name,
+                            type: template.component_type || 'functional',
+                            code: template.component_code
+                        };
+
+                        this.components.set(component.id, component);
+                        Logger.log('✅', `Loaded template: ${component.name}`);
+                    }
+
+                    Logger.log('✅', `Loaded ${templates.length} demo templates`);
+
                 } catch (error) {
-                    Logger.warn('Could not load templates', error);
+                    Logger.log('❌', 'Error loading templates:', error);
                 }
             }
 
-            async showDemoApp() {
-                if (this.demoTemplates.length === 0) {
-                    Logger.warn('No templates available');
-                    return;
+            setupNavigation() {
+                const nav = document.getElementById('navigation');
+                nav.innerHTML = '';
+
+                for (const [id, component] of this.components) {
+                    const btn = document.createElement('button');
+                    btn.className = 'nav-btn';
+                    btn.textContent = component.name;
+                    btn.onclick = () => this.loadComponent(id);
+                    nav.appendChild(btn);
                 }
 
-                // Render demo components in zones
-                const dashboard = this.demoTemplates.find(t => t.template_id === 'dashboard');
-                const listeClients = this.demoTemplates.find(t => t.template_id === 'liste_clients');
-                const listeProduits = this.demoTemplates.find(t => t.template_id === 'liste_produits');
-
-                if (dashboard) {
-                    await this.renderReactComponent('zone-header', dashboard);
-                }
-
-                if (listeClients) {
-                    await this.renderReactComponent('zone-body', listeClients);
-                }
-
-                if (listeProduits) {
-                    await this.renderReactComponent('zone-footer', listeProduits);
-                }
-
-                Logger.success('Demo app displayed');
+                Logger.log('✅', 'Navigation setup complete');
             }
 
-            async renderReactComponent(zoneId, template) {
-                const zone = document.querySelector(`[data-zone="${zoneId.replace('zone-', '')}"]`);
-                if (!zone) {
-                    Logger.warn(`Zone ${zoneId} not found`);
-                    return;
+            async loadComponent(componentId) {
+                try {
+                    const component = this.components.get(componentId);
+                    if (!component) {
+                        throw new Error(`Component not found: ${componentId}`);
+                    }
+
+                    Logger.log('🔄', `Loading component: ${component.name}`);
+
+                    const main = document.getElementById('main-content');
+                    main.innerHTML = '';
+
+                    await this.renderReactComponent(componentId, component);
+
+                    this.currentComponent = componentId;
+                    this.updateNavigationState();
+
+                    Logger.log('✅', `Rendered component: ${component.name}`);
+
+                } catch (error) {
+                    Logger.log('❌', 'Error loading component:', error);
+                    this.showError('Erreur Chargement Composant', error.message);
                 }
+            }
 
-                const content = zone.querySelector('.drop-zone-content');
-                if (!content) return;
-
-                // Create container for React component
-                const container = document.createElement('div');
-                container.id = `react-${zoneId}-${template.template_id}`;
-                container.style.cssText = 'width: 100%; height: 100%;';
-                content.innerHTML = '';
-                content.appendChild(container);
+            async renderReactComponent(componentId, template) {
+                const container = document.getElementById('main-content');
 
                 try {
                     // Transform JSX to JavaScript using Babel
-                    const transformedCode = Babel.transform(template.component_code, {
+                    const transformedCode = Babel.transform(template.code, {
                         presets: ['react']
                     }).code;
 
-                    // Create and execute the component
-                    const componentFunction = new Function('React', 'ReactDOM', 'gristAPI', `
+                    // Create component function with all React hooks available
+                    const componentFunction = new Function(
+                        'React',
+                        'ReactDOM',
+                        'gristAPI',
+                        `
+                        const {
+                            useState,
+                            useEffect,
+                            useCallback,
+                            useRef,
+                            useMemo,
+                            useContext,
+                            useReducer,
+                            useLayoutEffect
+                        } = React;
+
                         ${transformedCode}
+
                         return Component;
-                    `);
+                        `
+                    );
 
                     const ComponentClass = componentFunction(React, ReactDOM, window.gristAPI);
 
-                    // Render with React 18 createRoot
+                    // Render using React 18 createRoot
                     const root = ReactDOM.createRoot(container);
                     root.render(React.createElement(ComponentClass));
 
-                    Logger.success(`Rendered ${template.template_name}`);
                 } catch (error) {
-                    Logger.error(`Error rendering ${template.template_name}`, error);
-                    content.innerHTML = `
-                        <div style="padding: 20px; color: #ef4444;">
-                            <h3>Erreur de rendu</h3>
-                            <p>${error.message}</p>
-                        </div>
-                    `;
+                    Logger.log('❌', 'Error rendering React component:', error);
+                    this.showComponentError(container, error, componentId);
                 }
             }
 
-            setupUI() {
-                // Populate component library
-                const library = document.getElementById('component-library');
-                library.innerHTML = this.componentLibrary.map(comp => `
-                    <div class="component-item" data-type="${comp.type}" data-label="${comp.label}">
-                        <div class="component-icon">${comp.icon}</div>
-                        <div class="component-label">${comp.label}</div>
-                    </div>
-                `).join('');
-
-                // Initialize drag & drop
-                this.dragDrop.initializeLibrarySortable(library);
-
-                ['header', 'body', 'footer'].forEach(zone => {
-                    const zoneElement = document.querySelector(`[data-zone="${zone}"]`).querySelector('.drop-zone-content');
-                    this.dragDrop.initializeSortable(zoneElement, zone);
-                });
-
-                Logger.success('UI initialized');
-            }
-
-            setupEventListeners() {
-                // Header buttons
-                document.getElementById('btn-undo').addEventListener('click', () => this.undo());
-                document.getElementById('btn-redo').addEventListener('click', () => this.redo());
-                document.getElementById('btn-save').addEventListener('click', () => this.save());
-                document.getElementById('btn-load').addEventListener('click', () => this.load());
-                document.getElementById('btn-preview').addEventListener('click', () => this.preview());
-                document.getElementById('btn-help').addEventListener('click', () => this.showHelp());
-
-                Logger.success('Event listeners setup');
-            }
-
-            setupKeyboardShortcuts() {
-                document.addEventListener('keydown', (e) => {
-                    // Ctrl+Z: Undo
-                    if (e.ctrlKey && e.key === 'z' && !e.shiftKey) {
-                        e.preventDefault();
-                        this.undo();
-                    }
-
-                    // Ctrl+Shift+Z or Ctrl+Y: Redo
-                    if ((e.ctrlKey && e.shiftKey && e.key === 'Z') || (e.ctrlKey && e.key === 'y')) {
-                        e.preventDefault();
-                        this.redo();
-                    }
-
-                    // Ctrl+S: Save
-                    if (e.ctrlKey && e.key === 's') {
-                        e.preventDefault();
-                        this.save();
-                    }
-
-                    // Delete: Delete selected component
-                    if (e.key === 'Delete' || e.key === 'Backspace') {
-                        const selected = this.state.getSelectedComponent();
-                        if (selected && !e.target.matches('input, textarea')) {
-                            e.preventDefault();
-                            this.deleteComponent(selected.id);
-                        }
-                    }
-
-                    // Ctrl+D: Duplicate selected component
-                    if (e.ctrlKey && e.key === 'd') {
-                        const selected = this.state.getSelectedComponent();
-                        if (selected) {
-                            e.preventDefault();
-                            this.duplicateComponent(selected.id);
-                        }
-                    }
-
-                    // Ctrl+/: Help
-                    if (e.ctrlKey && e.key === '/') {
-                        e.preventDefault();
-                        this.showHelp();
-                    }
-                });
-
-                Logger.success('Keyboard shortcuts setup');
-            }
-
-            subscribeToState() {
-                // Update undo/redo buttons
-                this.state.subscribe('components', () => {
-                    document.getElementById('btn-undo').disabled = !this.state.canUndo();
-                    document.getElementById('btn-redo').disabled = !this.state.canRedo();
-                });
-
-                // Update properties panel when selection changes
-                this.state.subscribe('selectedComponentId', (componentId) => {
-                    this.updatePropertiesPanel();
-                });
-
-                Logger.success('State subscriptions setup');
-            }
-
-            // Actions
-            editComponent(componentId) {
-                Logger.info(`Edit component: ${componentId}`);
-                this.state.selectComponent(componentId);
-                this.updatePropertiesPanel();
-            }
-
-            duplicateComponent(componentId) {
-                const original = this.state.getComponent(componentId);
-                if (!original) return;
-
-                const duplicate = {
-                    ...GristUtils.deepClone(original),
-                    id: GristUtils.generateId('comp'),
-                    label: original.label + ' (copie)'
-                };
-
-                this.state.addComponent(duplicate);
-                this.dragDrop.renderZone(duplicate.zone);
-                this.showToast('Composant dupliqué', 'success');
-            }
-
-            deleteComponent(componentId) {
-                if (!confirm('Supprimer ce composant ?')) return;
-
-                const component = this.state.getComponent(componentId);
-                if (!component) return;
-
-                const zone = component.zone;
-                this.state.deleteComponent(componentId);
-                this.dragDrop.renderZone(zone);
-                this.showToast('Composant supprimé', 'success');
-            }
-
-            updatePropertiesPanel() {
-                const panel = document.getElementById('properties-content');
-                const component = this.state.getSelectedComponent();
-
-                if (!component) {
-                    panel.innerHTML = `
-                        <div class="text-center text-muted" style="padding: 40px 0;">
-                            Sélectionnez un composant pour éditer ses propriétés
-                        </div>
-                    `;
-                    return;
-                }
-
-                panel.innerHTML = `
-                    <div class="property-group">
-                        <div class="property-group-title">Général</div>
-                        <div class="property-field">
-                            <label class="property-label">Label</label>
-                            <input type="text" class="property-input" value="${GristUtils.escapeHtml(component.label)}"
-                                   onchange="appNest.updateComponentProperty('${component.id}', 'label', this.value)">
-                        </div>
-                        <div class="property-field">
-                            <label class="property-label">Type</label>
-                            <input type="text" class="property-input" value="${component.type}" disabled>
-                        </div>
+            showComponentError(container, error, componentId) {
+                container.innerHTML = `
+                    <div class="error-container">
+                        <h3>🚨 Erreur Composant: ${componentId}</h3>
+                        <p><strong>Message:</strong> ${error.message}</p>
+                        <pre>${error.stack || 'Pas de stack trace'}</pre>
                     </div>
                 `;
             }
 
-            updateComponentProperty(componentId, property, value) {
-                this.state.updateComponent(componentId, { [property]: value });
-                this.dragDrop.renderZone(this.state.getComponent(componentId).zone);
-            }
-
-            // History
-            undo() {
-                if (this.state.undo()) {
-                    this.dragDrop.renderAllZones();
-                    this.updatePropertiesPanel();
-                    this.showToast('Annulé', 'info');
-                }
-            }
-
-            redo() {
-                if (this.state.redo()) {
-                    this.dragDrop.renderAllZones();
-                    this.updatePropertiesPanel();
-                    this.showToast('Rétabli', 'info');
-                }
-            }
-
-            // Save/Load
-            save() {
-                const config = this.state.getState();
-                const json = JSON.stringify(config, null, 2);
-
-                const blob = new Blob([json], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `appnest-config-${Date.now()}.json`;
-                a.click();
-                URL.revokeObjectURL(url);
-
-                this.showToast('Configuration sauvegardée', 'success');
-                Logger.success('Configuration saved');
-            }
-
-            load() {
-                const input = document.createElement('input');
-                input.type = 'file';
-                input.accept = 'application/json';
-                input.onchange = async (e) => {
-                    const file = e.target.files[0];
-                    if (!file) return;
-
-                    try {
-                        const text = await file.text();
-                        const config = JSON.parse(text);
-
-                        this.state.setState(config, 'Charger configuration');
-                        this.dragDrop.renderAllZones();
-                        this.showToast('Configuration chargée', 'success');
-                        Logger.success('Configuration loaded');
-                    } catch (error) {
-                        Logger.error('Error loading config', error);
-                        this.showToast('Erreur lors du chargement', 'error');
+            updateNavigationState() {
+                const buttons = document.querySelectorAll('.nav-btn');
+                buttons.forEach((btn, index) => {
+                    const componentId = Array.from(this.components.keys())[index];
+                    if (componentId === this.currentComponent) {
+                        btn.classList.add('active');
+                    } else {
+                        btn.classList.remove('active');
                     }
-                };
-                input.click();
+                });
             }
 
-            preview() {
-                this.showToast('Prévisualisation (à implémenter)', 'info');
-            }
-
-            showHelp() {
-                const modalBody = document.getElementById('modal-body');
-                modalBody.innerHTML = `
-                    <h3 class="mb-3">Raccourcis Clavier</h3>
-                    <table style="width: 100%; font-size: 14px;">
-                        <tr><td><strong>Ctrl+Z</strong></td><td>Annuler</td></tr>
-                        <tr><td><strong>Ctrl+Shift+Z</strong></td><td>Rétablir</td></tr>
-                        <tr><td><strong>Ctrl+S</strong></td><td>Sauvegarder</td></tr>
-                        <tr><td><strong>Ctrl+D</strong></td><td>Dupliquer le composant sélectionné</td></tr>
-                        <tr><td><strong>Delete</strong></td><td>Supprimer le composant sélectionné</td></tr>
-                        <tr><td><strong>Ctrl+/</strong></td><td>Afficher l'aide</td></tr>
-                    </table>
-                    <h3 class="mb-3 mt-4">Utilisation</h3>
-                    <ol style="font-size: 14px; line-height: 1.6;">
-                        <li>Glissez des composants depuis la bibliothèque vers les zones de dépôt</li>
-                        <li>Réorganisez les composants par glisser-déposer</li>
-                        <li>Cliquez sur un composant pour éditer ses propriétés</li>
-                        <li>Sauvegardez votre configuration avec Ctrl+S</li>
-                    </ol>
-                `;
-                document.getElementById('modal-title').textContent = 'Aide';
-                this.showModal();
-            }
-
-            // UI Helpers
-            showToast(message, type = 'info') {
-                const container = document.getElementById('toast-container');
-                const id = GristUtils.generateId('toast');
-
-                const iconMap = {
-                    success: '✅',
-                    error: '❌',
-                    warning: '⚠️',
-                    info: 'ℹ️'
-                };
-
-                const toast = document.createElement('div');
-                toast.id = id;
-                toast.className = `toast ${type}`;
-                toast.innerHTML = `
-                    <div class="toast-icon">${iconMap[type]}</div>
-                    <div class="toast-message">${GristUtils.escapeHtml(message)}</div>
-                    <button class="toast-close" onclick="document.getElementById('${id}').remove()">×</button>
-                `;
-
-                container.appendChild(toast);
-
-                setTimeout(() => {
-                    toast.remove();
-                }, 5000);
-            }
-
-            showModal() {
-                document.getElementById('modal-overlay').classList.remove('hidden');
+            async loadDefaultComponent() {
+                if (this.components.size > 0) {
+                    const firstComponentId = Array.from(this.components.keys())[0];
+                    await this.loadComponent(firstComponentId);
+                }
             }
 
             hideLoading() {
-                document.getElementById('loading').classList.add('hidden');
+                const loading = document.querySelector('.loading');
+                if (loading) {
+                    loading.remove();
+                }
+            }
+
+            showError(title, message) {
+                const main = document.getElementById('main-content');
+                main.innerHTML = `
+                    <div class="error-container">
+                        <h3>❌ ${title}</h3>
+                        <p>${message}</p>
+                    </div>
+                `;
+                this.hideLoading();
+            }
+
+            showToast(type, message, duration = 3000) {
+                const toast = document.createElement('div');
+                toast.className = `toast ${type}`;
+
+                const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+                toast.innerHTML = `
+                    <span style="font-size: 1.5rem;">${icon}</span>
+                    <span>${message}</span>
+                `;
+
+                document.body.appendChild(toast);
+
+                setTimeout(() => {
+                    toast.style.animation = 'slideIn 0.3s ease-out reverse';
+                    setTimeout(() => toast.remove(), 300);
+                }, duration);
             }
         }
 
-        // ===== GLOBAL FUNCTIONS =====
-        function closeModal() {
-            document.getElementById('modal-overlay').classList.add('hidden');
-        }
-
-        // ===== INITIALIZATION =====
-        let appNest;
-
-        document.addEventListener('DOMContentLoaded', async () => {
-            appNest = new GristAppNest();
-            await appNest.init();
-        });
+        // ===== APPLICATION STARTUP =====
+        const appNest = new GristAppNest();
+        appNest.init();
     </script>
 </body>
 </html>

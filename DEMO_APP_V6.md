@@ -1,6 +1,35 @@
-# 🎉 Grist App Nest v6.0 - App de Démo Fonctionnelle
+# 🎉 Grist App Nest v6.0 - Container/Runtime pour Composants React
 
-> **Version Complète** avec initialisation automatique et application de démonstration intégrée
+> **Architecture Container/Runtime** : Le widget charge et exécute des composants React stockés dans Grist
+
+---
+
+## 🎯 Principe Fondamental
+
+**Grist App Nest v6.0** est un **conteneur/runtime** (et NON un builder) qui :
+
+1. ✅ Charge des composants React depuis la table Grist `Templates`
+2. ✅ Compile le JSX en JavaScript (via Babel)
+3. ✅ Exécute les composants avec accès aux hooks React complets
+4. ✅ Expose une API globale `gristAPI` pour les opérations CRUD
+5. ✅ Initialise automatiquement une app de démo si le document est vide
+
+---
+
+## 🏗️ Architecture: Container vs Builder
+
+### ❌ Ce que v6.0 N'EST PAS
+
+- ❌ Un outil de construction visuelle (drag & drop)
+- ❌ Un éditeur de composants avec panneau de propriétés
+- ❌ Un générateur de code avec interface graphique
+
+### ✅ Ce que v6.0 EST
+
+- ✅ Un **runtime container** qui charge et exécute des composants
+- ✅ Un **moteur de rendu React** avec support Babel
+- ✅ Une **plateforme d'exécution** pour composants stockés dans Grist
+- ✅ Un **système de navigation** entre différentes vues
 
 ---
 
@@ -17,8 +46,9 @@ Au premier chargement dans un document Grist **vierge**, l'application :
    - Produits (catalogue)
    - Ventes (historique)
 3. ✅ **Pré-remplit** avec des données réalistes
-4. ✅ **Affiche** l'application de démo complète
-5. ✅ **Notifie** l'utilisateur : "App de démo initialisée avec succès ! 🎉"
+4. ✅ **Charge** les templates depuis Grist
+5. ✅ **Affiche** le premier composant automatiquement
+6. ✅ **Notifie** l'utilisateur : "App de démo initialisée avec succès ! 🎉"
 
 ### ✅ Application de Démo Complète
 
@@ -79,22 +109,69 @@ Au premier chargement dans un document Grist **vierge**, l'application :
 
 ## 🏗️ Architecture Technique
 
-### Classes Ajoutées
+### Flux de Données Container/Runtime
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    Grist Document                           │
+│  ┌───────────────────────────────────────────────────────┐ │
+│  │  Templates Table                                      │ │
+│  │  ┌─────────────┬──────────────┬─────────────────────┐ │ │
+│  │  │ template_id │ template_name│ component_code      │ │ │
+│  │  ├─────────────┼──────────────┼─────────────────────┤ │ │
+│  │  │ dashboard   │ Dashboard    │ const Component=... │ │ │
+│  │  │ clients     │ Liste Clients│ const Component=... │ │ │
+│  │  └─────────────┴──────────────┴─────────────────────┘ │ │
+│  └───────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                            ↓
+                ┌───────────────────────┐
+                │  GristAppNest v6.0    │
+                │  (Container/Runtime)  │
+                └───────────────────────┘
+                            ↓
+          ┌─────────────────┴─────────────────┐
+          ↓                                   ↓
+┌──────────────────────┐          ┌──────────────────────┐
+│  GristIntegrationMgr │          │   GristWidgetBase    │
+│  - Auto-init demo    │          │   - Fetch templates  │
+│  - Create tables     │          │   - Cache data       │
+│  - Populate data     │          │   - Convert columnar │
+└──────────────────────┘          └──────────────────────┘
+                            ↓
+                ┌───────────────────────┐
+                │  Babel Transformer    │
+                │  JSX → JavaScript     │
+                └───────────────────────┘
+                            ↓
+                ┌───────────────────────┐
+                │  React 18 Runtime     │
+                │  createRoot + render  │
+                └───────────────────────┘
+                            ↓
+                ┌───────────────────────┐
+                │  Rendered Component   │
+                │  (in main-content)    │
+                └───────────────────────┘
+```
+
+### Classes Implémentées
 
 #### 1. `GristWidgetBase` (Classe de Base)
 
 ```javascript
 class GristWidgetBase {
     async initialize(options)           // Init Grist API
-    async fetchTable(tableName, cache)  // Fetch avec cache
-    async listTables()                  // Liste tables
+    async fetchTable(tableName, cache)  // Fetch avec cache automatique
+    convertColumnarToArray(data)        // Conversion columnar → array
+    async listTables()                  // Liste toutes les tables
     async createTable(name, columns)    // Création table
     async addRecords(name, records)     // Ajout masse
     invalidateCache(tableName)          // Gestion cache
 }
 ```
 
-**Utilisation** : Classe de base pour toutes les interactions Grist
+**Utilisation** : Classe de base pour toutes les interactions Grist avec cache intelligent
 
 #### 2. `GristIntegrationManager` (extends GristWidgetBase)
 
@@ -114,39 +191,98 @@ class GristIntegrationManager extends GristWidgetBase {
 
 **Utilisation** : Initialisation automatique des données de démo
 
-### Modifications `GristAppNest`
+### `GristAppNest` (Classe Principale Container)
 
-#### Nouvelles Méthodes
+#### Méthodes du Container/Runtime
 
 ```javascript
 class GristAppNest {
-    // Nouvelles méthodes
-    setupGlobalGristAPI()               // Expose gristAPI global
-    async loadDemoTemplates()           // Charge templates Grist
-    async showDemoApp()                 // Affiche app de démo
-    async renderReactComponent()        // Compile et rend JSX
+    // Container/Runtime core
+    async init()                        // Initialisation complète
+    async loadDemoTemplates()           // Charge templates depuis Grist
+    setupNavigation()                   // Crée boutons de navigation
+    async loadComponent(componentId)    // Charge un composant spécifique
+    async renderReactComponent()        // Compile JSX et rend React
+
+    // Global API
+    setupGlobalGristAPI()               // Expose window.gristAPI
+
+    // UI Management
+    updateNavigationState()             // Met à jour bouton actif
+    showToast(type, message)            // Notifications
+    showError(title, message)           // Gestion erreurs
 }
 ```
 
-#### Init Amélioré
+#### Flux d'Initialisation Container
 
 ```javascript
 async init() {
-    // 1. Init Grist avec accès FULL
+    // 1. Init Grist avec accès FULL (pour créer tables)
     await grist.ready({ requiredAccess: 'full' });
     await this.gristManager.initialize({ access: 'full' });
 
-    // 2. Setup global gristAPI
+    // 2. Setup global gristAPI (pour composants)
     this.setupGlobalGristAPI();
 
-    // 3. Initialise données de démo si nécessaire
-    await this.gristManager.checkAndInitializeDemoData();
+    // 3. Auto-init demo data si document vide
+    const demoInitialized = await this.gristManager.checkAndInitializeDemoData();
 
-    // 4. Charge les templates
+    // 4. Charge templates depuis table Grist
     await this.loadDemoTemplates();
 
-    // 5. Affiche l'app de démo
-    await this.showDemoApp();
+    // 5. Setup navigation (crée boutons)
+    this.setupNavigation();
+
+    // 6. Charge le premier composant
+    await this.loadDefaultComponent();
+
+    // 7. Show toast notification
+    if (demoInitialized) {
+        this.showToast('success', 'App de démo initialisée avec succès ! 🎉');
+    }
+}
+```
+
+#### Rendu de Composant (Container Pattern)
+
+```javascript
+async loadComponent(componentId) {
+    // 1. Récupère le composant depuis Map
+    const component = this.components.get(componentId);
+
+    // 2. Clear container
+    const main = document.getElementById('main-content');
+    main.innerHTML = '';
+
+    // 3. Compile et rend
+    await this.renderReactComponent(componentId, component);
+
+    // 4. Update navigation state
+    this.currentComponent = componentId;
+    this.updateNavigationState();
+}
+
+async renderReactComponent(componentId, template) {
+    // 1. Transform JSX avec Babel
+    const transformedCode = Babel.transform(template.code, {
+        presets: ['react']
+    }).code;
+
+    // 2. Create function with React hooks
+    const componentFunction = new Function(
+        'React', 'ReactDOM', 'gristAPI',
+        `const { useState, useEffect, ... } = React;
+         ${transformedCode}
+         return Component;`
+    );
+
+    // 3. Get Component class
+    const ComponentClass = componentFunction(React, ReactDOM, window.gristAPI);
+
+    // 4. Render with React 18
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(ComponentClass));
 }
 ```
 
@@ -496,28 +632,66 @@ await gristAPI.getData('Clients')
 
 ## 🎉 Conclusion
 
-**Grist App Nest v6.0** est maintenant une **application de démonstration complète et fonctionnelle** !
+**Grist App Nest v6.0** est un **Container/Runtime React** complet et optimisé !
 
-### Ce qui fonctionne :
+### Architecture Container/Runtime :
 
-✅ **Auto-initialization** : Création automatique des tables
-✅ **Demo data** : 20 records pré-remplis (3 templates + 17 données)
-✅ **React components** : 3 composants fonctionnels avec données réelles
-✅ **gristAPI** : API globale pour tous les composants
-✅ **Responsive** : Design moderne et adaptatif
-✅ **Cache** : Performances optimales
-✅ **Logs** : Debugging facilité
+✅ **Container Pattern** : Charge et exécute les composants (PAS de builder UI)
+✅ **Runtime Engine** : Babel + React 18 pour compilation et rendu
+✅ **Template Storage** : Composants stockés dans table Grist
+✅ **Navigation System** : Boutons générés dynamiquement
+✅ **Global API** : `gristAPI` exposé pour tous les composants
+
+### Optimisations Implémentées :
+
+✅ **GristWidgetBase** : Classe de base avec cache intelligent
+✅ **Auto-initialization** : Création automatique des tables et données
+✅ **Columnar Conversion** : Conversion automatique du format Grist
+✅ **React Hooks Complets** : useState, useEffect, useMemo, useCallback, useRef, etc.
+✅ **Logs Structurés** : Debugging facilité avec timestamps
+✅ **Toast Notifications** : Feedback utilisateur moderne
+
+### Différences vs v5.2 :
+
+| Feature | v5.2 | v6.0 |
+|---------|------|------|
+| Architecture | Container/Runtime | ✅ Container/Runtime (maintenu) |
+| Auto-init demo | ❌ Non | ✅ Oui |
+| Cache intelligent | ❌ Non | ✅ Oui (GristWidgetBase) |
+| Conversion columnar | ✅ Manuel | ✅ Automatique |
+| Classes modulaires | ❌ Monolithique | ✅ 3 classes (Base, Manager, App) |
+| AI Chat | ✅ Oui | ❌ Simplifié (focus runtime) |
+| Toast notifications | ❌ Non | ✅ Oui |
 
 ### Résultat Final :
 
-**Une vraie application de gestion** avec :
-- Dashboard de métriques
-- Gestion de clients
-- Catalogue de produits
-- Historique des ventes
-- Toutes les données depuis Grist
+**Un runtime container professionnel** qui :
+- ✅ Charge des composants React depuis Grist
+- ✅ Les compile et les exécute avec tous les hooks
+- ✅ Offre une API CRUD unifiée
+- ✅ S'auto-initialise avec une démo complète
+- ✅ Fonctionne avec une architecture propre et modulaire
 
-**Prêt pour production et démonstration ! 🚀**
+**Prêt pour production et extension ! 🚀**
+
+---
+
+## 📝 Notes Importantes
+
+### Le widget EST un container, PAS un builder
+
+**v6.0 ne permet PAS de :**
+- ❌ Créer visuellement des composants (drag & drop)
+- ❌ Éditer du code dans une interface graphique
+- ❌ Générer automatiquement du JSX
+
+**v6.0 permet de :**
+- ✅ Charger des composants existants depuis Grist
+- ✅ Les exécuter dans un environnement React contrôlé
+- ✅ Naviguer entre différentes vues
+- ✅ Accéder aux données Grist via `gristAPI`
+
+**Pour créer/modifier des composants** : Éditez directement la table `Templates` dans Grist !
 
 ---
 
