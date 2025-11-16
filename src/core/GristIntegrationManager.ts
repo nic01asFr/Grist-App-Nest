@@ -68,6 +68,10 @@ class GristIntegrationManager extends GristSchemaManager {
       await this.populateOpportunities(); // Depends on Companies & Contacts
       await this.populateActivities(); // Depends on Companies, Contacts & Opportunities
 
+      // CRITICAL: Invalidate all cache so Dashboard gets fresh data
+      this.invalidateCache();
+      Logger.log('🗑️', 'Cache cleared after data population');
+
       Logger.success('Data population complete');
     } catch (error) {
       Logger.error('Error populating data:', error);
@@ -92,6 +96,10 @@ class GristIntegrationManager extends GristSchemaManager {
       await this.populateContacts(); // Depends on Companies
       await this.populateOpportunities(); // Depends on Companies & Contacts
       await this.populateActivities(); // Depends on Companies, Contacts & Opportunities
+
+      // CRITICAL: Invalidate all cache so Dashboard gets fresh data
+      this.invalidateCache();
+      Logger.log('🗑️', 'Cache cleared after initialization');
 
       Logger.success('🎉 CRM demo data initialization complete');
     } catch (error) {
