@@ -25,6 +25,7 @@ class GristIntegrationManager extends GristSchemaManager {
   async checkAndInitializeDemoData(): Promise<boolean> {
     Logger.log('ℹ️', 'Checking for CRM demo data...');
 
+    // Check if tables exist
     const hasCompanies = await this.tableExists('Companies');
     const hasContacts = await this.tableExists('Contacts');
     const hasOpportunities = await this.tableExists('Opportunities');
@@ -32,13 +33,45 @@ class GristIntegrationManager extends GristSchemaManager {
     const hasTemplates = await this.tableExists('Templates');
     const hasAppConfig = await this.tableExists('AppConfig');
 
+    // If ANY table is missing, do full initialization
     if (!hasCompanies || !hasContacts || !hasOpportunities || !hasActivities || !hasTemplates || !hasAppConfig) {
-      Logger.log('📦', 'CRM tables not found, initializing...');
+      Logger.log('📦', 'Some CRM tables not found, initializing...');
       await this.initializeDemoData();
       return true;
-    } else {
-      Logger.log('✅', 'CRM data already exists');
-      return false;
+    }
+
+    // All tables exist, check if Templates table has data (critical table)
+    Logger.log('🔍', 'All tables exist, checking if they contain data...');
+    const templates = await this.fetchTable('Templates');
+
+    if (templates.length === 0) {
+      Logger.log('⚠️', 'Tables exist but Templates is empty, reinitializing data...');
+      await this.populateAllData();
+      return true;
+    }
+
+    Logger.log('✅', 'CRM data already exists and is populated');
+    return false;
+  }
+
+  /**
+   * Populate all data (without recreating schema)
+   */
+  private async populateAllData(): Promise<void> {
+    Logger.log('📝', 'Populating data into existing tables');
+
+    try {
+      await this.populateAppConfig();
+      await this.populateTemplates();
+      await this.populateCompanies();
+      await this.populateContacts(); // Depends on Companies
+      await this.populateOpportunities(); // Depends on Companies & Contacts
+      await this.populateActivities(); // Depends on Companies, Contacts & Opportunities
+
+      Logger.success('Data population complete');
+    } catch (error) {
+      Logger.error('Error populating data:', error);
+      throw error;
     }
   }
 
