@@ -68,8 +68,16 @@ scripts.forEach(({ tag, content }) => {
 // Write standalone file
 fs.writeFileSync(standaloneFile, html, 'utf-8');
 
+// Also copy to root for raw.githubusercontent.com access
+const rootStandaloneFile = path.join(__dirname, '..', 'grist-app-nest.html');
+fs.writeFileSync(rootStandaloneFile, html, 'utf-8');
+
 const size = (fs.statSync(standaloneFile).size / 1024).toFixed(2);
 console.log(`\n✅ Standalone HTML created!`);
 console.log(`   📄 ${standaloneFile}`);
+console.log(`   📄 ${rootStandaloneFile}`);
 console.log(`   📦 Size: ${size} KB`);
-console.log(`\n🌐 Deploy URL: https://raw.githubusercontent.com/YOUR_USERNAME/grist-app-nest/main/dist/grist-app-nest.html`);
+console.log(`\n🌐 GitHub Pages URL:`);
+console.log(`   https://nic01asFr.github.io/Grist-App-Nest/grist-app-nest.html`);
+console.log(`\n🌐 Raw GitHub URL:`);
+console.log(`   https://raw.githubusercontent.com/nic01asFr/Grist-App-Nest/main/grist-app-nest.html`);
