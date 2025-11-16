@@ -206,7 +206,7 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'subject', type: 'Text', label: 'Subject' },
       { id: 'description', type: 'Text', label: 'Description' },
       { id: 'scheduled_date', type: 'DateTime', label: 'Scheduled Date' },
-      { id: 'completed', type: 'Toggle', label: 'Completed' },
+      { id: 'completed', type: 'Bool', label: 'Completed' },
       { id: 'created_at', type: 'DateTime', label: 'Created At' },
     ];
   }
@@ -229,7 +229,7 @@ class GristSchemaManager extends GristWidgetBase {
       { id: 'description', type: 'Text', label: 'Description' },
       { id: 'component_code', type: 'Text', label: 'JSX Code' },
       { id: 'props_schema', type: 'Text', label: 'Props Schema (JSON)' },
-      { id: 'is_active', type: 'Toggle', label: 'Active' },
+      { id: 'is_active', type: 'Bool', label: 'Active' },
       { id: 'created_at', type: 'DateTime', label: 'Created At' },
       { id: 'updated_at', type: 'DateTime', label: 'Updated At' },
     ];
