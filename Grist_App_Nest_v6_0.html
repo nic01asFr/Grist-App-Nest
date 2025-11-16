@@ -1090,6 +1090,419 @@
             }
         };
 
+        // ===== GRIST WIDGET BASE =====
+        class GristWidgetBase {
+            constructor() {
+                this.grist = null;
+                this.cache = new Map();
+                this.isReady = false;
+            }
+
+            async initialize(options = {}) {
+                await grist.ready({ requiredAccess: options.access || 'full' });
+                this.grist = grist;
+                this.isReady = true;
+            }
+
+            async fetchTable(tableName, useCache = true) {
+                if (useCache && this.cache.has(tableName)) {
+                    return this.cache.get(tableName);
+                }
+
+                try {
+                    const rawData = await grist.docApi.fetchTable(tableName);
+                    const records = GristUtils.convertColumnarToRows(rawData);
+
+                    if (useCache) {
+                        this.cache.set(tableName, records);
+                    }
+
+                    return records;
+                } catch (error) {
+                    Logger.warn(`Table ${tableName} not found or empty`);
+                    return [];
+                }
+            }
+
+            async listTables() {
+                try {
+                    const tables = await grist.docApi.listTables();
+                    return tables.filter(t => !t.startsWith('_grist'));
+                } catch (error) {
+                    Logger.error('Error listing tables', error);
+                    return [];
+                }
+            }
+
+            async createTable(tableName, columns) {
+                try {
+                    await grist.docApi.applyUserActions([
+                        ['AddTable', tableName, columns]
+                    ]);
+                    Logger.success(`Table created: ${tableName}`);
+                    return true;
+                } catch (error) {
+                    Logger.error(`Error creating table ${tableName}`, error);
+                    return false;
+                }
+            }
+
+            async addRecords(tableName, records) {
+                try {
+                    const actions = records.map(record =>
+                        ['AddRecord', tableName, null, record]
+                    );
+                    await grist.docApi.applyUserActions(actions);
+                    this.cache.delete(tableName);
+                    return true;
+                } catch (error) {
+                    Logger.error(`Error adding records to ${tableName}`, error);
+                    return false;
+                }
+            }
+
+            invalidateCache(tableName = null) {
+                if (tableName) {
+                    this.cache.delete(tableName);
+                } else {
+                    this.cache.clear();
+                }
+            }
+        }
+
+        // ===== GRIST INTEGRATION MANAGER =====
+        class GristIntegrationManager extends GristWidgetBase {
+            constructor() {
+                super();
+                this.demoDataInitialized = false;
+            }
+
+            async checkAndInitializeDemoData() {
+                Logger.info('Checking for demo data...');
+
+                const tables = await this.listTables();
+                const hasTemplates = tables.includes('Templates');
+                const hasClients = tables.includes('Clients');
+                const hasProduits = tables.includes('Produits');
+
+                if (!hasTemplates || !hasClients || !hasProduits) {
+                    Logger.info('Demo data not found, initializing...');
+                    await this.initializeDemoData();
+                    this.demoDataInitialized = true;
+                } else {
+                    Logger.info('Demo data already exists');
+                }
+            }
+
+            async initializeDemoData() {
+                Logger.group('Initializing demo data');
+
+                // 1. Create Templates table
+                if (!await this.tableExists('Templates')) {
+                    await this.createTable('Templates', [
+                        { id: 'template_id', type: 'Text' },
+                        { id: 'template_name', type: 'Text' },
+                        { id: 'component_type', type: 'Text' },
+                        { id: 'component_code', type: 'Text' }
+                    ]);
+
+                    await this.addRecords('Templates', this.getDemoTemplates());
+                    Logger.success('Templates table created and populated');
+                }
+
+                // 2. Create Clients table
+                if (!await this.tableExists('Clients')) {
+                    await this.createTable('Clients', [
+                        { id: 'nom', type: 'Text' },
+                        { id: 'email', type: 'Text' },
+                        { id: 'entreprise', type: 'Text' },
+                        { id: 'statut', type: 'Text' }
+                    ]);
+
+                    await this.addRecords('Clients', this.getDemoClients());
+                    Logger.success('Clients table created and populated');
+                }
+
+                // 3. Create Produits table
+                if (!await this.tableExists('Produits')) {
+                    await this.createTable('Produits', [
+                        { id: 'nom', type: 'Text' },
+                        { id: 'prix', type: 'Numeric' },
+                        { id: 'stock', type: 'Numeric' },
+                        { id: 'categorie', type: 'Text' }
+                    ]);
+
+                    await this.addRecords('Produits', this.getDemoProduits());
+                    Logger.success('Produits table created and populated');
+                }
+
+                // 4. Create Ventes table
+                if (!await this.tableExists('Ventes')) {
+                    await this.createTable('Ventes', [
+                        { id: 'client', type: 'Text' },
+                        { id: 'produit', type: 'Text' },
+                        { id: 'montant', type: 'Numeric' },
+                        { id: 'date', type: 'Date' }
+                    ]);
+
+                    await this.addRecords('Ventes', this.getDemoVentes());
+                    Logger.success('Ventes table created and populated');
+                }
+
+                Logger.groupEnd();
+            }
+
+            async tableExists(tableName) {
+                const tables = await this.listTables();
+                return tables.includes(tableName);
+            }
+
+            getDemoTemplates() {
+                return [
+                    {
+                        template_id: 'dashboard',
+                        template_name: 'Dashboard Principal',
+                        component_type: 'functional',
+                        component_code: `const Component = () => {
+  const [metrics, setMetrics] = React.useState({ clients: 0, produits: 0, ventes: 0, ca: 0 });
+
+  React.useEffect(() => {
+    const loadMetrics = async () => {
+      const clients = await gristAPI.getData('Clients');
+      const produits = await gristAPI.getData('Produits');
+      const ventes = await gristAPI.getData('Ventes');
+      const ca = ventes.reduce((sum, v) => sum + (v.montant || 0), 0);
+
+      setMetrics({
+        clients: clients.length,
+        produits: produits.length,
+        ventes: ventes.length,
+        ca: ca
+      });
+    };
+    loadMetrics();
+  }, []);
+
+  const cardStyle = {
+    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    color: 'white',
+    padding: '24px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+    textAlign: 'center'
+  };
+
+  const valueStyle = {
+    fontSize: '36px',
+    fontWeight: 'bold',
+    marginBottom: '8px'
+  };
+
+  const labelStyle = {
+    fontSize: '14px',
+    opacity: 0.9,
+    textTransform: 'uppercase',
+    letterSpacing: '1px'
+  };
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h1 style={{ marginBottom: '30px', color: '#1e293b' }}>📊 Dashboard Grist App Nest</h1>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
+        <div style={cardStyle}>
+          <div style={valueStyle}>{metrics.clients}</div>
+          <div style={labelStyle}>👥 Clients</div>
+        </div>
+        <div style={{...cardStyle, background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)'}}>
+          <div style={valueStyle}>{metrics.produits}</div>
+          <div style={labelStyle}>📦 Produits</div>
+        </div>
+        <div style={{...cardStyle, background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'}}>
+          <div style={valueStyle}>{metrics.ventes}</div>
+          <div style={labelStyle}>💰 Ventes</div>
+        </div>
+        <div style={{...cardStyle, background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)'}}>
+          <div style={valueStyle}>{metrics.ca.toLocaleString('fr-FR')} €</div>
+          <div style={labelStyle}>💵 CA Total</div>
+        </div>
+      </div>
+    </div>
+  );
+};`
+                    },
+                    {
+                        template_id: 'liste_clients',
+                        template_name: 'Liste des Clients',
+                        component_type: 'functional',
+                        component_code: `const Component = () => {
+  const [clients, setClients] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadClients = async () => {
+      const data = await gristAPI.getData('Clients');
+      setClients(data);
+    };
+    loadClients();
+  }, []);
+
+  const tableStyle = {
+    width: '100%',
+    borderCollapse: 'collapse',
+    backgroundColor: 'white',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+    borderRadius: '8px',
+    overflow: 'hidden'
+  };
+
+  const thStyle = {
+    backgroundColor: '#667eea',
+    color: 'white',
+    padding: '16px',
+    textAlign: 'left',
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    fontSize: '12px',
+    letterSpacing: '1px'
+  };
+
+  const tdStyle = {
+    padding: '16px',
+    borderBottom: '1px solid #e2e8f0'
+  };
+
+  const statusStyle = (statut) => ({
+    padding: '4px 12px',
+    borderRadius: '12px',
+    fontSize: '12px',
+    fontWeight: '600',
+    backgroundColor: statut === 'Actif' ? '#10b981' : '#ef4444',
+    color: 'white',
+    display: 'inline-block'
+  });
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ marginBottom: '20px', color: '#1e293b' }}>👥 Liste des Clients</h2>
+      <table style={tableStyle}>
+        <thead>
+          <tr>
+            <th style={thStyle}>Nom</th>
+            <th style={thStyle}>Email</th>
+            <th style={thStyle}>Entreprise</th>
+            <th style={thStyle}>Statut</th>
+          </tr>
+        </thead>
+        <tbody>
+          {clients.map((client, idx) => (
+            <tr key={idx}>
+              <td style={tdStyle}>{client.nom}</td>
+              <td style={tdStyle}>{client.email}</td>
+              <td style={tdStyle}>{client.entreprise}</td>
+              <td style={tdStyle}>
+                <span style={statusStyle(client.statut)}>{client.statut}</span>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+};`
+                    },
+                    {
+                        template_id: 'liste_produits',
+                        template_name: 'Catalogue Produits',
+                        component_type: 'functional',
+                        component_code: `const Component = () => {
+  const [produits, setProduits] = React.useState([]);
+
+  React.useEffect(() => {
+    const loadProduits = async () => {
+      const data = await gristAPI.getData('Produits');
+      setProduits(data);
+    };
+    loadProduits();
+  }, []);
+
+  const cardStyle = {
+    backgroundColor: 'white',
+    borderRadius: '8px',
+    padding: '20px',
+    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    border: '1px solid #e2e8f0',
+    transition: 'transform 0.2s'
+  };
+
+  const priceStyle = {
+    fontSize: '24px',
+    fontWeight: 'bold',
+    color: '#667eea',
+    marginBottom: '8px'
+  };
+
+  const stockStyle = (stock) => ({
+    fontSize: '14px',
+    color: stock > 10 ? '#10b981' : stock > 0 ? '#f59e0b' : '#ef4444',
+    fontWeight: '600'
+  });
+
+  return (
+    <div style={{ padding: '20px' }}>
+      <h2 style={{ marginBottom: '20px', color: '#1e293b' }}>📦 Catalogue Produits</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
+        {produits.map((produit, idx) => (
+          <div key={idx} style={cardStyle}>
+            <h3 style={{ marginBottom: '12px', color: '#1e293b' }}>{produit.nom}</h3>
+            <div style={priceStyle}>{produit.prix} €</div>
+            <div style={stockStyle(produit.stock)}>
+              Stock: {produit.stock} unités
+            </div>
+            <div style={{ marginTop: '12px', fontSize: '12px', color: '#64748b', textTransform: 'uppercase' }}>
+              {produit.categorie}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};`
+                    }
+                ];
+            }
+
+            getDemoClients() {
+                return [
+                    { nom: 'Jean Dupont', email: 'jean.dupont@example.com', entreprise: 'Tech Corp', statut: 'Actif' },
+                    { nom: 'Marie Martin', email: 'marie.martin@example.com', entreprise: 'Innovation SA', statut: 'Actif' },
+                    { nom: 'Pierre Bernard', email: 'pierre.bernard@example.com', entreprise: 'Digital Plus', statut: 'Actif' },
+                    { nom: 'Sophie Dubois', email: 'sophie.dubois@example.com', entreprise: 'Cloud Services', statut: 'Inactif' },
+                    { nom: 'Luc Petit', email: 'luc.petit@example.com', entreprise: 'Data Systems', statut: 'Actif' }
+                ];
+            }
+
+            getDemoProduits() {
+                return [
+                    { nom: 'Ordinateur Portable Pro', prix: 1299, stock: 15, categorie: 'Informatique' },
+                    { nom: 'Souris Sans Fil', prix: 29, stock: 45, categorie: 'Accessoires' },
+                    { nom: 'Clavier Mécanique', prix: 89, stock: 23, categorie: 'Accessoires' },
+                    { nom: 'Écran 27 pouces', prix: 399, stock: 8, categorie: 'Informatique' },
+                    { nom: 'Webcam HD', prix: 79, stock: 32, categorie: 'Accessoires' },
+                    { nom: 'Casque Audio', prix: 149, stock: 18, categorie: 'Audio' }
+                ];
+            }
+
+            getDemoVentes() {
+                return [
+                    { client: 'Jean Dupont', produit: 'Ordinateur Portable Pro', montant: 1299, date: '2025-11-10' },
+                    { client: 'Marie Martin', produit: 'Écran 27 pouces', montant: 399, date: '2025-11-12' },
+                    { client: 'Pierre Bernard', produit: 'Clavier Mécanique', montant: 89, date: '2025-11-13' },
+                    { client: 'Jean Dupont', produit: 'Souris Sans Fil', montant: 29, date: '2025-11-14' },
+                    { client: 'Luc Petit', produit: 'Casque Audio', montant: 149, date: '2025-11-15' },
+                    { client: 'Marie Martin', produit: 'Webcam HD', montant: 79, date: '2025-11-15' }
+                ];
+            }
+        }
+
         // ===== STATE MANAGER =====
         class AppNestStateManager {
             constructor(initialState = {}) {
@@ -1478,7 +1891,9 @@
                 this.state = new AppNestStateManager();
                 this.dragDrop = new DragDropEngine(this.state);
                 this.grist = null;
+                this.gristManager = new GristIntegrationManager();
                 this.isReady = false;
+                this.demoTemplates = [];
 
                 // Component library
                 this.componentLibrary = [
@@ -1499,10 +1914,20 @@
                 const timer = Logger.startTimer('Initialisation complète');
 
                 try {
-                    // Initialize Grist
-                    await grist.ready({ requiredAccess: 'read table' });
+                    // Initialize Grist with FULL access
+                    await grist.ready({ requiredAccess: 'full' });
                     this.grist = grist;
+                    await this.gristManager.initialize({ access: 'full' });
                     Logger.success('Grist API prête');
+
+                    // Setup global gristAPI for React components
+                    this.setupGlobalGristAPI();
+
+                    // Check and initialize demo data
+                    await this.gristManager.checkAndInitializeDemoData();
+
+                    // Load demo templates from Grist
+                    await this.loadDemoTemplates();
 
                     // Setup UI
                     this.setupUI();
@@ -1512,16 +1937,141 @@
                     // Subscribe to state changes
                     this.subscribeToState();
 
+                    // Show demo app
+                    await this.showDemoApp();
+
                     this.isReady = true;
                     this.hideLoading();
                     timer.end();
 
                     Logger.success('✨ Grist App Nest v6.0 prêt !');
-                    this.showToast('Grist App Nest v6.0 chargé avec succès', 'success');
+
+                    if (this.gristManager.demoDataInitialized) {
+                        this.showToast('App de démo initialisée avec succès ! 🎉', 'success');
+                    } else {
+                        this.showToast('Grist App Nest v6.0 chargé avec succès', 'success');
+                    }
 
                 } catch (error) {
                     Logger.error('Erreur initialisation', error);
-                    this.showToast('Erreur lors de l\'initialisation', 'error');
+                    this.showToast('Erreur lors de l\'initialisation: ' + error.message, 'error');
+                }
+            }
+
+            setupGlobalGristAPI() {
+                // Global gristAPI for React components
+                window.gristAPI = {
+                    getData: async (tableName) => {
+                        try {
+                            const rawData = await grist.docApi.fetchTable(tableName);
+                            return GristUtils.convertColumnarToRows(rawData);
+                        } catch (error) {
+                            Logger.warn(`Table ${tableName} not found`);
+                            return [];
+                        }
+                    },
+
+                    addRecord: async (tableName, record) => {
+                        await grist.docApi.applyUserActions([
+                            ['AddRecord', tableName, null, record]
+                        ]);
+                    },
+
+                    updateRecord: async (tableName, recordId, updates) => {
+                        await grist.docApi.applyUserActions([
+                            ['UpdateRecord', tableName, recordId, updates]
+                        ]);
+                    },
+
+                    deleteRecord: async (tableName, recordId) => {
+                        await grist.docApi.applyUserActions([
+                            ['RemoveRecord', tableName, recordId]
+                        ]);
+                    }
+                };
+
+                Logger.success('Global gristAPI configured');
+            }
+
+            async loadDemoTemplates() {
+                try {
+                    this.demoTemplates = await this.gristManager.fetchTable('Templates');
+                    Logger.success(`Loaded ${this.demoTemplates.length} demo templates`);
+                } catch (error) {
+                    Logger.warn('Could not load templates', error);
+                }
+            }
+
+            async showDemoApp() {
+                if (this.demoTemplates.length === 0) {
+                    Logger.warn('No templates available');
+                    return;
+                }
+
+                // Render demo components in zones
+                const dashboard = this.demoTemplates.find(t => t.template_id === 'dashboard');
+                const listeClients = this.demoTemplates.find(t => t.template_id === 'liste_clients');
+                const listeProduits = this.demoTemplates.find(t => t.template_id === 'liste_produits');
+
+                if (dashboard) {
+                    await this.renderReactComponent('zone-header', dashboard);
+                }
+
+                if (listeClients) {
+                    await this.renderReactComponent('zone-body', listeClients);
+                }
+
+                if (listeProduits) {
+                    await this.renderReactComponent('zone-footer', listeProduits);
+                }
+
+                Logger.success('Demo app displayed');
+            }
+
+            async renderReactComponent(zoneId, template) {
+                const zone = document.querySelector(`[data-zone="${zoneId.replace('zone-', '')}"]`);
+                if (!zone) {
+                    Logger.warn(`Zone ${zoneId} not found`);
+                    return;
+                }
+
+                const content = zone.querySelector('.drop-zone-content');
+                if (!content) return;
+
+                // Create container for React component
+                const container = document.createElement('div');
+                container.id = `react-${zoneId}-${template.template_id}`;
+                container.style.cssText = 'width: 100%; height: 100%;';
+                content.innerHTML = '';
+                content.appendChild(container);
+
+                try {
+                    // Transform JSX to JavaScript using Babel
+                    const transformedCode = Babel.transform(template.component_code, {
+                        presets: ['react']
+                    }).code;
+
+                    // Create and execute the component
+                    const componentFunction = new Function('React', 'ReactDOM', 'gristAPI', `
+                        ${transformedCode}
+                        return Component;
+                    `);
+
+                    const ComponentClass = componentFunction(React, ReactDOM, window.gristAPI);
+
+                    // Render with React 18 createRoot
+                    const root = ReactDOM.createRoot(container);
+                    root.render(React.createElement(ComponentClass));
+
+                    Logger.success(`Rendered ${template.template_name}`);
+                } catch (error) {
+                    Logger.error(`Error rendering ${template.template_name}`, error);
+                    content.innerHTML = `
+                        <div style="padding: 20px; color: #ef4444;">
+                            <h3>Erreur de rendu</h3>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
                 }
             }
 
