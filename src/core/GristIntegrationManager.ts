@@ -3138,6 +3138,531 @@ const Component = ({
         `.trim(),
       },
 
+      // ===== ATOMIC: Stack Layout =====
+      {
+        template_id: 'atomic-layout-stack',
+        template_name: 'Stack Layout',
+        category: 'base',
+        description: 'Flexible stack layout (vertical/horizontal)',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  children,
+  direction = 'vertical',
+  spacing = 16,
+  align = 'start',
+  justify = 'start',
+  wrap = false,
+  divider = false
+}) => {
+  const isVertical = direction === 'vertical';
+
+  const alignValues = {
+    start: 'flex-start',
+    center: 'center',
+    end: 'flex-end',
+    stretch: 'stretch'
+  };
+
+  const justifyValues = {
+    start: 'flex-start',
+    center: 'center',
+    end: 'flex-end',
+    between: 'space-between',
+    around: 'space-around',
+    evenly: 'space-evenly'
+  };
+
+  const childArray = React.Children.toArray(children);
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: isVertical ? 'column' : 'row',
+      gap: divider ? 0 : \`\${spacing}px\`,
+      alignItems: alignValues[align],
+      justifyContent: justifyValues[justify],
+      flexWrap: wrap ? 'wrap' : 'nowrap'
+    }}>
+      {childArray.map((child, index) => (
+        <React.Fragment key={index}>
+          {child}
+          {divider && index < childArray.length - 1 && (
+            <div style={{
+              [isVertical ? 'width' : 'height']: '100%',
+              [isVertical ? 'height' : 'width']: '1px',
+              background: '#e5e5e5',
+              [isVertical ? 'margin' : 'marginLeft']: \`\${spacing / 2}px\`,
+              [isVertical ? 'marginBottom' : 'marginRight']: \`\${spacing / 2}px\`
+            }} />
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Grid Layout =====
+      {
+        template_id: 'atomic-layout-grid',
+        template_name: 'Grid Layout',
+        category: 'base',
+        description: 'Responsive grid layout',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  children,
+  columns = 3,
+  gap = 16,
+  minColumnWidth = 200,
+  responsive = true
+}) => {
+  const getGridColumns = () => {
+    if (responsive) {
+      return \`repeat(auto-fit, minmax(\${minColumnWidth}px, 1fr))\`;
+    }
+    return \`repeat(\${columns}, 1fr)\`;
+  };
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: getGridColumns(),
+      gap: \`\${gap}px\`
+    }}>
+      {children}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: List Layout =====
+      {
+        template_id: 'atomic-layout-list',
+        template_name: 'List Layout',
+        category: 'base',
+        description: 'Multi-mode list layout (list/grid/cards/table)',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  items = [],
+  mode = 'list',
+  renderItem,
+  emptyState = null,
+  gap = 12,
+  columns = 3,
+  striped = false
+}) => {
+  if (items.length === 0) {
+    return emptyState || (
+      <div style={{
+        padding: '40px 20px',
+        textAlign: 'center',
+        color: '#999',
+        fontFamily: "'Marianne', Arial, sans-serif"
+      }}>
+        Aucun élément à afficher
+      </div>
+    );
+  }
+
+  // LIST MODE - Vertical stack
+  if (mode === 'list') {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: \`\${gap}px\` }}>
+        {items.map((item, index) => (
+          <div
+            key={item.id || index}
+            style={{
+              background: striped && index % 2 === 1 ? '#f6f6f6' : 'transparent',
+              padding: striped ? '8px' : 0,
+              borderRadius: '4px'
+            }}
+          >
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // GRID MODE - Responsive grid
+  if (mode === 'grid') {
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: \`repeat(auto-fill, minmax(200px, 1fr))\`,
+        gap: \`\${gap}px\`
+      }}>
+        {items.map((item, index) => (
+          <div key={item.id || index}>
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // CARDS MODE - Cards grid with more spacing
+  if (mode === 'cards') {
+    return (
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: \`repeat(auto-fill, minmax(280px, 1fr))\`,
+        gap: \`\${gap * 1.5}px\`
+      }}>
+        {items.map((item, index) => (
+          <div
+            key={item.id || index}
+            style={{
+              background: 'white',
+              border: '1px solid #e5e5e5',
+              borderRadius: '8px',
+              overflow: 'hidden',
+              transition: 'box-shadow 0.2s',
+              cursor: 'pointer'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.boxShadow = '0 4px 12px rgba(0,0,0,0.1)'}
+            onMouseLeave={(e) => e.currentTarget.style.boxShadow = 'none'}
+          >
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // TABLE MODE - Compact table-like
+  if (mode === 'table') {
+    return (
+      <div style={{ overflow: 'auto' }}>
+        {items.map((item, index) => (
+          <div
+            key={item.id || index}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              padding: '12px',
+              borderBottom: '1px solid #e5e5e5',
+              background: index % 2 === 1 ? '#f6f6f6' : 'white',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#f0f0ff'}
+            onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 1 ? '#f6f6f6' : 'white'}
+          >
+            {renderItem(item, index)}
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  return null;
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Data Item =====
+      {
+        template_id: 'atomic-display-dataitem',
+        template_name: 'Data Item',
+        category: 'base',
+        description: 'Single data item display (label + value)',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  value = '',
+  icon = null,
+  orientation = 'vertical',
+  size = 'md',
+  copyable = false
+}) => {
+  const [copied, setCopied] = useState(false);
+
+  const sizes = {
+    sm: { labelSize: '12px', valueSize: '14px', gap: '4px' },
+    md: { labelSize: '14px', valueSize: '16px', gap: '6px' },
+    lg: { labelSize: '16px', valueSize: '18px', gap: '8px' }
+  };
+
+  const sizing = sizes[size];
+  const isVertical = orientation === 'vertical';
+
+  const handleCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(String(value));
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy:', err);
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: isVertical ? 'column' : 'row',
+      gap: sizing.gap,
+      alignItems: isVertical ? 'flex-start' : 'center',
+      justifyContent: isVertical ? 'flex-start' : 'space-between',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {/* Label */}
+      <div style={{
+        fontSize: sizing.labelSize,
+        color: '#666',
+        fontWeight: '500',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px'
+      }}>
+        {icon && <span>{icon}</span>}
+        {label}
+      </div>
+
+      {/* Value */}
+      <div style={{
+        fontSize: sizing.valueSize,
+        color: '#161616',
+        fontWeight: isVertical ? '400' : '500',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        flex: isVertical ? '0' : '1',
+        textAlign: isVertical ? 'left' : 'right'
+      }}>
+        <span style={{ wordBreak: 'break-word' }}>{value}</span>
+        {copyable && (
+          <button
+            onClick={handleCopy}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '16px',
+              color: copied ? '#18753c' : '#666',
+              padding: '4px',
+              transition: 'color 0.2s'
+            }}
+            title="Copier"
+          >
+            {copied ? '✓' : '📋'}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Stat Display =====
+      {
+        template_id: 'atomic-display-stat',
+        template_name: 'Stat Display',
+        category: 'base',
+        description: 'Statistic display with trend',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  value = 0,
+  unit = '',
+  trend = null,
+  trendLabel = '',
+  icon = null,
+  size = 'md',
+  variant = 'default'
+}) => {
+  const sizes = {
+    sm: { labelSize: '12px', valueSize: '24px', trendSize: '11px' },
+    md: { labelSize: '14px', valueSize: '32px', trendSize: '12px' },
+    lg: { labelSize: '16px', valueSize: '40px', trendSize: '14px' }
+  };
+
+  const variants = {
+    default: { color: '#161616' },
+    primary: { color: '#000091' },
+    success: { color: '#18753c' },
+    warning: { color: '#ff9800' },
+    error: { color: '#e1000f' }
+  };
+
+  const sizing = sizes[size];
+  const variantStyle = variants[variant];
+
+  const getTrendColor = () => {
+    if (trend === null) return '#666';
+    return trend >= 0 ? '#18753c' : '#e1000f';
+  };
+
+  const getTrendIcon = () => {
+    if (trend === null) return null;
+    return trend >= 0 ? '↑' : '↓';
+  };
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {/* Label */}
+      <div style={{
+        fontSize: sizing.labelSize,
+        color: '#666',
+        marginBottom: '8px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '6px'
+      }}>
+        {icon && <span style={{ fontSize: '18px' }}>{icon}</span>}
+        {label}
+      </div>
+
+      {/* Value */}
+      <div style={{
+        fontSize: sizing.valueSize,
+        fontWeight: '700',
+        color: variantStyle.color,
+        marginBottom: trend !== null ? '8px' : 0,
+        display: 'flex',
+        alignItems: 'baseline',
+        gap: '4px'
+      }}>
+        <span>{value}</span>
+        {unit && <span style={{ fontSize: sizing.labelSize, fontWeight: '400' }}>{unit}</span>}
+      </div>
+
+      {/* Trend */}
+      {trend !== null && (
+        <div style={{
+          fontSize: sizing.trendSize,
+          color: getTrendColor(),
+          display: 'flex',
+          alignItems: 'center',
+          gap: '4px',
+          fontWeight: '500'
+        }}>
+          <span>{getTrendIcon()}</span>
+          <span>{Math.abs(trend)}%</span>
+          {trendLabel && <span style={{ color: '#666', fontWeight: '400' }}>{trendLabel}</span>}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Empty State =====
+      {
+        template_id: 'atomic-display-emptystate',
+        template_name: 'Empty State',
+        category: 'base',
+        description: 'Empty state placeholder',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  icon = '📭',
+  title = 'Aucun élément',
+  description = '',
+  action = null,
+  actionLabel = '',
+  onAction = () => {},
+  size = 'md'
+}) => {
+  const sizes = {
+    sm: { iconSize: '32px', titleSize: '16px', descSize: '12px', padding: '20px' },
+    md: { iconSize: '48px', titleSize: '20px', descSize: '14px', padding: '40px' },
+    lg: { iconSize: '64px', titleSize: '24px', descSize: '16px', padding: '60px' }
+  };
+
+  const sizing = sizes[size];
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: sizing.padding,
+      textAlign: 'center',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {/* Icon */}
+      <div style={{
+        fontSize: sizing.iconSize,
+        marginBottom: '16px',
+        opacity: 0.5
+      }}>
+        {icon}
+      </div>
+
+      {/* Title */}
+      <div style={{
+        fontSize: sizing.titleSize,
+        fontWeight: '700',
+        color: '#161616',
+        marginBottom: description ? '8px' : '0'
+      }}>
+        {title}
+      </div>
+
+      {/* Description */}
+      {description && (
+        <div style={{
+          fontSize: sizing.descSize,
+          color: '#666',
+          maxWidth: '400px',
+          marginBottom: action ? '20px' : '0'
+        }}>
+          {description}
+        </div>
+      )}
+
+      {/* Action */}
+      {action || actionLabel ? (
+        action || (
+          <button
+            onClick={onAction}
+            style={{
+              padding: '10px 20px',
+              fontSize: '14px',
+              fontFamily: "'Marianne', Arial, sans-serif",
+              fontWeight: '500',
+              background: '#000091',
+              color: 'white',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.background = '#1212ff'}
+            onMouseLeave={(e) => e.currentTarget.style.background = '#000091'}
+          >
+            {actionLabel}
+          </button>
+        )
+      ) : null}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
       // ========================================
       // COMPOSITE COMPONENTS (Business Logic)
       // ========================================
