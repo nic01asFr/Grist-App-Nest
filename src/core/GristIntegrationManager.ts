@@ -50,12 +50,24 @@ class GristIntegrationManager extends GristSchemaManager {
       return true;
     }
 
-    // Check if new component architecture templates exist (migration)
+    // Check if migration to new component architecture is needed
     const hasBaseComponents = templates.some((t) => t.category === 'base');
     const hasCompositeComponents = templates.some((t) => t.category === 'composite');
     const hasFunctionalComponents = templates.some((t) => t.category === 'functional');
 
-    if (!hasBaseComponents || !hasCompositeComponents || !hasFunctionalComponents) {
+    // Check if page templates use refactored code (looking for getChildComponent usage)
+    const pageTemplates = templates.filter((t) => t.category === 'pages');
+    const pagesUseComposition = pageTemplates.some(
+      (t) => t.component_code?.includes('getChildComponent')
+    );
+
+    const needsMigration =
+      !hasBaseComponents ||
+      !hasCompositeComponents ||
+      !hasFunctionalComponents ||
+      !pagesUseComposition;
+
+    if (needsMigration) {
       Logger.log('🔄', 'Migrating to new component architecture...');
       await this.migrateToComponentArchitecture(templates);
       this.invalidateCache();
@@ -63,34 +75,71 @@ class GristIntegrationManager extends GristSchemaManager {
       return true;
     }
 
-    Logger.log('✅', 'CRM data already exists and is populated');
+    Logger.log('✅', 'CRM data already exists and is up to date');
     return false;
   }
 
   /**
-   * Migrate to component architecture by adding missing templates
+   * Migrate to component architecture by adding missing templates and updating existing pages
    */
   private async migrateToComponentArchitecture(existingTemplates: TemplateRecord[]): Promise<void> {
-    Logger.log('📦', 'Adding new component architecture templates...');
+    Logger.log('📦', 'Migrating to new component architecture...');
 
     try {
       const now = new Date().toISOString();
       const allTemplates = this.getAllTemplateDefinitions(now);
 
-      // Get existing template IDs
-      const existingIds = new Set(existingTemplates.map((t) => t.template_id));
+      // Create maps for efficient lookup
+      const existingMap = new Map(existingTemplates.map((t) => [t.template_id, t]));
+      const newTemplatesMap = new Map(allTemplates.filter(t => t.template_id).map((t) => [t.template_id, t]));
 
-      // Filter to only new templates (with valid template_id)
-      const newTemplates = allTemplates.filter(
-        (t) => t.template_id && !existingIds.has(t.template_id)
+      // 1. Add completely new templates (base, composite, functional components)
+      const templatesToAdd = allTemplates.filter(
+        (t) => t.template_id && !existingMap.has(t.template_id)
       );
 
-      if (newTemplates.length > 0) {
-        Logger.log('➕', `Adding ${newTemplates.length} new templates...`);
-        await this.addRecords('Templates', newTemplates);
-        Logger.success(`Added ${newTemplates.length} new templates`);
+      if (templatesToAdd.length > 0) {
+        Logger.log('➕', `Adding ${templatesToAdd.length} new templates...`);
+        await this.addRecords('Templates', templatesToAdd);
+        Logger.success(`Added ${templatesToAdd.length} new templates`);
+      }
+
+      // 2. Update existing page templates with refactored code
+      const pageTemplateIds = ['page-dashboard', 'page-companies', 'page-contacts', 'page-opportunities', 'page-activities'];
+      const templatesToUpdate: Array<{ id: number; updates: Partial<TemplateRecord> }> = [];
+
+      for (const pageId of pageTemplateIds) {
+        const existing = existingMap.get(pageId);
+        const newDef = newTemplatesMap.get(pageId);
+
+        if (existing && newDef) {
+          // Check if code needs updating (compare trimmed code to avoid whitespace differences)
+          const existingCode = existing.component_code?.trim() || '';
+          const newCode = newDef.component_code?.trim() || '';
+
+          if (existingCode !== newCode) {
+            templatesToUpdate.push({
+              id: existing.id,
+              updates: {
+                component_code: newDef.component_code,
+                description: newDef.description,
+                updated_at: now,
+              },
+            });
+          }
+        }
+      }
+
+      if (templatesToUpdate.length > 0) {
+        Logger.log('🔄', `Updating ${templatesToUpdate.length} existing page templates with refactored code...`);
+        for (const { id, updates } of templatesToUpdate) {
+          await window.grist.docApi.applyUserActions([
+            ['UpdateRecord', 'Templates', id, updates],
+          ]);
+        }
+        Logger.success(`Updated ${templatesToUpdate.length} page templates`);
       } else {
-        Logger.log('ℹ️', 'No new templates to add');
+        Logger.log('ℹ️', 'No page templates need updating');
       }
     } catch (error) {
       Logger.error('Error migrating to component architecture:', error);
