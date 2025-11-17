@@ -1016,6 +1016,922 @@ const Component = ({
         `.trim(),
       },
 
+      // ===== BASE: Textarea =====
+      {
+        template_id: 'base-textarea',
+        template_name: 'DSFR Textarea',
+        category: 'base',
+        description: 'DSFR Textarea component with validation',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  placeholder = '',
+  label = '',
+  error = '',
+  rows = 4,
+  maxLength = null,
+  disabled = false,
+  required = false
+}) => {
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <textarea
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        rows={rows}
+        maxLength={maxLength}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          padding: '12px',
+          fontSize: '16px',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          border: error ? '2px solid #e1000f' : '1px solid #ddd',
+          borderRadius: '4px',
+          resize: 'vertical',
+          boxSizing: 'border-box',
+          background: disabled ? '#f6f6f6' : 'white',
+          cursor: disabled ? 'not-allowed' : 'text'
+        }}
+      />
+      {maxLength && (
+        <div style={{ fontSize: '12px', color: '#666', marginTop: '4px', textAlign: 'right' }}>
+          {value.length} / {maxLength}
+        </div>
+      )}
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Checkbox =====
+      {
+        template_id: 'base-checkbox',
+        template_name: 'DSFR Checkbox',
+        category: 'base',
+        description: 'DSFR Checkbox component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  checked = false,
+  onChange = () => {},
+  label = '',
+  disabled = false,
+  id = 'checkbox-' + Math.random().toString(36).substr(2, 9)
+}) => {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '8px',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      cursor: disabled ? 'not-allowed' : 'pointer',
+      opacity: disabled ? 0.6 : 1
+    }}>
+      <input
+        type="checkbox"
+        id={id}
+        checked={checked}
+        onChange={(e) => onChange(e.target.checked)}
+        disabled={disabled}
+        style={{
+          width: '20px',
+          height: '20px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          accentColor: '#000091'
+        }}
+      />
+      {label && (
+        <label
+          htmlFor={id}
+          style={{
+            fontSize: '16px',
+            color: '#161616',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            userSelect: 'none'
+          }}
+        >
+          {label}
+        </label>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Radio =====
+      {
+        template_id: 'base-radio',
+        template_name: 'DSFR Radio',
+        category: 'base',
+        description: 'DSFR Radio button group',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  options = [],
+  value = '',
+  onChange = () => {},
+  label = '',
+  name = 'radio-' + Math.random().toString(36).substr(2, 9),
+  disabled = false
+}) => {
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <div style={{
+          marginBottom: '12px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+        </div>
+      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+        {options.map((option, index) => (
+          <div
+            key={index}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              cursor: disabled ? 'not-allowed' : 'pointer',
+              opacity: disabled ? 0.6 : 1
+            }}
+          >
+            <input
+              type="radio"
+              id={\`\${name}-\${index}\`}
+              name={name}
+              value={option.value}
+              checked={value === option.value}
+              onChange={() => onChange(option.value)}
+              disabled={disabled}
+              style={{
+                width: '20px',
+                height: '20px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                accentColor: '#000091'
+              }}
+            />
+            <label
+              htmlFor={\`\${name}-\${index}\`}
+              style={{
+                fontSize: '16px',
+                color: '#161616',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                userSelect: 'none'
+              }}
+            >
+              {option.label}
+            </label>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Switch =====
+      {
+        template_id: 'base-switch',
+        template_name: 'DSFR Switch',
+        category: 'base',
+        description: 'DSFR Toggle switch component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  checked = false,
+  onChange = () => {},
+  label = '',
+  disabled = false
+}) => {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: '12px',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      opacity: disabled ? 0.6 : 1
+    }}>
+      <div
+        onClick={() => !disabled && onChange(!checked)}
+        style={{
+          width: '48px',
+          height: '24px',
+          background: checked ? '#000091' : '#ddd',
+          borderRadius: '12px',
+          position: 'relative',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          transition: 'background 0.2s'
+        }}
+      >
+        <div style={{
+          position: 'absolute',
+          top: '2px',
+          left: checked ? '26px' : '2px',
+          width: '20px',
+          height: '20px',
+          background: 'white',
+          borderRadius: '50%',
+          transition: 'left 0.2s',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+        }} />
+      </div>
+      {label && (
+        <span style={{
+          fontSize: '16px',
+          color: '#161616',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          userSelect: 'none'
+        }} onClick={() => !disabled && onChange(!checked)}>
+          {label}
+        </span>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Tooltip =====
+      {
+        template_id: 'base-tooltip',
+        template_name: 'DSFR Tooltip',
+        category: 'base',
+        description: 'DSFR Tooltip component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  content = '',
+  children,
+  position = 'top'
+}) => {
+  const [visible, setVisible] = useState(false);
+
+  const positions = {
+    top: { bottom: '100%', left: '50%', transform: 'translateX(-50%)', marginBottom: '8px' },
+    bottom: { top: '100%', left: '50%', transform: 'translateX(-50%)', marginTop: '8px' },
+    left: { right: '100%', top: '50%', transform: 'translateY(-50%)', marginRight: '8px' },
+    right: { left: '100%', top: '50%', transform: 'translateY(-50%)', marginLeft: '8px' }
+  };
+
+  return (
+    <div
+      style={{ position: 'relative', display: 'inline-block' }}
+      onMouseEnter={() => setVisible(true)}
+      onMouseLeave={() => setVisible(false)}
+    >
+      {children}
+      {visible && content && (
+        <div style={{
+          position: 'absolute',
+          ...positions[position],
+          background: '#161616',
+          color: 'white',
+          padding: '8px 12px',
+          borderRadius: '4px',
+          fontSize: '14px',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          whiteSpace: 'nowrap',
+          zIndex: 1000,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+        }}>
+          {content}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Tabs =====
+      {
+        template_id: 'base-tabs',
+        template_name: 'DSFR Tabs',
+        category: 'base',
+        description: 'DSFR Tabs navigation component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  tabs = [],
+  activeTab = 0,
+  onChange = () => {}
+}) => {
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {/* Tab Headers */}
+      <div style={{
+        display: 'flex',
+        borderBottom: '2px solid #e5e5e5',
+        gap: '4px'
+      }}>
+        {tabs.map((tab, index) => (
+          <button
+            key={index}
+            onClick={() => onChange(index)}
+            style={{
+              padding: '12px 24px',
+              fontSize: '16px',
+              fontWeight: activeTab === index ? '700' : '400',
+              color: activeTab === index ? '#000091' : '#666',
+              background: 'transparent',
+              border: 'none',
+              borderBottom: activeTab === index ? '3px solid #000091' : '3px solid transparent',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+              marginBottom: '-2px'
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Tab Content */}
+      <div style={{ padding: '24px 0' }}>
+        {tabs[activeTab]?.content}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Accordion =====
+      {
+        template_id: 'base-accordion',
+        template_name: 'DSFR Accordion',
+        category: 'base',
+        description: 'DSFR Accordion/Collapsible component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  title = '',
+  children,
+  defaultOpen = false
+}) => {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div style={{
+      border: '1px solid #e5e5e5',
+      borderRadius: '4px',
+      marginBottom: '8px',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {/* Header */}
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          padding: '16px',
+          background: '#f6f6f6',
+          cursor: 'pointer',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          fontWeight: '500',
+          color: '#161616',
+          userSelect: 'none'
+        }}
+      >
+        <span>{title}</span>
+        <span style={{
+          transform: isOpen ? 'rotate(180deg)' : 'rotate(0deg)',
+          transition: 'transform 0.2s',
+          fontSize: '12px'
+        }}>
+          ▼
+        </span>
+      </div>
+
+      {/* Content */}
+      {isOpen && (
+        <div style={{
+          padding: '16px',
+          borderTop: '1px solid #e5e5e5'
+        }}>
+          {children}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Breadcrumb =====
+      {
+        template_id: 'base-breadcrumb',
+        template_name: 'DSFR Breadcrumb',
+        category: 'base',
+        description: 'DSFR Breadcrumb navigation component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  items = [],
+  separator = '›'
+}) => {
+  return (
+    <nav style={{
+      fontFamily: "'Marianne', Arial, sans-serif",
+      fontSize: '14px',
+      color: '#666',
+      marginBottom: '16px'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+        {items.map((item, index) => (
+          <React.Fragment key={index}>
+            <span
+              onClick={item.onClick}
+              style={{
+                color: index === items.length - 1 ? '#161616' : '#000091',
+                cursor: item.onClick ? 'pointer' : 'default',
+                textDecoration: item.onClick && index !== items.length - 1 ? 'underline' : 'none',
+                fontWeight: index === items.length - 1 ? '500' : '400'
+              }}
+            >
+              {item.label}
+            </span>
+            {index < items.length - 1 && (
+              <span style={{ color: '#999' }}>{separator}</span>
+            )}
+          </React.Fragment>
+        ))}
+      </div>
+    </nav>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Pagination =====
+      {
+        template_id: 'base-pagination',
+        template_name: 'DSFR Pagination',
+        category: 'base',
+        description: 'DSFR Pagination component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  currentPage = 1,
+  totalPages = 1,
+  onPageChange = () => {},
+  maxVisible = 5
+}) => {
+  const getPageNumbers = () => {
+    const pages = [];
+    let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+    let end = Math.min(totalPages, start + maxVisible - 1);
+
+    if (end - start + 1 < maxVisible) {
+      start = Math.max(1, end - maxVisible + 1);
+    }
+
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  };
+
+  const PageButton = ({ page, active }) => (
+    <button
+      onClick={() => onPageChange(page)}
+      disabled={active}
+      style={{
+        padding: '8px 12px',
+        minWidth: '40px',
+        fontSize: '14px',
+        fontFamily: "'Marianne', Arial, sans-serif",
+        background: active ? '#000091' : 'white',
+        color: active ? 'white' : '#161616',
+        border: '1px solid #ddd',
+        borderRadius: '4px',
+        cursor: active ? 'default' : 'pointer',
+        fontWeight: active ? '700' : '400'
+      }}
+    >
+      {page}
+    </button>
+  );
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: '4px',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '16px 0',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {/* Previous */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        style={{
+          padding: '8px 12px',
+          fontSize: '14px',
+          background: 'white',
+          color: currentPage === 1 ? '#999' : '#000091',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          cursor: currentPage === 1 ? 'not-allowed' : 'pointer'
+        }}
+      >
+        ‹ Précédent
+      </button>
+
+      {/* First page */}
+      {getPageNumbers()[0] > 1 && (
+        <>
+          <PageButton page={1} active={currentPage === 1} />
+          {getPageNumbers()[0] > 2 && <span style={{ padding: '0 8px' }}>...</span>}
+        </>
+      )}
+
+      {/* Page numbers */}
+      {getPageNumbers().map(page => (
+        <PageButton key={page} page={page} active={currentPage === page} />
+      ))}
+
+      {/* Last page */}
+      {getPageNumbers()[getPageNumbers().length - 1] < totalPages && (
+        <>
+          {getPageNumbers()[getPageNumbers().length - 1] < totalPages - 1 && (
+            <span style={{ padding: '0 8px' }}>...</span>
+          )}
+          <PageButton page={totalPages} active={currentPage === totalPages} />
+        </>
+      )}
+
+      {/* Next */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        style={{
+          padding: '8px 12px',
+          fontSize: '14px',
+          background: 'white',
+          color: currentPage === totalPages ? '#999' : '#000091',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          cursor: currentPage === totalPages ? 'not-allowed' : 'pointer'
+        }}
+      >
+        Suivant ›
+      </button>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Spinner =====
+      {
+        template_id: 'base-spinner',
+        template_name: 'DSFR Spinner',
+        category: 'base',
+        description: 'DSFR Loading spinner component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  size = 'md',
+  color = '#000091',
+  text = ''
+}) => {
+  const sizes = {
+    sm: 16,
+    md: 32,
+    lg: 48,
+    xl: 64
+  };
+
+  const spinnerSize = sizes[size];
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      gap: '12px',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      <div style={{
+        width: spinnerSize,
+        height: spinnerSize,
+        border: \`3px solid \${color}20\`,
+        borderTop: \`3px solid \${color}\`,
+        borderRadius: '50%',
+        animation: 'spin 1s linear infinite'
+      }} />
+      {text && (
+        <div style={{ fontSize: '14px', color: '#666' }}>
+          {text}
+        </div>
+      )}
+      <style>
+        {\`
+          @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+          }
+        \`}
+      </style>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: ProgressBar =====
+      {
+        template_id: 'base-progressbar',
+        template_name: 'DSFR ProgressBar',
+        category: 'base',
+        description: 'DSFR Progress bar component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = 0,
+  max = 100,
+  label = '',
+  showPercentage = true,
+  color = '#000091',
+  height = 8
+}) => {
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif", width: '100%' }}>
+      {/* Label and percentage */}
+      {(label || showPercentage) && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          marginBottom: '8px',
+          fontSize: '14px',
+          color: '#161616'
+        }}>
+          {label && <span>{label}</span>}
+          {showPercentage && <span style={{ fontWeight: '500' }}>{Math.round(percentage)}%</span>}
+        </div>
+      )}
+
+      {/* Progress bar */}
+      <div style={{
+        width: '100%',
+        height: height,
+        background: '#e5e5e5',
+        borderRadius: height / 2,
+        overflow: 'hidden'
+      }}>
+        <div style={{
+          width: \`\${percentage}%\`,
+          height: '100%',
+          background: color,
+          transition: 'width 0.3s ease',
+          borderRadius: height / 2
+        }} />
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Avatar =====
+      {
+        template_id: 'base-avatar',
+        template_name: 'DSFR Avatar',
+        category: 'base',
+        description: 'DSFR Avatar component with initials',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  name = '',
+  src = null,
+  size = 'md',
+  color = '#000091'
+}) => {
+  const sizes = {
+    sm: 32,
+    md: 48,
+    lg: 64,
+    xl: 96
+  };
+
+  const avatarSize = sizes[size];
+
+  const getInitials = (name) => {
+    if (!name) return '?';
+    const parts = name.trim().split(' ');
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
+
+  return (
+    <div style={{
+      width: avatarSize,
+      height: avatarSize,
+      borderRadius: '50%',
+      background: src ? 'transparent' : color,
+      color: 'white',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: avatarSize / 2.5,
+      fontWeight: '700',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      overflow: 'hidden',
+      flexShrink: 0
+    }}>
+      {src ? (
+        <img src={src} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+      ) : (
+        <span>{getInitials(name)}</span>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: SearchInput =====
+      {
+        template_id: 'base-search-input',
+        template_name: 'DSFR Search Input',
+        category: 'base',
+        description: 'DSFR Search input with icon',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  onSearch = () => {},
+  placeholder = 'Rechercher...',
+  disabled = false
+}) => {
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      onSearch(value);
+    }
+  };
+
+  return (
+    <div style={{
+      position: 'relative',
+      width: '100%',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onKeyPress={handleKeyPress}
+        placeholder={placeholder}
+        disabled={disabled}
+        style={{
+          width: '100%',
+          padding: '12px 44px 12px 16px',
+          fontSize: '16px',
+          border: '1px solid #ddd',
+          borderRadius: '4px',
+          boxSizing: 'border-box',
+          background: disabled ? '#f6f6f6' : 'white'
+        }}
+      />
+      <button
+        onClick={() => onSearch(value)}
+        disabled={disabled}
+        style={{
+          position: 'absolute',
+          right: '4px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          width: '36px',
+          height: '36px',
+          background: '#000091',
+          color: 'white',
+          border: 'none',
+          borderRadius: '4px',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '16px'
+        }}
+      >
+        🔍
+      </button>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Divider =====
+      {
+        template_id: 'base-divider',
+        template_name: 'DSFR Divider',
+        category: 'base',
+        description: 'DSFR Divider/Separator component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  orientation = 'horizontal',
+  text = '',
+  spacing = 16
+}) => {
+  if (orientation === 'vertical') {
+    return (
+      <div style={{
+        width: '1px',
+        background: '#e5e5e5',
+        margin: \`0 \${spacing}px\`,
+        alignSelf: 'stretch'
+      }} />
+    );
+  }
+
+  if (text) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        margin: \`\${spacing}px 0\`,
+        fontFamily: "'Marianne', Arial, sans-serif"
+      }}>
+        <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
+        <span style={{ padding: '0 16px', fontSize: '14px', color: '#666' }}>{text}</span>
+        <div style={{ flex: 1, height: '1px', background: '#e5e5e5' }} />
+      </div>
+    );
+  }
+
+  return (
+    <div style={{
+      height: '1px',
+      background: '#e5e5e5',
+      margin: \`\${spacing}px 0\`
+    }} />
+  );
+};
+        `.trim(),
+      },
+
       // ========================================
       // COMPOSITE COMPONENTS (Business Logic)
       // ========================================
@@ -1880,6 +2796,787 @@ const Component = ({ onRowClick = null }) => {
       striped={true}
       caption={\`\${activities.length} activités\`}
     />
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Data Table with Pagination =====
+      {
+        template_id: 'data-table-advanced',
+        template_name: 'Advanced Data Table',
+        category: 'composite',
+        description: 'Advanced table with sorting, filtering, and pagination',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  data = [],
+  columns = [],
+  pageSize = 10,
+  searchable = true,
+  sortable = true
+}) => {
+  const [Table, setTable] = useState(null);
+  const [SearchInput, setSearchInput] = useState(null);
+  const [Pagination, setPagination] = useState(null);
+  const [Spinner, setSpinner] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortKey, setSortKey] = useState('');
+  const [sortDir, setSortDir] = useState('asc');
+
+  useEffect(() => {
+    const load = async () => {
+      const [TableComp, SearchComp, PaginationComp, SpinnerComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('base-search-input'),
+        gristAPI.getChildComponent('base-pagination'),
+        gristAPI.getChildComponent('base-spinner')
+      ]);
+      setTable(() => TableComp);
+      setSearchInput(() => SearchComp);
+      setPagination(() => PaginationComp);
+      setSpinner(() => SpinnerComp);
+    };
+    load();
+  }, []);
+
+  if (!Table || !SearchInput || !Pagination || !Spinner) {
+    return <Spinner size="md" text="Chargement..." />;
+  }
+
+  // Filter data
+  let filtered = data;
+  if (searchTerm && searchable) {
+    filtered = data.filter(row =>
+      columns.some(col =>
+        String(row[col.key] || '').toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    );
+  }
+
+  // Sort data
+  if (sortKey && sortable) {
+    filtered = [...filtered].sort((a, b) => {
+      const aVal = a[sortKey];
+      const bVal = b[sortKey];
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1;
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+  }
+
+  // Paginate
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const start = (currentPage - 1) * pageSize;
+  const paginatedData = filtered.slice(start, start + pageSize);
+
+  const enhancedColumns = columns.map(col => ({
+    ...col,
+    onClick: sortable ? () => {
+      if (sortKey === col.key) {
+        setSortDir(sortDir === 'asc' ? 'desc' : 'asc');
+      } else {
+        setSortKey(col.key);
+        setSortDir('asc');
+      }
+    } : null
+  }));
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {searchable && (
+        <div style={{ marginBottom: '16px' }}>
+          <SearchInput
+            value={searchTerm}
+            onChange={setSearchTerm}
+            onSearch={() => {}}
+            placeholder="Rechercher dans le tableau..."
+          />
+        </div>
+      )}
+
+      <Table
+        columns={enhancedColumns}
+        data={paginatedData}
+        striped={true}
+        caption={\`\${filtered.length} résultats\`}
+      />
+
+      {totalPages > 1 && (
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+          maxVisible={5}
+        />
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Search Bar with Filters =====
+      {
+        template_id: 'search-bar-filtered',
+        template_name: 'Search Bar with Filters',
+        category: 'composite',
+        description: 'Search bar with filter dropdown',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  onSearch = () => {},
+  filters = [],
+  placeholder = 'Rechercher...'
+}) => {
+  const [SearchInput, setSearchInput] = useState(null);
+  const [Select, setSelect] = useState(null);
+  const [searchValue, setSearchValue] = useState('');
+  const [selectedFilters, setSelectedFilters] = useState({});
+
+  useEffect(() => {
+    const load = async () => {
+      const [SearchComp, SelectComp] = await Promise.all([
+        gristAPI.getChildComponent('base-search-input'),
+        gristAPI.getChildComponent('base-select')
+      ]);
+      setSearchInput(() => SearchComp);
+      setSelect(() => SelectComp);
+    };
+    load();
+  }, []);
+
+  if (!SearchInput || !Select) return <div>Chargement...</div>;
+
+  const handleSearch = () => {
+    onSearch({ term: searchValue, filters: selectedFilters });
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      gap: '12px',
+      alignItems: 'flex-end',
+      flexWrap: 'wrap',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      <div style={{ flex: '1 1 300px' }}>
+        <SearchInput
+          value={searchValue}
+          onChange={setSearchValue}
+          onSearch={handleSearch}
+          placeholder={placeholder}
+        />
+      </div>
+
+      {filters.map((filter, index) => (
+        <div key={index} style={{ flex: '0 1 200px' }}>
+          <Select
+            label={filter.label}
+            options={filter.options}
+            value={selectedFilters[filter.key] || ''}
+            onChange={(value) => {
+              const newFilters = { ...selectedFilters, [filter.key]: value };
+              setSelectedFilters(newFilters);
+              onSearch({ term: searchValue, filters: newFilters });
+            }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Stats Card with Chart =====
+      {
+        template_id: 'stats-card-chart',
+        template_name: 'Stats Card with Chart',
+        category: 'composite',
+        description: 'Statistics card with mini chart',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  title = '',
+  value = 0,
+  subtitle = '',
+  trend = null,
+  icon = '📊',
+  color = '#000091',
+  data = []
+}) => {
+  const [Card, setCard] = useState(null);
+  const [ProgressBar, setProgressBar] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const [CardComp, ProgressComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-progressbar')
+      ]);
+      setCard(() => CardComp);
+      setProgressBar(() => ProgressComp);
+    };
+    load();
+  }, []);
+
+  if (!Card || !ProgressBar) return null;
+
+  const trendColor = trend > 0 ? '#18753c' : trend < 0 ? '#e1000f' : '#666';
+  const trendIcon = trend > 0 ? '↑' : trend < 0 ? '↓' : '→';
+
+  return (
+    <Card>
+      <div style={{ padding: '20px' }}>
+        {/* Header */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontSize: '14px', color: '#666', marginBottom: '4px' }}>{title}</div>
+            <div style={{ fontSize: '32px', fontWeight: '700', color: '#161616' }}>{value}</div>
+            {subtitle && <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>{subtitle}</div>}
+          </div>
+          <div style={{ fontSize: '32px', opacity: 0.7 }}>{icon}</div>
+        </div>
+
+        {/* Trend */}
+        {trend !== null && (
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+            fontSize: '14px',
+            color: trendColor,
+            fontWeight: '500',
+            marginBottom: '12px'
+          }}>
+            <span>{trendIcon}</span>
+            <span>{Math.abs(trend)}%</span>
+            <span style={{ color: '#666', fontWeight: '400' }}>vs période précédente</span>
+          </div>
+        )}
+
+        {/* Mini chart / Progress */}
+        {data.length > 0 && (
+          <ProgressBar
+            value={data[data.length - 1]}
+            max={Math.max(...data)}
+            color={color}
+            showPercentage={false}
+            height={4}
+          />
+        )}
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Timeline =====
+      {
+        template_id: 'timeline-events',
+        template_name: 'Timeline Events',
+        category: 'composite',
+        description: 'Timeline view of events/activities',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  events = [],
+  title = 'Timeline'
+}) => {
+  const [Badge, setBadge] = useState(null);
+  const [Avatar, setAvatar] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const [BadgeComp, AvatarComp] = await Promise.all([
+        gristAPI.getChildComponent('base-badge'),
+        gristAPI.getChildComponent('base-avatar')
+      ]);
+      setBadge(() => BadgeComp);
+      setAvatar(() => AvatarComp);
+    };
+    load();
+  }, []);
+
+  if (!Badge || !Avatar) return <div>Chargement...</div>;
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {title && <h3 style={{ marginBottom: '24px', fontSize: '20px', fontWeight: '700' }}>{title}</h3>}
+
+      <div style={{ position: 'relative' }}>
+        {/* Vertical line */}
+        <div style={{
+          position: 'absolute',
+          left: '20px',
+          top: '0',
+          bottom: '0',
+          width: '2px',
+          background: '#e5e5e5'
+        }} />
+
+        {/* Events */}
+        {events.map((event, index) => (
+          <div
+            key={index}
+            style={{
+              position: 'relative',
+              paddingLeft: '56px',
+              paddingBottom: '24px'
+            }}
+          >
+            {/* Dot */}
+            <div style={{
+              position: 'absolute',
+              left: '12px',
+              top: '4px',
+              width: '16px',
+              height: '16px',
+              borderRadius: '50%',
+              background: event.color || '#000091',
+              border: '3px solid white',
+              boxShadow: '0 0 0 2px #e5e5e5'
+            }} />
+
+            {/* Content */}
+            <div style={{
+              background: '#f6f6f6',
+              padding: '12px 16px',
+              borderRadius: '8px',
+              border: '1px solid #e5e5e5'
+            }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                marginBottom: '8px'
+              }}>
+                <div style={{ fontWeight: '500', color: '#161616' }}>{event.title}</div>
+                {event.type && <Badge label={event.type} variant="default" size="sm" />}
+              </div>
+
+              {event.description && (
+                <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>
+                  {event.description}
+                </div>
+              )}
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                fontSize: '12px',
+                color: '#999'
+              }}>
+                <span>{event.date ? new Date(event.date).toLocaleDateString('fr-FR') : ''}</span>
+                {event.user && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <Avatar name={event.user} size="sm" />
+                    <span>{event.user}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Kanban Board =====
+      {
+        template_id: 'kanban-board',
+        template_name: 'Kanban Board',
+        category: 'composite',
+        description: 'Kanban board for opportunities/tasks',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  columns = [],
+  items = [],
+  onItemClick = () => {},
+  onStatusChange = () => {}
+}) => {
+  const [Card, setCard] = useState(null);
+  const [Badge, setBadge] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const [CardComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setCard(() => CardComp);
+      setBadge(() => BadgeComp);
+    };
+    load();
+  }, []);
+
+  if (!Card || !Badge) return <div>Chargement...</div>;
+
+  return (
+    <div style={{
+      display: 'grid',
+      gridTemplateColumns: \`repeat(\${columns.length}, 1fr)\`,
+      gap: '16px',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      overflowX: 'auto'
+    }}>
+      {columns.map((column, colIndex) => {
+        const columnItems = items.filter(item => item.status === column.value);
+
+        return (
+          <div key={colIndex} style={{ minWidth: '280px' }}>
+            {/* Column Header */}
+            <div style={{
+              padding: '12px 16px',
+              background: column.color || '#f6f6f6',
+              borderRadius: '8px 8px 0 0',
+              fontWeight: '700',
+              color: '#161616',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span>{column.label}</span>
+              <Badge label={columnItems.length.toString()} variant="default" size="sm" />
+            </div>
+
+            {/* Column Content */}
+            <div style={{
+              background: '#f6f6f6',
+              padding: '12px',
+              borderRadius: '0 0 8px 8px',
+              minHeight: '400px'
+            }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {columnItems.map((item, itemIndex) => (
+                  <div
+                    key={itemIndex}
+                    onClick={() => onItemClick(item)}
+                    style={{ cursor: 'pointer' }}
+                  >
+                    <Card>
+                      <div style={{ padding: '12px' }}>
+                        <div style={{ fontWeight: '500', marginBottom: '8px', color: '#161616' }}>
+                          {item.title}
+                        </div>
+                        {item.amount && (
+                          <div style={{ fontSize: '18px', fontWeight: '700', color: '#000091', marginBottom: '8px' }}>
+                            {item.amount.toLocaleString('fr-FR')} €
+                          </div>
+                        )}
+                        {item.company && (
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            {item.company}
+                          </div>
+                        )}
+                        {item.probability && (
+                          <div style={{ marginTop: '8px' }}>
+                            <div style={{
+                              height: '4px',
+                              background: '#e5e5e5',
+                              borderRadius: '2px',
+                              overflow: 'hidden'
+                            }}>
+                              <div style={{
+                                width: \`\${item.probability}%\`,
+                                height: '100%',
+                                background: '#000091'
+                              }} />
+                            </div>
+                            <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                              {item.probability}% de probabilité
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </Card>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Quick Actions Menu =====
+      {
+        template_id: 'quick-actions-menu',
+        template_name: 'Quick Actions Menu',
+        category: 'composite',
+        description: 'Floating quick actions menu',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  actions = [],
+  position = 'bottom-right'
+}) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [Button, setButton] = useState(null);
+
+  useEffect(() => {
+    const load = async () => {
+      const ButtonComp = await gristAPI.getChildComponent('base-button');
+      setButton(() => ButtonComp);
+    };
+    load();
+  }, []);
+
+  if (!Button) return null;
+
+  const positions = {
+    'bottom-right': { bottom: '24px', right: '24px' },
+    'bottom-left': { bottom: '24px', left: '24px' },
+    'top-right': { top: '24px', right: '24px' },
+    'top-left': { top: '24px', left: '24px' }
+  };
+
+  return (
+    <div style={{
+      position: 'fixed',
+      ...positions[position],
+      zIndex: 1000,
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {/* Actions Menu */}
+      {isOpen && (
+        <div style={{
+          position: 'absolute',
+          bottom: '72px',
+          right: '0',
+          background: 'white',
+          border: '1px solid #e5e5e5',
+          borderRadius: '8px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          padding: '8px',
+          minWidth: '200px'
+        }}>
+          {actions.map((action, index) => (
+            <button
+              key={index}
+              onClick={() => {
+                action.onClick();
+                setIsOpen(false);
+              }}
+              style={{
+                width: '100%',
+                padding: '12px 16px',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                textAlign: 'left',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px',
+                fontSize: '14px',
+                color: '#161616',
+                borderRadius: '4px',
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#f6f6f6'}
+              onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+            >
+              <span style={{ fontSize: '20px' }}>{action.icon}</span>
+              <span>{action.label}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Toggle Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        style={{
+          width: '56px',
+          height: '56px',
+          borderRadius: '50%',
+          background: '#000091',
+          color: 'white',
+          border: 'none',
+          fontSize: '24px',
+          cursor: 'pointer',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          transition: 'transform 0.2s, background 0.2s',
+          transform: isOpen ? 'rotate(45deg)' : 'rotate(0deg)'
+        }}
+        onMouseEnter={(e) => e.currentTarget.style.background = '#1212ff'}
+        onMouseLeave={(e) => e.currentTarget.style.background = '#000091'}
+      >
+        +
+      </button>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Activity Feed =====
+      {
+        template_id: 'activity-feed-recent',
+        template_name: 'Recent Activity Feed',
+        category: 'composite',
+        description: 'Feed of recent activities',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  limit = 10,
+  title = 'Activités récentes'
+}) => {
+  const [activities, setActivities] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [Avatar, setAvatar] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const load = async () => {
+      const [AvatarComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-avatar'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setAvatar(() => AvatarComp);
+      setBadge(() => BadgeComp);
+
+      const [activitiesData, companiesData] = await Promise.all([
+        gristAPI.getData('Activities'),
+        gristAPI.getData('Companies')
+      ]);
+
+      setActivities(activitiesData.slice(0, limit));
+      setCompanies(companiesData);
+      setLoading(false);
+    };
+    load();
+  }, [limit]);
+
+  if (loading || !Avatar || !Badge) return <div>Chargement...</div>;
+
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : 'N/A';
+  };
+
+  const getActivityIcon = (type) => {
+    const icons = {
+      'meeting': '🤝',
+      'call': '📞',
+      'email': '📧',
+      'task': '✓',
+      'note': '📝'
+    };
+    return icons[type] || '📋';
+  };
+
+  const getTimeAgo = (date) => {
+    if (!date) return '';
+    const now = new Date();
+    const past = new Date(date);
+    const diffMs = now - past;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return \`il y a \${diffMins}min\`;
+    if (diffHours < 24) return \`il y a \${diffHours}h\`;
+    return \`il y a \${diffDays}j\`;
+  };
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {title && <h3 style={{ marginBottom: '16px', fontSize: '18px', fontWeight: '700' }}>{title}</h3>}
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        {activities.map((activity, index) => (
+          <div
+            key={index}
+            style={{
+              display: 'flex',
+              gap: '12px',
+              padding: '12px',
+              background: '#f6f6f6',
+              borderRadius: '8px',
+              border: '1px solid #e5e5e5'
+            }}
+          >
+            <div style={{ fontSize: '24px', flexShrink: 0 }}>
+              {getActivityIcon(activity.type)}
+            </div>
+
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{
+                fontWeight: '500',
+                color: '#161616',
+                marginBottom: '4px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap'
+              }}>
+                {activity.title}
+              </div>
+
+              <div style={{ fontSize: '12px', color: '#666', marginBottom: '8px' }}>
+                {getCompanyName(activity.company_id)}
+              </div>
+
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span style={{ fontSize: '11px', color: '#999' }}>
+                  {getTimeAgo(activity.scheduled_date)}
+                </span>
+                <Badge
+                  label={activity.completed ? 'Terminée' : 'En cours'}
+                  variant={activity.completed ? 'success' : 'default'}
+                  size="sm"
+                />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {activities.length === 0 && (
+        <div style={{
+          textAlign: 'center',
+          padding: '40px 20px',
+          color: '#999',
+          fontSize: '14px'
+        }}>
+          Aucune activité récente
+        </div>
+      )}
+    </div>
   );
 };
         `.trim(),
