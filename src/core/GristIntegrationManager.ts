@@ -3713,6 +3713,122 @@ const Component = ({ label, value, icon, color = '#000091', trend = null }) => {
         `.trim(),
       },
 
+      // ===== COMPOSITE: Universal Data Table =====
+      {
+        template_id: 'data-table',
+        template_name: 'Universal Data Table',
+        category: 'composite',
+        description: 'Universal table with multi-mode display (table/list/grid/cards) - for all business apps',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  data = [],
+  columns = [],
+  mode = 'table',
+  onRowClick = null,
+  striped = true,
+  caption = null,
+  emptyMessage = 'Aucune donnée disponible'
+}) => {
+  const [Table, setTable] = useState(null);
+  const [List, setList] = useState(null);
+  const [EmptyState, setEmptyState] = useState(null);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [TableComp, ListComp, EmptyComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('atomic-layout-list'),
+        gristAPI.getChildComponent('atomic-display-emptystate')
+      ]);
+      setTable(() => TableComp);
+      setList(() => ListComp);
+      setEmptyState(() => EmptyComp);
+    };
+    loadComponents();
+  }, []);
+
+  if (!Table || !List || !EmptyState) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
+  if (data.length === 0) {
+    return <EmptyState message={emptyMessage} icon="📊" />;
+  }
+
+  // TABLE MODE - use base-table
+  if (mode === 'table') {
+    return (
+      <Table
+        columns={columns}
+        data={data}
+        onRowClick={onRowClick}
+        striped={striped}
+        caption={caption}
+      />
+    );
+  }
+
+  // LIST/GRID/CARDS MODES - use atomic-layout-list
+  const renderRow = (item, index) => (
+    <div
+      onClick={() => onRowClick && onRowClick(item)}
+      style={{
+        cursor: onRowClick ? 'pointer' : 'default',
+        fontFamily: "'Marianne', Arial, sans-serif"
+      }}
+    >
+      {columns.map((col, colIndex) => {
+        const value = item[col.key];
+        const displayValue = col.render ? col.render(value, item) : value;
+
+        return (
+          <div
+            key={colIndex}
+            style={{
+              marginBottom: mode === 'list' ? '4px' : '8px',
+              fontSize: mode === 'cards' ? '14px' : '13px'
+            }}
+          >
+            {mode !== 'table' && (
+              <span style={{ fontWeight: '600', marginRight: '8px', color: '#666' }}>
+                {col.label}:
+              </span>
+            )}
+            <span>{displayValue || '-'}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  return (
+    <div>
+      {caption && (
+        <div style={{
+          fontFamily: "'Marianne', Arial, sans-serif",
+          fontSize: '14px',
+          color: '#666',
+          marginBottom: '12px',
+          fontWeight: '500'
+        }}>
+          {caption}
+        </div>
+      )}
+      <List
+        items={data}
+        mode={mode}
+        renderItem={renderRow}
+        striped={striped}
+      />
+    </div>
+  );
+};
+        `.trim(),
+      },
+
       // ===== COMPOSITE: Company Card =====
       {
         template_id: 'company-card',
@@ -4153,18 +4269,18 @@ const Component = ({ activity }) => {
         `.trim(),
       },
 
-      // ===== COMPOSITE: Company List =====
+      // ===== FUNCTIONAL: Company List =====
       {
         template_id: 'company-list',
         template_name: 'Company List',
-        category: 'composite',
-        description: 'Table of companies using DSFR table component',
+        category: 'functional',
+        description: 'Universal companies list with multi-mode display - uses data-table composite',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
-const Component = ({ onRowClick = null }) => {
-  const [Table, setTable] = useState(null);
+const Component = ({ onRowClick = null, mode = 'table' }) => {
+  const [DataTable, setDataTable] = useState(null);
   const [Badge, setBadge] = useState(null);
   const [companies, setCompanies] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -4172,10 +4288,10 @@ const Component = ({ onRowClick = null }) => {
   useEffect(() => {
     const loadComponents = async () => {
       const [TableComp, BadgeComp] = await Promise.all([
-        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('data-table'),
         gristAPI.getChildComponent('base-badge')
       ]);
-      setTable(() => TableComp);
+      setDataTable(() => TableComp);
       setBadge(() => BadgeComp);
     };
     loadComponents();
@@ -4190,7 +4306,7 @@ const Component = ({ onRowClick = null }) => {
     loadData();
   }, []);
 
-  if (!Table || !Badge || loading) {
+  if (!DataTable || !Badge || loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
@@ -4208,30 +4324,32 @@ const Component = ({ onRowClick = null }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
+    <DataTable
       data={companies}
+      columns={columns}
+      mode={mode}
       onRowClick={onRowClick}
       striped={true}
       caption={\`\${companies.length} entreprises\`}
+      emptyMessage="Aucune entreprise"
     />
   );
 };
         `.trim(),
       },
 
-      // ===== COMPOSITE: Contact List =====
+      // ===== FUNCTIONAL: Contact List =====
       {
         template_id: 'contact-list',
         template_name: 'Contact List',
-        category: 'composite',
-        description: 'Table of contacts using DSFR table component',
+        category: 'functional',
+        description: 'Universal contacts list with multi-mode display - uses data-table composite',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
-const Component = ({ onRowClick = null }) => {
-  const [Table, setTable] = useState(null);
+const Component = ({ onRowClick = null, mode = 'table' }) => {
+  const [DataTable, setDataTable] = useState(null);
   const [Badge, setBadge] = useState(null);
   const [contacts, setContacts] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -4240,10 +4358,10 @@ const Component = ({ onRowClick = null }) => {
   useEffect(() => {
     const loadComponents = async () => {
       const [TableComp, BadgeComp] = await Promise.all([
-        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('data-table'),
         gristAPI.getChildComponent('base-badge')
       ]);
-      setTable(() => TableComp);
+      setDataTable(() => TableComp);
       setBadge(() => BadgeComp);
     };
     loadComponents();
@@ -4262,7 +4380,7 @@ const Component = ({ onRowClick = null }) => {
     loadData();
   }, []);
 
-  if (!Table || !Badge || loading) {
+  if (!DataTable || !Badge || loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
@@ -4300,30 +4418,32 @@ const Component = ({ onRowClick = null }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
+    <DataTable
       data={contacts}
+      columns={columns}
+      mode={mode}
       onRowClick={onRowClick}
       striped={true}
       caption={\`\${contacts.length} contacts\`}
+      emptyMessage="Aucun contact"
     />
   );
 };
         `.trim(),
       },
 
-      // ===== COMPOSITE: Opportunity List =====
+      // ===== FUNCTIONAL: Opportunity List =====
       {
         template_id: 'opportunity-list',
         template_name: 'Opportunity List',
-        category: 'composite',
-        description: 'Table of opportunities using DSFR table component',
+        category: 'functional',
+        description: 'Universal opportunities list with multi-mode display - uses data-table composite',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
-const Component = ({ onRowClick = null }) => {
-  const [Table, setTable] = useState(null);
+const Component = ({ onRowClick = null, mode = 'table' }) => {
+  const [DataTable, setDataTable] = useState(null);
   const [Badge, setBadge] = useState(null);
   const [opportunities, setOpportunities] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -4332,10 +4452,10 @@ const Component = ({ onRowClick = null }) => {
   useEffect(() => {
     const loadComponents = async () => {
       const [TableComp, BadgeComp] = await Promise.all([
-        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('data-table'),
         gristAPI.getChildComponent('base-badge')
       ]);
-      setTable(() => TableComp);
+      setDataTable(() => TableComp);
       setBadge(() => BadgeComp);
     };
     loadComponents();
@@ -4354,7 +4474,7 @@ const Component = ({ onRowClick = null }) => {
     loadData();
   }, []);
 
-  if (!Table || !Badge || loading) {
+  if (!DataTable || !Badge || loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
@@ -4414,30 +4534,32 @@ const Component = ({ onRowClick = null }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
+    <DataTable
       data={opportunities}
+      columns={columns}
+      mode={mode}
       onRowClick={onRowClick}
       striped={true}
       caption={\`\${opportunities.length} opportunités\`}
+      emptyMessage="Aucune opportunité"
     />
   );
 };
         `.trim(),
       },
 
-      // ===== COMPOSITE: Activity List =====
+      // ===== FUNCTIONAL: Activity List =====
       {
         template_id: 'activity-list',
         template_name: 'Activity List',
-        category: 'composite',
-        description: 'Table of activities using DSFR table component',
+        category: 'functional',
+        description: 'Universal activities list with multi-mode display - uses data-table composite',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
-const Component = ({ onRowClick = null }) => {
-  const [Table, setTable] = useState(null);
+const Component = ({ onRowClick = null, mode = 'table' }) => {
+  const [DataTable, setDataTable] = useState(null);
   const [Badge, setBadge] = useState(null);
   const [activities, setActivities] = useState([]);
   const [companies, setCompanies] = useState([]);
@@ -4446,10 +4568,10 @@ const Component = ({ onRowClick = null }) => {
   useEffect(() => {
     const loadComponents = async () => {
       const [TableComp, BadgeComp] = await Promise.all([
-        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('data-table'),
         gristAPI.getChildComponent('base-badge')
       ]);
-      setTable(() => TableComp);
+      setDataTable(() => TableComp);
       setBadge(() => BadgeComp);
     };
     loadComponents();
@@ -4468,7 +4590,7 @@ const Component = ({ onRowClick = null }) => {
     loadData();
   }, []);
 
-  if (!Table || !Badge || loading) {
+  if (!DataTable || !Badge || loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
@@ -4516,12 +4638,14 @@ const Component = ({ onRowClick = null }) => {
   ];
 
   return (
-    <Table
-      columns={columns}
+    <DataTable
       data={activities}
+      columns={columns}
+      mode={mode}
       onRowClick={onRowClick}
       striped={true}
       caption={\`\${activities.length} activités\`}
+      emptyMessage="Aucune activité"
     />
   );
 };
