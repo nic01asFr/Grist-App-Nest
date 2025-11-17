@@ -1734,6 +1734,108 @@ const Component = ({ onRowClick = null }) => {
         `.trim(),
       },
 
+      // ===== COMPOSITE: Activity List =====
+      {
+        template_id: 'activity-list',
+        template_name: 'Activity List',
+        category: 'composite',
+        description: 'Table of activities using DSFR table component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ onRowClick = null }) => {
+  const [Table, setTable] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [activities, setActivities] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [TableComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setTable(() => TableComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [activitiesData, companiesData] = await Promise.all([
+        gristAPI.getData('Activities'),
+        gristAPI.getData('Companies')
+      ]);
+      setActivities(activitiesData);
+      setCompanies(companiesData);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  if (!Table || !Badge || loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : '-';
+  };
+
+  const getTypeVariant = (type) => {
+    const map = {
+      'Call': 'info',
+      'Email': 'info',
+      'Meeting': 'warning',
+      'Task': 'default'
+    };
+    return map[type] || 'default';
+  };
+
+  const columns = [
+    { key: 'subject', label: 'Sujet', align: 'left' },
+    {
+      key: 'type',
+      label: 'Type',
+      align: 'left',
+      render: (value) => <Badge label={value} variant={getTypeVariant(value)} size="sm" />
+    },
+    {
+      key: 'company_id',
+      label: 'Entreprise',
+      align: 'left',
+      render: (value) => value ? getCompanyName(value) : '-'
+    },
+    {
+      key: 'scheduled_date',
+      label: 'Date prévue',
+      align: 'left',
+      render: (value) => value ? new Date(value).toLocaleDateString('fr-FR') : '-'
+    },
+    {
+      key: 'completed',
+      label: 'Statut',
+      align: 'center',
+      render: (value) => value ? <Badge label="Terminée" variant="success" size="sm" /> : <Badge label="En cours" variant="default" size="sm" />
+    }
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      data={activities}
+      onRowClick={onRowClick}
+      striped={true}
+      caption={\`\${activities.length} activités\`}
+    />
+  );
+};
+        `.trim(),
+      },
+
       // ========================================
       // FUNCTIONAL COMPONENTS (Complete Features)
       // ========================================
@@ -2081,8 +2183,17 @@ const Component = ({
         updated_at: now,
         component_code: `
 const Component = () => {
+  const [MetricCard, setMetricCard] = useState(null);
   const [metrics, setMetrics] = useState({ companies: 0, contacts: 0, opportunities: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadComponent = async () => {
+      const MetricCardComp = await gristAPI.getChildComponent('metric-card');
+      setMetricCard(() => MetricCardComp);
+    };
+    loadComponent();
+  }, []);
 
   useEffect(() => {
     const loadData = async () => {
@@ -2110,13 +2221,21 @@ const Component = () => {
     loadData();
   }, []);
 
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  if (!MetricCard || loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
+  const revenueFormatted = new Intl.NumberFormat('fr-FR', {
+    style: 'currency',
+    currency: 'EUR',
+    maximumFractionDigits: 0
+  }).format(metrics.revenue);
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
-      <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px' }}>Dashboard CRM</h1>
+    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px', color: '#161616' }}>
+        Dashboard CRM
+      </h1>
 
       <div style={{
         display: 'grid',
@@ -2124,61 +2243,43 @@ const Component = () => {
         gap: '20px',
         marginBottom: '32px'
       }}>
-        <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          color: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>Entreprises</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', marginTop: '8px' }}>{metrics.companies}</div>
-        </div>
-
-        <div style={{
-          background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
-          color: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>Contacts</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', marginTop: '8px' }}>{metrics.contacts}</div>
-        </div>
-
-        <div style={{
-          background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
-          color: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>Opportunités</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', marginTop: '8px' }}>{metrics.opportunities}</div>
-        </div>
-
-        <div style={{
-          background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
-          color: 'white',
-          padding: '24px',
-          borderRadius: '12px',
-          boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-        }}>
-          <div style={{ fontSize: '14px', opacity: 0.9 }}>Chiffre d'affaires</div>
-          <div style={{ fontSize: '36px', fontWeight: 'bold', marginTop: '8px' }}>
-            {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(metrics.revenue)}
-          </div>
-        </div>
+        <MetricCard
+          label="Entreprises"
+          value={metrics.companies}
+          icon="🏢"
+          gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+        />
+        <MetricCard
+          label="Contacts"
+          value={metrics.contacts}
+          icon="👥"
+          gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+        />
+        <MetricCard
+          label="Opportunités"
+          value={metrics.opportunities}
+          icon="💼"
+          gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+        />
+        <MetricCard
+          label="Chiffre d'affaires"
+          value={revenueFormatted}
+          icon="💰"
+          gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
+        />
       </div>
 
       <div style={{
         background: 'white',
         padding: '24px',
-        borderRadius: '12px',
+        borderRadius: '8px',
+        border: '1px solid #e5e5e5',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
       }}>
-        <h2 style={{ fontSize: '20px', fontWeight: 'bold', marginBottom: '16px' }}>Bienvenue dans votre CRM</h2>
-        <p style={{ color: '#666', lineHeight: '1.6' }}>
+        <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#161616' }}>
+          Bienvenue dans votre CRM
+        </h2>
+        <p style={{ color: '#666', lineHeight: '1.6', fontSize: '14px' }}>
           Utilisez la navigation ci-dessus pour accéder aux différentes sections de votre CRM.
           Gérez vos entreprises, contacts, opportunités et activités en toute simplicité.
         </p>
@@ -2200,70 +2301,65 @@ const Component = () => {
         updated_at: now,
         component_code: `
 const Component = () => {
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [CompanyList, setCompanyList] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [Modal, setModal] = useState(null);
+  const [DynamicForm, setDynamicForm] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const loadCompanies = async () => {
-      try {
-        const data = await gristAPI.getData('Companies');
-        setCompanies(data);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading companies:', error);
-        setLoading(false);
-      }
+    const loadComponents = async () => {
+      const [ListComp, ButtonComp, ModalComp, FormComp] = await Promise.all([
+        gristAPI.getChildComponent('company-list'),
+        gristAPI.getChildComponent('base-button'),
+        gristAPI.getChildComponent('base-modal'),
+        gristAPI.getChildComponent('dynamic-form')
+      ]);
+      setCompanyList(() => ListComp);
+      setButton(() => ButtonComp);
+      setModal(() => ModalComp);
+      setDynamicForm(() => FormComp);
     };
-    loadCompanies();
+    loadComponents();
   }, []);
 
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  const handleSuccess = () => {
+    setShowModal(false);
+    setRefreshKey(prev => prev + 1);
+  };
+
+  if (!CompanyList || !Button || !Modal || !DynamicForm) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Entreprises</h1>
-        <div style={{ color: '#666' }}>{companies.length} entreprises</div>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#161616' }}>Entreprises</h1>
+        <Button
+          label="Ajouter une entreprise"
+          variant="primary"
+          icon="+"
+          onClick={() => setShowModal(true)}
+        />
       </div>
 
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #e9ecef' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Nom</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Secteur</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Taille</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Ville</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Pays</th>
-            </tr>
-          </thead>
-          <tbody>
-            {companies.map((company, index) => (
-              <tr
-                key={company.id}
-                style={{
-                  borderBottom: '1px solid #e9ecef',
-                  background: index % 2 === 0 ? 'white' : '#f8f9fa',
-                  transition: 'background 0.2s'
-                }}
-              >
-                <td style={{ padding: '16px', fontWeight: '500' }}>{company.name}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{company.industry || '-'}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{company.size || '-'}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{company.city || '-'}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{company.country || '-'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <CompanyList key={refreshKey} />
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Créer une entreprise"
+        size="md"
+      >
+        <DynamicForm
+          entityType="Company"
+          mode="create"
+          onSuccess={handleSuccess}
+          onCancel={() => setShowModal(false)}
+        />
+      </Modal>
     </div>
   );
 };
@@ -2281,101 +2377,65 @@ const Component = () => {
         updated_at: now,
         component_code: `
 const Component = () => {
-  const [contacts, setContacts] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [ContactList, setContactList] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [Modal, setModal] = useState(null);
+  const [DynamicForm, setDynamicForm] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [contactsData, companiesData] = await Promise.all([
-          gristAPI.getData('Contacts'),
-          gristAPI.getData('Companies')
-        ]);
-        setContacts(contactsData);
-        setCompanies(companiesData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading contacts:', error);
-        setLoading(false);
-      }
+    const loadComponents = async () => {
+      const [ListComp, ButtonComp, ModalComp, FormComp] = await Promise.all([
+        gristAPI.getChildComponent('contact-list'),
+        gristAPI.getChildComponent('base-button'),
+        gristAPI.getChildComponent('base-modal'),
+        gristAPI.getChildComponent('dynamic-form')
+      ]);
+      setContactList(() => ListComp);
+      setButton(() => ButtonComp);
+      setModal(() => ModalComp);
+      setDynamicForm(() => FormComp);
     };
-    loadData();
+    loadComponents();
   }, []);
 
-  const getCompanyName = useCallback((companyId) => {
-    const company = companies.find(c => c.id === companyId);
-    return company ? company.name : '-';
-  }, [companies]);
-
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
-  }
-
-  const getStatusColor = (status) => {
-    const colors = {
-      'Active': '#28a745',
-      'Lead': '#ffc107',
-      'Inactive': '#6c757d'
-    };
-    return colors[status] || '#6c757d';
+  const handleSuccess = () => {
+    setShowModal(false);
+    setRefreshKey(prev => prev + 1);
   };
 
+  if (!ContactList || !Button || !Modal || !DynamicForm) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Contacts</h1>
-        <div style={{ color: '#666' }}>{contacts.length} contacts</div>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#161616' }}>Contacts</h1>
+        <Button
+          label="Ajouter un contact"
+          variant="primary"
+          icon="+"
+          onClick={() => setShowModal(true)}
+        />
       </div>
 
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #e9ecef' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Nom</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Email</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Entreprise</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Position</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Statut</th>
-            </tr>
-          </thead>
-          <tbody>
-            {contacts.map((contact, index) => (
-              <tr
-                key={contact.id}
-                style={{
-                  borderBottom: '1px solid #e9ecef',
-                  background: index % 2 === 0 ? 'white' : '#f8f9fa'
-                }}
-              >
-                <td style={{ padding: '16px', fontWeight: '500' }}>
-                  {contact.first_name} {contact.last_name}
-                </td>
-                <td style={{ padding: '16px', color: '#666', fontSize: '14px' }}>{contact.email}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{getCompanyName(contact.company_id)}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{contact.position || '-'}</td>
-                <td style={{ padding: '16px' }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    background: getStatusColor(contact.status) + '20',
-                    color: getStatusColor(contact.status)
-                  }}>
-                    {contact.status || '-'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <ContactList key={refreshKey} />
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Créer un contact"
+        size="md"
+      >
+        <DynamicForm
+          entityType="Contact"
+          mode="create"
+          onSuccess={handleSuccess}
+          onCancel={() => setShowModal(false)}
+        />
+      </Modal>
     </div>
   );
 };
@@ -2393,124 +2453,65 @@ const Component = () => {
         updated_at: now,
         component_code: `
 const Component = () => {
-  const [opportunities, setOpportunities] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [OpportunityList, setOpportunityList] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [Modal, setModal] = useState(null);
+  const [DynamicForm, setDynamicForm] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [oppsData, companiesData] = await Promise.all([
-          gristAPI.getData('Opportunities'),
-          gristAPI.getData('Companies')
-        ]);
-        setOpportunities(oppsData);
-        setCompanies(companiesData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading opportunities:', error);
-        setLoading(false);
-      }
+    const loadComponents = async () => {
+      const [ListComp, ButtonComp, ModalComp, FormComp] = await Promise.all([
+        gristAPI.getChildComponent('opportunity-list'),
+        gristAPI.getChildComponent('base-button'),
+        gristAPI.getChildComponent('base-modal'),
+        gristAPI.getChildComponent('dynamic-form')
+      ]);
+      setOpportunityList(() => ListComp);
+      setButton(() => ButtonComp);
+      setModal(() => ModalComp);
+      setDynamicForm(() => FormComp);
     };
-    loadData();
+    loadComponents();
   }, []);
 
-  const getCompanyName = useCallback((companyId) => {
-    const company = companies.find(c => c.id === companyId);
-    return company ? company.name : '-';
-  }, [companies]);
-
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
-  }
-
-  const getStageColor = (stage) => {
-    const colors = {
-      'Prospecting': '#6c757d',
-      'Qualification': '#17a2b8',
-      'Proposal': '#ffc107',
-      'Negotiation': '#fd7e14',
-      'Closed Won': '#28a745',
-      'Closed Lost': '#dc3545'
-    };
-    return colors[stage] || '#6c757d';
+  const handleSuccess = () => {
+    setShowModal(false);
+    setRefreshKey(prev => prev + 1);
   };
 
-  const totalValue = opportunities.reduce((sum, opp) => sum + (opp.amount || 0), 0);
-  const avgProbability = opportunities.length > 0
-    ? Math.round(opportunities.reduce((sum, opp) => sum + (opp.probability || 0), 0) / opportunities.length)
-    : 0;
+  if (!OpportunityList || !Button || !Modal || !DynamicForm) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
 
   return (
-    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Opportunités</h1>
-        <div style={{ display: 'flex', gap: '24px', color: '#666' }}>
-          <div>
-            <span style={{ fontSize: '14px' }}>Valeur totale: </span>
-            <span style={{ fontWeight: 'bold', color: '#000' }}>
-              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(totalValue)}
-            </span>
-          </div>
-          <div>
-            <span style={{ fontSize: '14px' }}>Probabilité moy: </span>
-            <span style={{ fontWeight: 'bold', color: '#000' }}>{avgProbability}%</span>
-          </div>
-        </div>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#161616' }}>Opportunités</h1>
+        <Button
+          label="Ajouter une opportunité"
+          variant="primary"
+          icon="+"
+          onClick={() => setShowModal(true)}
+        />
       </div>
 
-      <div style={{
-        background: 'white',
-        borderRadius: '12px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        overflow: 'hidden'
-      }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa', borderBottom: '2px solid #e9ecef' }}>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Titre</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Entreprise</th>
-              <th style={{ padding: '16px', textAlign: 'right', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Montant</th>
-              <th style={{ padding: '16px', textAlign: 'center', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Probabilité</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Statut</th>
-              <th style={{ padding: '16px', textAlign: 'left', fontWeight: '600', fontSize: '14px', color: '#495057' }}>Clôture prévue</th>
-            </tr>
-          </thead>
-          <tbody>
-            {opportunities.map((opp, index) => (
-              <tr
-                key={opp.id}
-                style={{
-                  borderBottom: '1px solid #e9ecef',
-                  background: index % 2 === 0 ? 'white' : '#f8f9fa'
-                }}
-              >
-                <td style={{ padding: '16px', fontWeight: '500' }}>{opp.title}</td>
-                <td style={{ padding: '16px', color: '#666' }}>{getCompanyName(opp.company_id)}</td>
-                <td style={{ padding: '16px', textAlign: 'right', fontWeight: '500' }}>
-                  {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(opp.amount || 0)}
-                </td>
-                <td style={{ padding: '16px', textAlign: 'center', color: '#666' }}>{opp.probability}%</td>
-                <td style={{ padding: '16px' }}>
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    background: getStageColor(opp.stage) + '20',
-                    color: getStageColor(opp.stage)
-                  }}>
-                    {opp.stage}
-                  </span>
-                </td>
-                <td style={{ padding: '16px', color: '#666', fontSize: '14px' }}>
-                  {opp.expected_close_date ? new Date(opp.expected_close_date).toLocaleDateString('fr-FR') : '-'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+      <OpportunityList key={refreshKey} />
+
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Créer une opportunité"
+        size="md"
+      >
+        <DynamicForm
+          entityType="Opportunity"
+          mode="create"
+          onSuccess={handleSuccess}
+          onCancel={() => setShowModal(false)}
+        />
+      </Modal>
     </div>
   );
 };
@@ -2528,149 +2529,65 @@ const Component = () => {
         updated_at: now,
         component_code: `
 const Component = () => {
-  const [activities, setActivities] = useState([]);
-  const [companies, setCompanies] = useState([]);
-  const [contacts, setContacts] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [ActivityList, setActivityList] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [Modal, setModal] = useState(null);
+  const [DynamicForm, setDynamicForm] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   useEffect(() => {
-    const loadData = async () => {
-      try {
-        const [activitiesData, companiesData, contactsData] = await Promise.all([
-          gristAPI.getData('Activities'),
-          gristAPI.getData('Companies'),
-          gristAPI.getData('Contacts')
-        ]);
-
-        // Sort by scheduled date (most recent first)
-        activitiesData.sort((a, b) => new Date(b.scheduled_date) - new Date(a.scheduled_date));
-
-        setActivities(activitiesData);
-        setCompanies(companiesData);
-        setContacts(contactsData);
-        setLoading(false);
-      } catch (error) {
-        console.error('Error loading activities:', error);
-        setLoading(false);
-      }
+    const loadComponents = async () => {
+      const [ListComp, ButtonComp, ModalComp, FormComp] = await Promise.all([
+        gristAPI.getChildComponent('activity-list'),
+        gristAPI.getChildComponent('base-button'),
+        gristAPI.getChildComponent('base-modal'),
+        gristAPI.getChildComponent('dynamic-form')
+      ]);
+      setActivityList(() => ListComp);
+      setButton(() => ButtonComp);
+      setModal(() => ModalComp);
+      setDynamicForm(() => FormComp);
     };
-    loadData();
+    loadComponents();
   }, []);
 
-  const getCompanyName = useCallback((companyId) => {
-    const company = companies.find(c => c.id === companyId);
-    return company ? company.name : '';
-  }, [companies]);
+  const handleSuccess = () => {
+    setShowModal(false);
+    setRefreshKey(prev => prev + 1);
+  };
 
-  const getContactName = useCallback((contactId) => {
-    const contact = contacts.find(c => c.id === contactId);
-    return contact ? \`\${contact.first_name} \${contact.last_name}\` : '';
-  }, [contacts]);
-
-  if (loading) {
-    return <div style={{ padding: '20px', textAlign: 'center' }}>Loading...</div>;
+  if (!ActivityList || !Button || !Modal || !DynamicForm) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
-  const getTypeIcon = (type) => {
-    const icons = {
-      'Call': '📞',
-      'Email': '📧',
-      'Meeting': '🤝',
-      'Task': '✅',
-      'Note': '📝'
-    };
-    return icons[type] || '📋';
-  };
-
-  const getTypeColor = (type) => {
-    const colors = {
-      'Call': '#17a2b8',
-      'Email': '#6f42c1',
-      'Meeting': '#fd7e14',
-      'Task': '#20c997',
-      'Note': '#6c757d'
-    };
-    return colors[type] || '#6c757d';
-  };
-
-  const completedCount = activities.filter(a => a.completed).length;
-  const pendingCount = activities.length - completedCount;
-
   return (
-    <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto' }}>
+    <div style={{ padding: '24px', maxWidth: '1400px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h1 style={{ fontSize: '28px', fontWeight: 'bold' }}>Activités</h1>
-        <div style={{ display: 'flex', gap: '24px', color: '#666' }}>
-          <div><span style={{ fontWeight: 'bold', color: '#28a745' }}>{completedCount}</span> terminées</div>
-          <div><span style={{ fontWeight: 'bold', color: '#ffc107' }}>{pendingCount}</span> en cours</div>
-        </div>
+        <h1 style={{ fontSize: '28px', fontWeight: 'bold', color: '#161616' }}>Activités</h1>
+        <Button
+          label="Ajouter une activité"
+          variant="primary"
+          icon="+"
+          onClick={() => setShowModal(true)}
+        />
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-        {activities.map((activity) => (
-          <div
-            key={activity.id}
-            style={{
-              background: 'white',
-              borderRadius: '12px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              padding: '20px',
-              borderLeft: \`4px solid \${getTypeColor(activity.type)}\`,
-              opacity: activity.completed ? 0.7 : 1
-            }}
-          >
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '24px' }}>{getTypeIcon(activity.type)}</span>
-                <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '4px' }}>{activity.subject}</h3>
-                  <div style={{ fontSize: '14px', color: '#666' }}>
-                    {getCompanyName(activity.company_id)}
-                    {activity.contact_id && \` • \${getContactName(activity.contact_id)}\`}
-                  </div>
-                </div>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{
-                  padding: '4px 12px',
-                  borderRadius: '12px',
-                  fontSize: '12px',
-                  fontWeight: '500',
-                  background: getTypeColor(activity.type) + '20',
-                  color: getTypeColor(activity.type)
-                }}>
-                  {activity.type}
-                </span>
-                {activity.completed && (
-                  <span style={{
-                    padding: '4px 12px',
-                    borderRadius: '12px',
-                    fontSize: '12px',
-                    fontWeight: '500',
-                    background: '#28a74520',
-                    color: '#28a745'
-                  }}>
-                    ✓ Terminé
-                  </span>
-                )}
-              </div>
-            </div>
+      <ActivityList key={refreshKey} />
 
-            {activity.description && (
-              <p style={{ fontSize: '14px', color: '#666', marginBottom: '12px', lineHeight: '1.5' }}>
-                {activity.description}
-              </p>
-            )}
-
-            <div style={{ fontSize: '13px', color: '#999' }}>
-              {new Date(activity.scheduled_date).toLocaleString('fr-FR', {
-                dateStyle: 'long',
-                timeStyle: 'short'
-              })}
-            </div>
-          </div>
-        ))}
-      </div>
+      <Modal
+        isOpen={showModal}
+        onClose={() => setShowModal(false)}
+        title="Créer une activité"
+        size="md"
+      >
+        <DynamicForm
+          entityType="Activity"
+          mode="create"
+          onSuccess={handleSuccess}
+          onCancel={() => setShowModal(false)}
+        />
+      </Modal>
     </div>
   );
 };
