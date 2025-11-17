@@ -1932,6 +1932,686 @@ const Component = ({
         `.trim(),
       },
 
+      // ===== BASE: DatePicker =====
+      {
+        template_id: 'base-datepicker',
+        template_name: 'DSFR DatePicker',
+        category: 'base',
+        description: 'DSFR Date picker component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  label = '',
+  placeholder = 'jj/mm/aaaa',
+  error = '',
+  disabled = false,
+  required = false,
+  min = '',
+  max = ''
+}) => {
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <input
+        type="date"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        min={min}
+        max={max}
+        style={{
+          width: '100%',
+          padding: '12px',
+          fontSize: '16px',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          border: error ? '2px solid #e1000f' : '1px solid #ddd',
+          borderRadius: '4px',
+          boxSizing: 'border-box',
+          background: disabled ? '#f6f6f6' : 'white',
+          cursor: disabled ? 'not-allowed' : 'text'
+        }}
+      />
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: FileUpload =====
+      {
+        template_id: 'base-fileupload',
+        template_name: 'DSFR File Upload',
+        category: 'base',
+        description: 'DSFR File upload component with drag & drop',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  onChange = () => {},
+  accept = '*',
+  multiple = false,
+  label = 'Choisir un fichier',
+  maxSize = 10485760,
+  disabled = false
+}) => {
+  const [isDragging, setIsDragging] = useState(false);
+  const [files, setFiles] = useState([]);
+  const inputRef = useRef(null);
+
+  const handleFiles = (fileList) => {
+    const newFiles = Array.from(fileList).filter(file => {
+      if (file.size > maxSize) {
+        alert(\`Fichier trop volumineux: \${file.name} (\${(file.size / 1048576).toFixed(2)} MB)\`);
+        return false;
+      }
+      return true;
+    });
+
+    setFiles(multiple ? [...files, ...newFiles] : newFiles);
+    onChange(multiple ? [...files, ...newFiles] : newFiles[0]);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    if (!disabled) handleFiles(e.dataTransfer.files);
+  };
+
+  const removeFile = (index) => {
+    const newFiles = files.filter((_, i) => i !== index);
+    setFiles(newFiles);
+    onChange(multiple ? newFiles : null);
+  };
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      <div
+        onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+        onDragLeave={() => setIsDragging(false)}
+        onDrop={handleDrop}
+        onClick={() => !disabled && inputRef.current?.click()}
+        style={{
+          border: \`2px dashed \${isDragging ? '#000091' : '#ddd'}\`,
+          borderRadius: '8px',
+          padding: '32px',
+          textAlign: 'center',
+          background: isDragging ? '#f0f0ff' : '#f6f6f6',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          transition: 'all 0.2s',
+          opacity: disabled ? 0.6 : 1
+        }}
+      >
+        <div style={{ fontSize: '48px', marginBottom: '12px' }}>📁</div>
+        <div style={{ fontSize: '16px', fontWeight: '500', color: '#161616', marginBottom: '4px' }}>
+          {label}
+        </div>
+        <div style={{ fontSize: '12px', color: '#666' }}>
+          ou glissez-déposez vos fichiers ici
+        </div>
+        <div style={{ fontSize: '11px', color: '#999', marginTop: '8px' }}>
+          Taille max: {(maxSize / 1048576).toFixed(0)} MB
+        </div>
+      </div>
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept={accept}
+        multiple={multiple}
+        onChange={(e) => handleFiles(e.target.files)}
+        disabled={disabled}
+        style={{ display: 'none' }}
+      />
+
+      {files.length > 0 && (
+        <div style={{ marginTop: '16px' }}>
+          {files.map((file, index) => (
+            <div
+              key={index}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '8px 12px',
+                background: '#f6f6f6',
+                borderRadius: '4px',
+                marginBottom: '8px',
+                fontSize: '14px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1, minWidth: 0 }}>
+                <span>📄</span>
+                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {file.name}
+                </span>
+                <span style={{ color: '#666', fontSize: '12px', flexShrink: 0 }}>
+                  ({(file.size / 1024).toFixed(1)} KB)
+                </span>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); removeFile(index); }}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: '#e1000f',
+                  cursor: 'pointer',
+                  fontSize: '18px',
+                  padding: '4px 8px'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Tag =====
+      {
+        template_id: 'base-tag',
+        template_name: 'DSFR Tag',
+        category: 'base',
+        description: 'DSFR Tag component with remove option',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  onRemove = null,
+  color = '#000091',
+  size = 'md',
+  icon = null
+}) => {
+  const sizes = {
+    sm: { padding: '4px 8px', fontSize: '12px' },
+    md: { padding: '6px 12px', fontSize: '14px' },
+    lg: { padding: '8px 16px', fontSize: '16px' }
+  };
+
+  const sizing = sizes[size];
+
+  return (
+    <div style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '6px',
+      background: \`\${color}15\`,
+      color: color,
+      padding: sizing.padding,
+      fontSize: sizing.fontSize,
+      borderRadius: '16px',
+      border: \`1px solid \${color}40\`,
+      fontFamily: "'Marianne', Arial, sans-serif",
+      fontWeight: '500'
+    }}>
+      {icon && <span>{icon}</span>}
+      <span>{label}</span>
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          style={{
+            background: 'transparent',
+            border: 'none',
+            color: color,
+            cursor: 'pointer',
+            padding: '0',
+            fontSize: '14px',
+            lineHeight: 1,
+            display: 'flex',
+            alignItems: 'center'
+          }}
+        >
+          ✕
+        </button>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: IconButton =====
+      {
+        template_id: 'base-iconbutton',
+        template_name: 'DSFR Icon Button',
+        category: 'base',
+        description: 'DSFR Icon-only button component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  icon = '⚙',
+  onClick = () => {},
+  variant = 'primary',
+  size = 'md',
+  disabled = false,
+  ariaLabel = 'Button'
+}) => {
+  const variantStyles = {
+    primary: { background: '#000091', color: 'white', hover: '#1212ff' },
+    secondary: { background: '#e3e3fd', color: '#000091', hover: '#c9c9fb' },
+    tertiary: { background: 'transparent', color: '#000091', hover: '#f5f5fe', border: '1px solid #000091' },
+    ghost: { background: 'transparent', color: '#666', hover: '#f6f6f6', border: 'none' }
+  };
+
+  const sizes = {
+    sm: { size: 32, fontSize: '16px' },
+    md: { size: 40, fontSize: '20px' },
+    lg: { size: 48, fontSize: '24px' }
+  };
+
+  const style = variantStyles[variant];
+  const sizing = sizes[size];
+
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={ariaLabel}
+      style={{
+        width: sizing.size,
+        height: sizing.size,
+        background: style.background,
+        color: style.color,
+        border: style.border || 'none',
+        borderRadius: '4px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'all 0.2s',
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: sizing.fontSize,
+        flexShrink: 0
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) e.currentTarget.style.background = style.hover;
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) e.currentTarget.style.background = style.background;
+      }}
+    >
+      {icon}
+    </button>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: NumberInput =====
+      {
+        template_id: 'base-numberinput',
+        template_name: 'DSFR Number Input',
+        category: 'base',
+        description: 'DSFR Number input with increment/decrement buttons',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = 0,
+  onChange = () => {},
+  label = '',
+  min = null,
+  max = null,
+  step = 1,
+  disabled = false,
+  required = false,
+  unit = ''
+}) => {
+  const increment = () => {
+    const newValue = parseFloat(value) + step;
+    if (max === null || newValue <= max) onChange(newValue);
+  };
+
+  const decrement = () => {
+    const newValue = parseFloat(value) - step;
+    if (min === null || newValue >= min) onChange(newValue);
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <div style={{ display: 'flex', gap: '4px', alignItems: 'stretch' }}>
+        <button
+          onClick={decrement}
+          disabled={disabled || (min !== null && value <= min)}
+          style={{
+            width: '40px',
+            background: '#f6f6f6',
+            border: '1px solid #ddd',
+            borderRadius: '4px 0 0 4px',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: '20px',
+            color: '#000091',
+            fontWeight: '700'
+          }}
+        >
+          −
+        </button>
+        <div style={{ position: 'relative', flex: 1 }}>
+          <input
+            type="number"
+            value={value}
+            onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+            min={min}
+            max={max}
+            step={step}
+            disabled={disabled}
+            style={{
+              width: '100%',
+              padding: unit ? '12px 40px 12px 12px' : '12px',
+              fontSize: '16px',
+              fontFamily: "'Marianne', Arial, sans-serif",
+              border: '1px solid #ddd',
+              borderLeft: 'none',
+              borderRight: 'none',
+              boxSizing: 'border-box',
+              background: disabled ? '#f6f6f6' : 'white',
+              textAlign: 'center',
+              MozAppearance: 'textfield'
+            }}
+          />
+          {unit && (
+            <span style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '14px',
+              color: '#666',
+              pointerEvents: 'none'
+            }}>
+              {unit}
+            </span>
+          )}
+        </div>
+        <button
+          onClick={increment}
+          disabled={disabled || (max !== null && value >= max)}
+          style={{
+            width: '40px',
+            background: '#f6f6f6',
+            border: '1px solid #ddd',
+            borderRadius: '0 4px 4px 0',
+            cursor: disabled ? 'not-allowed' : 'pointer',
+            fontSize: '20px',
+            color: '#000091',
+            fontWeight: '700'
+          }}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Rating =====
+      {
+        template_id: 'base-rating',
+        template_name: 'DSFR Rating',
+        category: 'base',
+        description: 'DSFR Star rating component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = 0,
+  onChange = null,
+  max = 5,
+  size = 'md',
+  readonly = false,
+  label = ''
+}) => {
+  const [hoverValue, setHoverValue] = useState(0);
+
+  const sizes = {
+    sm: 16,
+    md: 24,
+    lg: 32,
+    xl: 40
+  };
+
+  const starSize = sizes[size];
+  const isInteractive = onChange && !readonly;
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <div style={{
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+        </div>
+      )}
+      <div style={{
+        display: 'flex',
+        gap: '4px',
+        alignItems: 'center'
+      }}>
+        {Array.from({ length: max }, (_, index) => {
+          const starValue = index + 1;
+          const isFilled = starValue <= (hoverValue || value);
+
+          return (
+            <span
+              key={index}
+              onClick={() => isInteractive && onChange(starValue)}
+              onMouseEnter={() => isInteractive && setHoverValue(starValue)}
+              onMouseLeave={() => isInteractive && setHoverValue(0)}
+              style={{
+                fontSize: starSize,
+                color: isFilled ? '#ffc107' : '#ddd',
+                cursor: isInteractive ? 'pointer' : 'default',
+                transition: 'color 0.2s',
+                lineHeight: 1
+              }}
+            >
+              {isFilled ? '★' : '☆'}
+            </span>
+          );
+        })}
+        {value > 0 && (
+          <span style={{ marginLeft: '8px', fontSize: '14px', color: '#666' }}>
+            {value}/{max}
+          </span>
+        )}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Skeleton =====
+      {
+        template_id: 'base-skeleton',
+        template_name: 'DSFR Skeleton',
+        category: 'base',
+        description: 'DSFR Skeleton loading placeholder',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  variant = 'text',
+  width = '100%',
+  height = null,
+  count = 1,
+  circle = false
+}) => {
+  const variantHeights = {
+    text: 16,
+    heading: 24,
+    button: 40,
+    card: 200,
+    avatar: 48
+  };
+
+  const finalHeight = height || variantHeights[variant];
+  const finalWidth = circle ? finalHeight : width;
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+      {Array.from({ length: count }, (_, index) => (
+        <div
+          key={index}
+          style={{
+            width: finalWidth,
+            height: finalHeight,
+            background: 'linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%)',
+            backgroundSize: '200% 100%',
+            animation: 'shimmer 1.5s infinite',
+            borderRadius: circle ? '50%' : '4px'
+          }}
+        />
+      ))}
+      <style>
+        {\`
+          @keyframes shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+          }
+        \`}
+      </style>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Stepper =====
+      {
+        template_id: 'base-stepper',
+        template_name: 'DSFR Stepper',
+        category: 'base',
+        description: 'DSFR Multi-step indicator',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  steps = [],
+  currentStep = 0,
+  onStepClick = null
+}) => {
+  return (
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      padding: '24px 0'
+    }}>
+      {steps.map((step, index) => {
+        const isActive = index === currentStep;
+        const isCompleted = index < currentStep;
+        const isClickable = onStepClick && index < currentStep;
+
+        return (
+          <React.Fragment key={index}>
+            <div
+              onClick={() => isClickable && onStepClick(index)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                cursor: isClickable ? 'pointer' : 'default',
+                flex: index === steps.length - 1 ? '0' : '1'
+              }}
+            >
+              <div style={{
+                width: '40px',
+                height: '40px',
+                borderRadius: '50%',
+                background: isCompleted || isActive ? '#000091' : '#e5e5e5',
+                color: isCompleted || isActive ? 'white' : '#666',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontWeight: '700',
+                fontSize: '16px',
+                marginBottom: '8px',
+                border: isActive ? '3px solid #1212ff' : 'none',
+                boxSizing: 'border-box'
+              }}>
+                {isCompleted ? '✓' : index + 1}
+              </div>
+              <div style={{
+                fontSize: '12px',
+                fontWeight: isActive ? '700' : '400',
+                color: isActive ? '#000091' : '#666',
+                textAlign: 'center',
+                maxWidth: '100px',
+                lineHeight: 1.3
+              }}>
+                {step.label || step}
+              </div>
+            </div>
+
+            {index < steps.length - 1 && (
+              <div style={{
+                flex: '1',
+                height: '2px',
+                background: index < currentStep ? '#000091' : '#e5e5e5',
+                margin: '0 8px 24px 8px'
+              }} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
       // ========================================
       // COMPOSITE COMPONENTS (Business Logic)
       // ========================================
