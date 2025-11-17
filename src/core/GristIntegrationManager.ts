@@ -2613,6 +2613,532 @@ const Component = ({
       },
 
       // ========================================
+      // ATOMIC COMPONENTS (Specialized Inputs & Layouts)
+      // ========================================
+
+      // ===== ATOMIC: Email Input =====
+      {
+        template_id: 'atomic-input-email',
+        template_name: 'Email Input',
+        category: 'base',
+        description: 'Specialized email input with validation',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  label = 'Email',
+  placeholder = 'exemple@domain.com',
+  required = false,
+  disabled = false,
+  autoValidate = true
+}) => {
+  const [error, setError] = useState('');
+
+  const validateEmail = (email) => {
+    if (!email && required) return 'Email requis';
+    if (email && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return 'Email invalide';
+    return '';
+  };
+
+  const handleChange = (newValue) => {
+    onChange(newValue);
+    if (autoValidate) {
+      setError(validateEmail(newValue));
+    }
+  };
+
+  const handleBlur = () => {
+    setError(validateEmail(value));
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '18px',
+          color: '#666'
+        }}>
+          ✉
+        </span>
+        <input
+          type="email"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          onBlur={handleBlur}
+          placeholder={placeholder}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: '12px 12px 12px 44px',
+            fontSize: '16px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            border: error ? '2px solid #e1000f' : '1px solid #ddd',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+            background: disabled ? '#f6f6f6' : 'white'
+          }}
+        />
+      </div>
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Phone Input =====
+      {
+        template_id: 'atomic-input-phone',
+        template_name: 'Phone Input',
+        category: 'base',
+        description: 'Specialized phone input with formatting',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  label = 'Téléphone',
+  placeholder = '06 12 34 56 78',
+  required = false,
+  disabled = false,
+  country = 'FR'
+}) => {
+  const [error, setError] = useState('');
+
+  const formatPhone = (phone) => {
+    const digits = phone.replace(/\\D/g, '');
+    if (country === 'FR') {
+      return digits.replace(/(\\d{2})(?=\\d)/g, '$1 ').trim();
+    }
+    return digits;
+  };
+
+  const validatePhone = (phone) => {
+    if (!phone && required) return 'Téléphone requis';
+    const digits = phone.replace(/\\D/g, '');
+    if (phone && country === 'FR' && digits.length !== 10) return 'Téléphone invalide (10 chiffres)';
+    return '';
+  };
+
+  const handleChange = (newValue) => {
+    const formatted = formatPhone(newValue);
+    onChange(formatted);
+    setError(validatePhone(formatted));
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '18px',
+          color: '#666'
+        }}>
+          📞
+        </span>
+        <input
+          type="tel"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: '12px 12px 12px 44px',
+            fontSize: '16px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            border: error ? '2px solid #e1000f' : '1px solid #ddd',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+            background: disabled ? '#f6f6f6' : 'white'
+          }}
+        />
+      </div>
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Currency Input =====
+      {
+        template_id: 'atomic-input-currency',
+        template_name: 'Currency Input',
+        category: 'base',
+        description: 'Specialized currency input with formatting',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = 0,
+  onChange = () => {},
+  label = 'Montant',
+  currency = '€',
+  currencyPosition = 'right',
+  min = 0,
+  max = null,
+  required = false,
+  disabled = false
+}) => {
+  const [displayValue, setDisplayValue] = useState('');
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setDisplayValue(value ? value.toLocaleString('fr-FR') : '');
+  }, [value]);
+
+  const handleChange = (newValue) => {
+    const numericValue = parseFloat(newValue.replace(/[^0-9.-]/g, '')) || 0;
+
+    if (min !== null && numericValue < min) {
+      setError(\`Montant minimum: \${min}\${currency}\`);
+    } else if (max !== null && numericValue > max) {
+      setError(\`Montant maximum: \${max}\${currency}\`);
+    } else {
+      setError('');
+    }
+
+    onChange(numericValue);
+    setDisplayValue(numericValue ? numericValue.toLocaleString('fr-FR') : '');
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <div style={{ position: 'relative' }}>
+        {currencyPosition === 'left' && (
+          <span style={{
+            position: 'absolute',
+            left: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '16px',
+            fontWeight: '700',
+            color: '#000091'
+          }}>
+            {currency}
+          </span>
+        )}
+        <input
+          type="text"
+          value={displayValue}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: currencyPosition === 'left' ? '12px 12px 12px 40px' : '12px 40px 12px 12px',
+            fontSize: '16px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            border: error ? '2px solid #e1000f' : '1px solid #ddd',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+            background: disabled ? '#f6f6f6' : 'white',
+            textAlign: 'right'
+          }}
+        />
+        {currencyPosition === 'right' && (
+          <span style={{
+            position: 'absolute',
+            right: '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            fontSize: '16px',
+            fontWeight: '700',
+            color: '#000091'
+          }}>
+            {currency}
+          </span>
+        )}
+      </div>
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: URL Input =====
+      {
+        template_id: 'atomic-input-url',
+        template_name: 'URL Input',
+        category: 'base',
+        description: 'Specialized URL input with validation',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = '',
+  onChange = () => {},
+  label = 'Site web',
+  placeholder = 'https://exemple.com',
+  required = false,
+  disabled = false
+}) => {
+  const [error, setError] = useState('');
+
+  const validateURL = (url) => {
+    if (!url && required) return 'URL requise';
+    if (url) {
+      try {
+        new URL(url);
+      } catch {
+        return 'URL invalide';
+      }
+    }
+    return '';
+  };
+
+  const handleChange = (newValue) => {
+    onChange(newValue);
+    setError(validateURL(newValue));
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+      <div style={{ position: 'relative' }}>
+        <span style={{
+          position: 'absolute',
+          left: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '18px',
+          color: '#666'
+        }}>
+          🔗
+        </span>
+        <input
+          type="url"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: '12px 12px 12px 44px',
+            fontSize: '16px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            border: error ? '2px solid #e1000f' : '1px solid #ddd',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+            background: disabled ? '#f6f6f6' : 'white'
+          }}
+        />
+        {value && !error && (
+          <a
+            href={value}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{
+              position: 'absolute',
+              right: '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              fontSize: '16px',
+              color: '#000091',
+              textDecoration: 'none'
+            }}
+          >
+            ↗
+          </a>
+        )}
+      </div>
+      {error && (
+        <div style={{ color: '#e1000f', fontSize: '12px', marginTop: '4px' }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== ATOMIC: Percentage Input =====
+      {
+        template_id: 'atomic-input-percentage',
+        template_name: 'Percentage Input',
+        category: 'base',
+        description: 'Specialized percentage input',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  value = 0,
+  onChange = () => {},
+  label = 'Pourcentage',
+  min = 0,
+  max = 100,
+  step = 1,
+  required = false,
+  disabled = false,
+  showSlider = false
+}) => {
+  const handleChange = (newValue) => {
+    const numValue = Math.min(max, Math.max(min, parseFloat(newValue) || 0));
+    onChange(numValue);
+  };
+
+  return (
+    <div style={{ marginBottom: '16px', fontFamily: "'Marianne', Arial, sans-serif" }}>
+      {label && (
+        <label style={{
+          display: 'block',
+          marginBottom: '8px',
+          fontWeight: '500',
+          color: '#161616',
+          fontSize: '14px'
+        }}>
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+
+      {showSlider && (
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            marginBottom: '8px',
+            accentColor: '#000091'
+          }}
+        />
+      )}
+
+      <div style={{ position: 'relative' }}>
+        <input
+          type="number"
+          value={value}
+          onChange={(e) => handleChange(e.target.value)}
+          min={min}
+          max={max}
+          step={step}
+          disabled={disabled}
+          style={{
+            width: '100%',
+            padding: '12px 40px 12px 12px',
+            fontSize: '16px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            border: '1px solid #ddd',
+            borderRadius: '4px',
+            boxSizing: 'border-box',
+            background: disabled ? '#f6f6f6' : 'white',
+            textAlign: 'right',
+            MozAppearance: 'textfield'
+          }}
+        />
+        <span style={{
+          position: 'absolute',
+          right: '12px',
+          top: '50%',
+          transform: 'translateY(-50%)',
+          fontSize: '16px',
+          fontWeight: '700',
+          color: '#000091'
+        }}>
+          %
+        </span>
+      </div>
+
+      {showSlider && (
+        <div style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#666',
+          display: 'flex',
+          justifyContent: 'space-between'
+        }}>
+          <span>{min}%</span>
+          <span>{max}%</span>
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ========================================
       // COMPOSITE COMPONENTS (Business Logic)
       // ========================================
 
