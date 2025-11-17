@@ -42,7 +42,7 @@ class GristIntegrationManager extends GristSchemaManager {
 
     // All tables exist, check if Templates table has data (critical table)
     Logger.log('🔍', 'All tables exist, checking if they contain data...');
-    const templates = await this.fetchTable('Templates');
+    const templates = await this.fetchTable<TemplateRecord>('Templates');
 
     if (templates.length === 0) {
       Logger.log('⚠️', 'Tables exist but Templates is empty, reinitializing data...');
@@ -50,8 +50,52 @@ class GristIntegrationManager extends GristSchemaManager {
       return true;
     }
 
+    // Check if new component architecture templates exist (migration)
+    const hasBaseComponents = templates.some((t) => t.category === 'base');
+    const hasCompositeComponents = templates.some((t) => t.category === 'composite');
+    const hasFunctionalComponents = templates.some((t) => t.category === 'functional');
+
+    if (!hasBaseComponents || !hasCompositeComponents || !hasFunctionalComponents) {
+      Logger.log('🔄', 'Migrating to new component architecture...');
+      await this.migrateToComponentArchitecture(templates);
+      this.invalidateCache();
+      Logger.log('✅', 'Migration complete');
+      return true;
+    }
+
     Logger.log('✅', 'CRM data already exists and is populated');
     return false;
+  }
+
+  /**
+   * Migrate to component architecture by adding missing templates
+   */
+  private async migrateToComponentArchitecture(existingTemplates: TemplateRecord[]): Promise<void> {
+    Logger.log('📦', 'Adding new component architecture templates...');
+
+    try {
+      const now = new Date().toISOString();
+      const allTemplates = this.getAllTemplateDefinitions(now);
+
+      // Get existing template IDs
+      const existingIds = new Set(existingTemplates.map((t) => t.template_id));
+
+      // Filter to only new templates (with valid template_id)
+      const newTemplates = allTemplates.filter(
+        (t) => t.template_id && !existingIds.has(t.template_id)
+      );
+
+      if (newTemplates.length > 0) {
+        Logger.log('➕', `Adding ${newTemplates.length} new templates...`);
+        await this.addRecords('Templates', newTemplates);
+        Logger.success(`Added ${newTemplates.length} new templates`);
+      } else {
+        Logger.log('ℹ️', 'No new templates to add');
+      }
+    } catch (error) {
+      Logger.error('Error migrating to component architecture:', error);
+      throw error;
+    }
   }
 
   /**
@@ -144,10 +188,11 @@ class GristIntegrationManager extends GristSchemaManager {
 
   // ===== TEMPLATES DATA =====
 
-  private async populateTemplates(): Promise<void> {
-    const now = new Date().toISOString();
-
-    const templates: Partial<TemplateRecord>[] = [
+  /**
+   * Get all template definitions (for initial population or migration)
+   */
+  private getAllTemplateDefinitions(now: string): Partial<TemplateRecord>[] {
+    return [
       // ========================================
       // BASE COMPONENTS (DSFR Design System)
       // ========================================
@@ -2632,9 +2677,17 @@ const Component = () => {
         `.trim(),
       },
     ];
+  }
+
+  /**
+   * Populate templates table
+   */
+  private async populateTemplates(): Promise<void> {
+    const now = new Date().toISOString();
+    const templates = this.getAllTemplateDefinitions(now);
 
     await this.addRecords('Templates', templates);
-    Logger.success(`Templates populated: ${templates.length} page components`);
+    Logger.success(`Templates populated: ${templates.length} components`);
   }
 
   // ===== COMPANIES DATA =====
