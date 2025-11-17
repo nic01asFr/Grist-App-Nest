@@ -9,6 +9,7 @@
 
 import { useState, useEffect } from 'react';
 import GristIntegrationManager from '@core/GristIntegrationManager';
+import { initializeGristAPI } from '@api/gristAPI';
 import Dashboard from './components/Dashboard';
 import { Loader } from '@templates';
 
@@ -25,6 +26,9 @@ export default function App() {
         // Step 1: Initialize Grist API
         setInitMessage('🔌 Connexion à Grist...');
         await gristManager.initialize({ access: 'full' });
+
+        // CRITICAL: Connect gristAPI to gristManager
+        initializeGristAPI(gristManager);
 
         // Step 2: Check and initialize demo data if needed
         setInitMessage('🗄️ Vérification des données...');
