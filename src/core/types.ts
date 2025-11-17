@@ -98,7 +98,7 @@ export interface ActivityRecord extends GristRecord {
 export interface TemplateRecord extends GristRecord {
   template_id: string;
   template_name: string;
-  category: 'pages' | 'widgets' | 'layouts' | 'charts' | 'forms';
+  category: 'pages' | 'widgets' | 'layouts' | 'charts' | 'forms' | 'base' | 'composite' | 'functional';
   description?: string;
   component_code: string; // JSX code as string
   props_schema?: string; // JSON schema
@@ -180,6 +180,7 @@ export interface GristAPI {
   // Component loading
   getTemplate: (templateId: string) => Promise<TemplateRecord | null>;
   getTemplates: (category?: string) => Promise<TemplateRecord[]>;
+  getChildComponent: (templateId: string) => Promise<React.ComponentType<any>>;
 }
 
 export interface PageData {

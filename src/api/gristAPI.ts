@@ -4,6 +4,7 @@
  */
 
 import { GristIntegrationManager } from '@core';
+import { componentLoader } from '@core/ComponentLoader';
 import type { GristAPI, GristRecord, TemplateRecord } from '@core/types';
 
 let gristManager: GristIntegrationManager | null = null;
@@ -72,6 +73,22 @@ export const gristAPI: GristAPI = {
     }
 
     return templates;
+  },
+
+  async getChildComponent(templateId: string): Promise<React.ComponentType<any>> {
+    if (!gristManager) throw new Error('Grist API not initialized');
+
+    // Fetch the template
+    const template = await this.getTemplate(templateId);
+
+    if (!template) {
+      throw new Error(`Template not found: ${templateId}`);
+    }
+
+    // Load and compile the component using componentLoader
+    const component = await componentLoader.loadComponent(template);
+
+    return component;
   },
 };
 

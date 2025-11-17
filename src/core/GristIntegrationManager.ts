@@ -148,6 +148,1551 @@ class GristIntegrationManager extends GristSchemaManager {
     const now = new Date().toISOString();
 
     const templates: Partial<TemplateRecord>[] = [
+      // ========================================
+      // BASE COMPONENTS (DSFR Design System)
+      // ========================================
+
+      // ===== BASE: Button =====
+      {
+        template_id: 'base-button',
+        template_name: 'DSFR Button',
+        category: 'base',
+        description: 'DSFR Button component with variants and sizes',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = 'Button',
+  onClick = () => {},
+  variant = 'primary',
+  size = 'md',
+  icon = null,
+  disabled = false,
+  type = 'button'
+}) => {
+  const variantStyles = {
+    primary: {
+      background: '#000091',
+      color: 'white',
+      border: 'none',
+      hover: '#1212ff'
+    },
+    secondary: {
+      background: '#e3e3fd',
+      color: '#000091',
+      border: 'none',
+      hover: '#c9c9fb'
+    },
+    tertiary: {
+      background: 'transparent',
+      color: '#000091',
+      border: '1px solid #000091',
+      hover: '#f5f5fe'
+    },
+    error: {
+      background: '#e1000f',
+      color: 'white',
+      border: 'none',
+      hover: '#c9000d'
+    }
+  };
+
+  const sizeStyles = {
+    sm: { padding: '8px 16px', fontSize: '14px' },
+    md: { padding: '12px 24px', fontSize: '16px' },
+    lg: { padding: '16px 32px', fontSize: '18px' }
+  };
+
+  const style = variantStyles[variant];
+  const sizing = sizeStyles[size];
+
+  return (
+    <button
+      type={type}
+      onClick={onClick}
+      disabled={disabled}
+      style={{
+        background: style.background,
+        color: style.color,
+        border: style.border,
+        padding: sizing.padding,
+        fontSize: sizing.fontSize,
+        fontFamily: "'Marianne', Arial, sans-serif",
+        fontWeight: '500',
+        borderRadius: '4px',
+        cursor: disabled ? 'not-allowed' : 'pointer',
+        opacity: disabled ? 0.6 : 1,
+        transition: 'all 0.2s',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px'
+      }}
+      onMouseEnter={(e) => {
+        if (!disabled) e.currentTarget.style.background = style.hover;
+      }}
+      onMouseLeave={(e) => {
+        if (!disabled) e.currentTarget.style.background = style.background;
+      }}
+    >
+      {icon && <span>{icon}</span>}
+      {label}
+    </button>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Input =====
+      {
+        template_id: 'base-input',
+        template_name: 'DSFR Input',
+        category: 'base',
+        description: 'DSFR Input component with validation',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  value = '',
+  onChange = () => {},
+  type = 'text',
+  placeholder = '',
+  required = false,
+  error = '',
+  hint = '',
+  disabled = false,
+  id = ''
+}) => {
+  const inputId = id || \`input-\${Math.random().toString(36).substr(2, 9)}\`;
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      {label && (
+        <label
+          htmlFor={inputId}
+          style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#161616'
+          }}
+        >
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+
+      <input
+        id={inputId}
+        type={type}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+        required={required}
+        style={{
+          width: '100%',
+          padding: '12px',
+          fontSize: '16px',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          border: error ? '2px solid #e1000f' : '1px solid #3a3a3a',
+          borderRadius: '4px',
+          background: disabled ? '#f6f6f6' : 'white',
+          color: '#161616',
+          outline: 'none',
+          transition: 'border-color 0.2s'
+        }}
+        onFocus={(e) => {
+          if (!error) e.currentTarget.style.borderColor = '#000091';
+        }}
+        onBlur={(e) => {
+          if (!error) e.currentTarget.style.borderColor = '#3a3a3a';
+        }}
+      />
+
+      {hint && !error && (
+        <div style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#666',
+          fontFamily: "'Marianne', Arial, sans-serif"
+        }}>
+          {hint}
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#e1000f',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          fontWeight: '500'
+        }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Card =====
+      {
+        template_id: 'base-card',
+        template_name: 'DSFR Card',
+        category: 'base',
+        description: 'DSFR Card component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  title = '',
+  children = null,
+  footer = null,
+  variant = 'default'
+}) => {
+  const variantStyles = {
+    default: { border: '1px solid #e5e5e5', background: 'white' },
+    primary: { border: '1px solid #000091', background: '#f5f5fe' },
+    success: { border: '1px solid #18753c', background: '#f5fef5' },
+    error: { border: '1px solid #e1000f', background: '#fef5f5' }
+  };
+
+  const style = variantStyles[variant];
+
+  return (
+    <div style={{
+      border: style.border,
+      background: style.background,
+      borderRadius: '8px',
+      overflow: 'hidden',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      {title && (
+        <div style={{
+          padding: '16px 20px',
+          borderBottom: '1px solid #e5e5e5',
+          fontWeight: '600',
+          fontSize: '18px',
+          color: '#161616'
+        }}>
+          {title}
+        </div>
+      )}
+
+      <div style={{ padding: '20px' }}>
+        {children}
+      </div>
+
+      {footer && (
+        <div style={{
+          padding: '12px 20px',
+          borderTop: '1px solid #e5e5e5',
+          background: '#f6f6f6'
+        }}>
+          {footer}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Badge =====
+      {
+        template_id: 'base-badge',
+        template_name: 'DSFR Badge',
+        category: 'base',
+        description: 'DSFR Badge component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  variant = 'info',
+  size = 'md'
+}) => {
+  const variantStyles = {
+    success: { background: '#18753c', color: 'white' },
+    error: { background: '#e1000f', color: 'white' },
+    warning: { background: '#fc5d00', color: 'white' },
+    info: { background: '#0063cb', color: 'white' },
+    new: { background: '#6a6af4', color: 'white' },
+    default: { background: '#e5e5e5', color: '#161616' }
+  };
+
+  const sizeStyles = {
+    sm: { padding: '2px 8px', fontSize: '11px' },
+    md: { padding: '4px 12px', fontSize: '13px' },
+    lg: { padding: '6px 16px', fontSize: '15px' }
+  };
+
+  const style = variantStyles[variant] || variantStyles.default;
+  const sizing = sizeStyles[size];
+
+  return (
+    <span style={{
+      display: 'inline-block',
+      background: style.background,
+      color: style.color,
+      padding: sizing.padding,
+      fontSize: sizing.fontSize,
+      fontFamily: "'Marianne', Arial, sans-serif",
+      fontWeight: '500',
+      borderRadius: '4px',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px'
+    }}>
+      {label}
+    </span>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Alert =====
+      {
+        template_id: 'base-alert',
+        template_name: 'DSFR Alert',
+        category: 'base',
+        description: 'DSFR Alert component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  message = '',
+  type = 'info',
+  title = '',
+  closable = false,
+  onClose = () => {}
+}) => {
+  const [visible, setVisible] = useState(true);
+
+  const typeStyles = {
+    success: {
+      background: '#f5fef5',
+      border: '#18753c',
+      icon: '✅',
+      color: '#18753c'
+    },
+    error: {
+      background: '#fef5f5',
+      border: '#e1000f',
+      icon: '❌',
+      color: '#e1000f'
+    },
+    warning: {
+      background: '#fef9f5',
+      border: '#fc5d00',
+      icon: '⚠️',
+      color: '#fc5d00'
+    },
+    info: {
+      background: '#f5f9fe',
+      border: '#0063cb',
+      icon: 'ℹ️',
+      color: '#0063cb'
+    }
+  };
+
+  const style = typeStyles[type];
+
+  const handleClose = () => {
+    setVisible(false);
+    onClose();
+  };
+
+  if (!visible) return null;
+
+  return (
+    <div style={{
+      background: style.background,
+      border: \`1px solid \${style.border}\`,
+      borderLeft: \`4px solid \${style.border}\`,
+      borderRadius: '4px',
+      padding: '16px',
+      marginBottom: '16px',
+      fontFamily: "'Marianne', Arial, sans-serif",
+      position: 'relative'
+    }}>
+      <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
+        <div style={{ fontSize: '20px' }}>{style.icon}</div>
+        <div style={{ flex: 1 }}>
+          {title && (
+            <div style={{
+              fontWeight: '600',
+              color: style.color,
+              marginBottom: '4px',
+              fontSize: '16px'
+            }}>
+              {title}
+            </div>
+          )}
+          <div style={{ color: '#161616', fontSize: '14px', lineHeight: '1.5' }}>
+            {message}
+          </div>
+        </div>
+        {closable && (
+          <button
+            onClick={handleClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '18px',
+              color: '#666',
+              padding: '0',
+              lineHeight: '1'
+            }}
+          >
+            ×
+          </button>
+        )}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Select =====
+      {
+        template_id: 'base-select',
+        template_name: 'DSFR Select',
+        category: 'base',
+        description: 'DSFR Select component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  label = '',
+  value = '',
+  onChange = () => {},
+  options = [],
+  required = false,
+  error = '',
+  hint = '',
+  disabled = false,
+  placeholder = 'Sélectionnez...'
+}) => {
+  const selectId = \`select-\${Math.random().toString(36).substr(2, 9)}\`;
+
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      {label && (
+        <label
+          htmlFor={selectId}
+          style={{
+            display: 'block',
+            marginBottom: '8px',
+            fontFamily: "'Marianne', Arial, sans-serif",
+            fontSize: '14px',
+            fontWeight: '500',
+            color: '#161616'
+          }}
+        >
+          {label}
+          {required && <span style={{ color: '#e1000f', marginLeft: '4px' }}>*</span>}
+        </label>
+      )}
+
+      <select
+        id={selectId}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        required={required}
+        style={{
+          width: '100%',
+          padding: '12px',
+          fontSize: '16px',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          border: error ? '2px solid #e1000f' : '1px solid #3a3a3a',
+          borderRadius: '4px',
+          background: disabled ? '#f6f6f6' : 'white',
+          color: '#161616',
+          outline: 'none',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          transition: 'border-color 0.2s'
+        }}
+        onFocus={(e) => {
+          if (!error) e.currentTarget.style.borderColor = '#000091';
+        }}
+        onBlur={(e) => {
+          if (!error) e.currentTarget.style.borderColor = '#3a3a3a';
+        }}
+      >
+        {placeholder && <option value="">{placeholder}</option>}
+        {options.map((opt, idx) => (
+          <option key={idx} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+
+      {hint && !error && (
+        <div style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#666',
+          fontFamily: "'Marianne', Arial, sans-serif"
+        }}>
+          {hint}
+        </div>
+      )}
+
+      {error && (
+        <div style={{
+          marginTop: '4px',
+          fontSize: '12px',
+          color: '#e1000f',
+          fontFamily: "'Marianne', Arial, sans-serif",
+          fontWeight: '500'
+        }}>
+          {error}
+        </div>
+      )}
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Table =====
+      {
+        template_id: 'base-table',
+        template_name: 'DSFR Table',
+        category: 'base',
+        description: 'DSFR Table component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  columns = [],
+  data = [],
+  onRowClick = null,
+  striped = true,
+  caption = ''
+}) => {
+  return (
+    <div style={{
+      background: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+      overflow: 'hidden',
+      fontFamily: "'Marianne', Arial, sans-serif"
+    }}>
+      <table style={{
+        width: '100%',
+        borderCollapse: 'collapse'
+      }}>
+        {caption && (
+          <caption style={{
+            padding: '16px',
+            textAlign: 'left',
+            fontWeight: '600',
+            fontSize: '16px',
+            color: '#161616',
+            background: '#f6f6f6'
+          }}>
+            {caption}
+          </caption>
+        )}
+        <thead>
+          <tr style={{
+            background: '#f6f6f6',
+            borderBottom: '2px solid #e5e5e5'
+          }}>
+            {columns.map((col, idx) => (
+              <th
+                key={idx}
+                style={{
+                  padding: '16px',
+                  textAlign: col.align || 'left',
+                  fontWeight: '600',
+                  fontSize: '14px',
+                  color: '#161616',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.5px'
+                }}
+              >
+                {col.label}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td
+                colSpan={columns.length}
+                style={{
+                  padding: '32px',
+                  textAlign: 'center',
+                  color: '#666',
+                  fontSize: '14px'
+                }}
+              >
+                Aucune donnée disponible
+              </td>
+            </tr>
+          ) : (
+            data.map((row, rowIdx) => (
+              <tr
+                key={rowIdx}
+                onClick={onRowClick ? () => onRowClick(row) : undefined}
+                style={{
+                  borderBottom: '1px solid #e5e5e5',
+                  background: striped && rowIdx % 2 === 1 ? '#f9f9f9' : 'white',
+                  cursor: onRowClick ? 'pointer' : 'default',
+                  transition: 'background 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  if (onRowClick) e.currentTarget.style.background = '#f0f0f0';
+                }}
+                onMouseLeave={(e) => {
+                  if (onRowClick) {
+                    e.currentTarget.style.background = striped && rowIdx % 2 === 1 ? '#f9f9f9' : 'white';
+                  }
+                }}
+              >
+                {columns.map((col, colIdx) => (
+                  <td
+                    key={colIdx}
+                    style={{
+                      padding: '16px',
+                      textAlign: col.align || 'left',
+                      fontSize: '14px',
+                      color: '#161616'
+                    }}
+                  >
+                    {col.render ? col.render(row[col.key], row) : row[col.key]}
+                  </td>
+                ))}
+              </tr>
+            ))
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== BASE: Modal =====
+      {
+        template_id: 'base-modal',
+        template_name: 'DSFR Modal',
+        category: 'base',
+        description: 'DSFR Modal component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  isOpen = false,
+  onClose = () => {},
+  title = '',
+  children = null,
+  footer = null,
+  size = 'md'
+}) => {
+  const sizeStyles = {
+    sm: { maxWidth: '400px' },
+    md: { maxWidth: '600px' },
+    lg: { maxWidth: '900px' },
+    xl: { maxWidth: '1200px' }
+  };
+
+  if (!isOpen) return null;
+
+  return (
+    <div
+      style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        background: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 1000,
+        padding: '20px',
+        fontFamily: "'Marianne', Arial, sans-serif"
+      }}
+      onClick={onClose}
+    >
+      <div
+        style={{
+          background: 'white',
+          borderRadius: '8px',
+          boxShadow: '0 4px 16px rgba(0,0,0,0.2)',
+          width: '100%',
+          ...sizeStyles[size],
+          maxHeight: '90vh',
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {/* Header */}
+        <div style={{
+          padding: '20px 24px',
+          borderBottom: '1px solid #e5e5e5',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h2 style={{
+            margin: 0,
+            fontSize: '20px',
+            fontWeight: '600',
+            color: '#161616'
+          }}>
+            {title}
+          </h2>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              fontSize: '24px',
+              color: '#666',
+              padding: '0',
+              lineHeight: '1',
+              width: '32px',
+              height: '32px',
+              borderRadius: '4px',
+              transition: 'background 0.2s'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#f0f0f0';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'none';
+            }}
+          >
+            ×
+          </button>
+        </div>
+
+        {/* Body */}
+        <div style={{
+          padding: '24px',
+          overflowY: 'auto',
+          flex: 1
+        }}>
+          {children}
+        </div>
+
+        {/* Footer */}
+        {footer && (
+          <div style={{
+            padding: '16px 24px',
+            borderTop: '1px solid #e5e5e5',
+            background: '#f6f6f6',
+            display: 'flex',
+            justifyContent: 'flex-end',
+            gap: '12px'
+          }}>
+            {footer}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ========================================
+      // COMPOSITE COMPONENTS (Business Logic)
+      // ========================================
+
+      // ===== COMPOSITE: Metric Card =====
+      {
+        template_id: 'metric-card',
+        template_name: 'Metric Card',
+        category: 'composite',
+        description: 'Dashboard metric card with icon and value',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ label, value, icon, gradient }) => {
+  const [Card, setCard] = useState(null);
+
+  useEffect(() => {
+    const loadCard = async () => {
+      const CardComponent = await gristAPI.getChildComponent('base-card');
+      setCard(() => CardComponent);
+    };
+    loadCard();
+  }, []);
+
+  if (!Card) return <div>Chargement...</div>;
+
+  return (
+    <Card variant="default">
+      <div style={{
+        background: gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+        color: 'white',
+        padding: '24px',
+        borderRadius: '8px',
+        fontFamily: "'Marianne', Arial, sans-serif"
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          {icon && <div style={{ fontSize: '32px' }}>{icon}</div>}
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
+              {label}
+            </div>
+            <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
+              {value}
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Company Card =====
+      {
+        template_id: 'company-card',
+        template_name: 'Company Card',
+        category: 'composite',
+        description: 'Detailed company card with contacts and opportunities count',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ company }) => {
+  const [Card, setCard] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [contactsCount, setContactsCount] = useState(0);
+  const [oppsCount, setOppsCount] = useState(0);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [CardComp, BadgeComp, ButtonComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-badge'),
+        gristAPI.getChildComponent('base-button')
+      ]);
+      setCard(() => CardComp);
+      setBadge(() => BadgeComp);
+      setButton(() => ButtonComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadRelatedData = async () => {
+      if (!company) return;
+      const [contacts, opps] = await Promise.all([
+        gristAPI.getData('Contacts'),
+        gristAPI.getData('Opportunities')
+      ]);
+      setContactsCount(contacts.filter(c => c.company_id === company.id).length);
+      setOppsCount(opps.filter(o => o.company_id === company.id).length);
+    };
+    loadRelatedData();
+  }, [company]);
+
+  if (!Card || !Badge || !Button || !company) {
+    return <div>Chargement...</div>;
+  }
+
+  return (
+    <Card
+      title={company.name}
+      footer={
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button label="Éditer" variant="primary" size="sm" />
+          <Button label="Supprimer" variant="error" size="sm" />
+        </div>
+      }
+    >
+      <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+        {company.industry && (
+          <div style={{ marginBottom: '12px' }}>
+            <Badge label={company.industry} variant="info" />
+          </div>
+        )}
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Taille</div>
+            <div style={{ fontWeight: '500' }}>{company.size || '-'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Pays</div>
+            <div style={{ fontWeight: '500' }}>{company.country || '-'}</div>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '12px', background: '#f6f6f6', borderRadius: '4px' }}>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#000091' }}>
+              {contactsCount}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666' }}>Contacts</div>
+          </div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#000091' }}>
+              {oppsCount}
+            </div>
+            <div style={{ fontSize: '12px', color: '#666' }}>Opportunités</div>
+          </div>
+        </div>
+
+        {company.website && (
+          <div style={{ marginTop: '12px', fontSize: '14px' }}>
+            <a href={company.website} target="_blank" rel="noopener noreferrer" style={{ color: '#000091' }}>
+              {company.website}
+            </a>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Contact Card =====
+      {
+        template_id: 'contact-card',
+        template_name: 'Contact Card',
+        category: 'composite',
+        description: 'Detailed contact card with company information',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ contact }) => {
+  const [Card, setCard] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [company, setCompany] = useState(null);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [CardComp, BadgeComp, ButtonComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-badge'),
+        gristAPI.getChildComponent('base-button')
+      ]);
+      setCard(() => CardComp);
+      setBadge(() => BadgeComp);
+      setButton(() => ButtonComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadCompany = async () => {
+      if (!contact || !contact.company_id) return;
+      const companies = await gristAPI.getData('Companies');
+      const comp = companies.find(c => c.id === contact.company_id);
+      setCompany(comp);
+    };
+    loadCompany();
+  }, [contact]);
+
+  if (!Card || !Badge || !Button || !contact) {
+    return <div>Chargement...</div>;
+  }
+
+  const getStatusVariant = (status) => {
+    const map = { 'Active': 'success', 'Inactive': 'default', 'Lead': 'info' };
+    return map[status] || 'default';
+  };
+
+  return (
+    <Card
+      title={\`\${contact.first_name} \${contact.last_name}\`}
+      footer={
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <Button label="Éditer" variant="primary" size="sm" />
+          <Button label="Supprimer" variant="error" size="sm" />
+        </div>
+      }
+    >
+      <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+        {contact.status && (
+          <div style={{ marginBottom: '12px' }}>
+            <Badge label={contact.status} variant={getStatusVariant(contact.status)} />
+          </div>
+        )}
+
+        <div style={{ marginBottom: '16px' }}>
+          <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Email</div>
+          <div style={{ fontWeight: '500' }}>
+            <a href={\`mailto:\${contact.email}\`} style={{ color: '#000091' }}>
+              {contact.email}
+            </a>
+          </div>
+        </div>
+
+        {contact.phone && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Téléphone</div>
+            <div style={{ fontWeight: '500' }}>{contact.phone}</div>
+          </div>
+        )}
+
+        {contact.position && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Poste</div>
+            <div style={{ fontWeight: '500' }}>{contact.position}</div>
+          </div>
+        )}
+
+        {company && (
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f6f6f6', borderRadius: '4px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Entreprise</div>
+            <div style={{ fontWeight: '600', color: '#000091' }}>{company.name}</div>
+            {company.industry && <div style={{ fontSize: '12px', color: '#666', marginTop: '2px' }}>{company.industry}</div>}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Opportunity Card =====
+      {
+        template_id: 'opportunity-card',
+        template_name: 'Opportunity Card',
+        category: 'composite',
+        description: 'Detailed opportunity card with company and contact info',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ opportunity }) => {
+  const [Card, setCard] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [company, setCompany] = useState(null);
+  const [contact, setContact] = useState(null);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [CardComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setCard(() => CardComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadRelatedData = async () => {
+      if (!opportunity) return;
+      const [companies, contacts] = await Promise.all([
+        gristAPI.getData('Companies'),
+        gristAPI.getData('Contacts')
+      ]);
+      if (opportunity.company_id) {
+        setCompany(companies.find(c => c.id === opportunity.company_id));
+      }
+      if (opportunity.contact_id) {
+        setContact(contacts.find(c => c.id === opportunity.contact_id));
+      }
+    };
+    loadRelatedData();
+  }, [opportunity]);
+
+  if (!Card || !Badge || !opportunity) {
+    return <div>Chargement...</div>;
+  }
+
+  const getStageVariant = (stage) => {
+    const map = {
+      'Prospecting': 'default',
+      'Qualification': 'info',
+      'Proposal': 'warning',
+      'Negotiation': 'warning',
+      'Closed Won': 'success',
+      'Closed Lost': 'error'
+    };
+    return map[stage] || 'default';
+  };
+
+  return (
+    <Card title={opportunity.title}>
+      <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+        <div style={{ marginBottom: '16px' }}>
+          <Badge label={opportunity.stage} variant={getStageVariant(opportunity.stage)} />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+          <div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Montant</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#000091' }}>
+              {new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(opportunity.amount || 0)}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Probabilité</div>
+            <div style={{ fontSize: '24px', fontWeight: 'bold', color: '#000091' }}>
+              {opportunity.probability}%
+            </div>
+          </div>
+        </div>
+
+        {opportunity.expected_close_date && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Clôture prévue</div>
+            <div style={{ fontWeight: '500' }}>
+              {new Date(opportunity.expected_close_date).toLocaleDateString('fr-FR')}
+            </div>
+          </div>
+        )}
+
+        {company && (
+          <div style={{ marginTop: '16px', padding: '12px', background: '#f6f6f6', borderRadius: '4px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Entreprise</div>
+            <div style={{ fontWeight: '600' }}>{company.name}</div>
+            {contact && (
+              <div style={{ fontSize: '12px', color: '#666', marginTop: '4px' }}>
+                Contact: {contact.first_name} {contact.last_name}
+              </div>
+            )}
+          </div>
+        )}
+
+        {opportunity.description && (
+          <div style={{ marginTop: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Description</div>
+            <div style={{ fontSize: '14px', lineHeight: '1.5' }}>{opportunity.description}</div>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Activity Card =====
+      {
+        template_id: 'activity-card',
+        template_name: 'Activity Card',
+        category: 'composite',
+        description: 'Detailed activity card with related entities',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ activity }) => {
+  const [Card, setCard] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [company, setCompany] = useState(null);
+  const [contact, setContact] = useState(null);
+  const [opportunity, setOpportunity] = useState(null);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [CardComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setCard(() => CardComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadRelatedData = async () => {
+      if (!activity) return;
+      const [companies, contacts, opps] = await Promise.all([
+        gristAPI.getData('Companies'),
+        gristAPI.getData('Contacts'),
+        gristAPI.getData('Opportunities')
+      ]);
+      if (activity.company_id) {
+        setCompany(companies.find(c => c.id === activity.company_id));
+      }
+      if (activity.contact_id) {
+        setContact(contacts.find(c => c.id === activity.contact_id));
+      }
+      if (activity.opportunity_id) {
+        setOpportunity(opps.find(o => o.id === activity.opportunity_id));
+      }
+    };
+    loadRelatedData();
+  }, [activity]);
+
+  if (!Card || !Badge || !activity) {
+    return <div>Chargement...</div>;
+  }
+
+  const getTypeVariant = (type) => {
+    const map = {
+      'Call': 'info',
+      'Email': 'info',
+      'Meeting': 'warning',
+      'Task': 'default'
+    };
+    return map[type] || 'default';
+  };
+
+  return (
+    <Card title={activity.subject}>
+      <div style={{ fontFamily: "'Marianne', Arial, sans-serif" }}>
+        <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
+          <Badge label={activity.type} variant={getTypeVariant(activity.type)} />
+          {activity.completed && <Badge label="Terminée" variant="success" />}
+        </div>
+
+        {activity.scheduled_date && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Date prévue</div>
+            <div style={{ fontWeight: '500' }}>
+              {new Date(activity.scheduled_date).toLocaleDateString('fr-FR')}
+            </div>
+          </div>
+        )}
+
+        {activity.description && (
+          <div style={{ marginBottom: '16px' }}>
+            <div style={{ fontSize: '12px', color: '#666', marginBottom: '4px' }}>Description</div>
+            <div style={{ fontSize: '14px', lineHeight: '1.5' }}>{activity.description}</div>
+          </div>
+        )}
+
+        <div style={{ marginTop: '16px', padding: '12px', background: '#f6f6f6', borderRadius: '4px' }}>
+          {company && (
+            <div style={{ marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666' }}>Entreprise: </span>
+              <span style={{ fontWeight: '500' }}>{company.name}</span>
+            </div>
+          )}
+          {contact && (
+            <div style={{ marginBottom: '8px' }}>
+              <span style={{ fontSize: '12px', color: '#666' }}>Contact: </span>
+              <span style={{ fontWeight: '500' }}>{contact.first_name} {contact.last_name}</span>
+            </div>
+          )}
+          {opportunity && (
+            <div>
+              <span style={{ fontSize: '12px', color: '#666' }}>Opportunité: </span>
+              <span style={{ fontWeight: '500' }}>{opportunity.title}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </Card>
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Company List =====
+      {
+        template_id: 'company-list',
+        template_name: 'Company List',
+        category: 'composite',
+        description: 'Table of companies using DSFR table component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ onRowClick = null }) => {
+  const [Table, setTable] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [TableComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setTable(() => TableComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const data = await gristAPI.getData('Companies');
+      setCompanies(data);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  if (!Table || !Badge || loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
+  const columns = [
+    { key: 'name', label: 'Nom', align: 'left' },
+    {
+      key: 'industry',
+      label: 'Secteur',
+      align: 'left',
+      render: (value) => value ? <Badge label={value} variant="info" size="sm" /> : '-'
+    },
+    { key: 'size', label: 'Taille', align: 'left' },
+    { key: 'country', label: 'Pays', align: 'left' },
+    { key: 'city', label: 'Ville', align: 'left' }
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      data={companies}
+      onRowClick={onRowClick}
+      striped={true}
+      caption={\`\${companies.length} entreprises\`}
+    />
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Contact List =====
+      {
+        template_id: 'contact-list',
+        template_name: 'Contact List',
+        category: 'composite',
+        description: 'Table of contacts using DSFR table component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ onRowClick = null }) => {
+  const [Table, setTable] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [contacts, setContacts] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [TableComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setTable(() => TableComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [contactsData, companiesData] = await Promise.all([
+        gristAPI.getData('Contacts'),
+        gristAPI.getData('Companies')
+      ]);
+      setContacts(contactsData);
+      setCompanies(companiesData);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  if (!Table || !Badge || loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : '-';
+  };
+
+  const getStatusVariant = (status) => {
+    const map = { 'Active': 'success', 'Inactive': 'default', 'Lead': 'info' };
+    return map[status] || 'default';
+  };
+
+  const columns = [
+    {
+      key: 'name',
+      label: 'Nom',
+      align: 'left',
+      render: (_, row) => \`\${row.first_name} \${row.last_name}\`
+    },
+    { key: 'email', label: 'Email', align: 'left' },
+    {
+      key: 'company_id',
+      label: 'Entreprise',
+      align: 'left',
+      render: (value) => getCompanyName(value)
+    },
+    { key: 'position', label: 'Poste', align: 'left' },
+    {
+      key: 'status',
+      label: 'Statut',
+      align: 'left',
+      render: (value) => value ? <Badge label={value} variant={getStatusVariant(value)} size="sm" /> : '-'
+    }
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      data={contacts}
+      onRowClick={onRowClick}
+      striped={true}
+      caption={\`\${contacts.length} contacts\`}
+    />
+  );
+};
+        `.trim(),
+      },
+
+      // ===== COMPOSITE: Opportunity List =====
+      {
+        template_id: 'opportunity-list',
+        template_name: 'Opportunity List',
+        category: 'composite',
+        description: 'Table of opportunities using DSFR table component',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({ onRowClick = null }) => {
+  const [Table, setTable] = useState(null);
+  const [Badge, setBadge] = useState(null);
+  const [opportunities, setOpportunities] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [TableComp, BadgeComp] = await Promise.all([
+        gristAPI.getChildComponent('base-table'),
+        gristAPI.getChildComponent('base-badge')
+      ]);
+      setTable(() => TableComp);
+      setBadge(() => BadgeComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const [oppsData, companiesData] = await Promise.all([
+        gristAPI.getData('Opportunities'),
+        gristAPI.getData('Companies')
+      ]);
+      setOpportunities(oppsData);
+      setCompanies(companiesData);
+      setLoading(false);
+    };
+    loadData();
+  }, []);
+
+  if (!Table || !Badge || loading) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
+  }
+
+  const getCompanyName = (companyId) => {
+    const company = companies.find(c => c.id === companyId);
+    return company ? company.name : '-';
+  };
+
+  const getStageVariant = (stage) => {
+    const map = {
+      'Prospecting': 'default',
+      'Qualification': 'info',
+      'Proposal': 'warning',
+      'Negotiation': 'warning',
+      'Closed Won': 'success',
+      'Closed Lost': 'error'
+    };
+    return map[stage] || 'default';
+  };
+
+  const columns = [
+    { key: 'title', label: 'Titre', align: 'left' },
+    {
+      key: 'company_id',
+      label: 'Entreprise',
+      align: 'left',
+      render: (value) => getCompanyName(value)
+    },
+    {
+      key: 'amount',
+      label: 'Montant',
+      align: 'right',
+      render: (value) => new Intl.NumberFormat('fr-FR', {
+        style: 'currency',
+        currency: 'EUR',
+        maximumFractionDigits: 0
+      }).format(value || 0)
+    },
+    {
+      key: 'probability',
+      label: 'Probabilité',
+      align: 'center',
+      render: (value) => \`\${value}%\`
+    },
+    {
+      key: 'stage',
+      label: 'Statut',
+      align: 'left',
+      render: (value) => <Badge label={value} variant={getStageVariant(value)} size="sm" />
+    },
+    {
+      key: 'expected_close_date',
+      label: 'Clôture prévue',
+      align: 'left',
+      render: (value) => value ? new Date(value).toLocaleDateString('fr-FR') : '-'
+    }
+  ];
+
+  return (
+    <Table
+      columns={columns}
+      data={opportunities}
+      onRowClick={onRowClick}
+      striped={true}
+      caption={\`\${opportunities.length} opportunités\`}
+    />
+  );
+};
+        `.trim(),
+      },
+
+      // ========================================
+      // PAGE COMPONENTS
+      // ========================================
+
       // ===== PAGE: Dashboard =====
       {
         template_id: 'page-dashboard',
