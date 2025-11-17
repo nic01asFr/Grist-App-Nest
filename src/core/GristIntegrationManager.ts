@@ -3667,49 +3667,45 @@ const Component = ({
       // COMPOSITE COMPONENTS (Business Logic)
       // ========================================
 
-      // ===== COMPOSITE: Metric Card =====
+      // ===== COMPOSITE: Dashboard Metric =====
       {
-        template_id: 'metric-card',
-        template_name: 'Metric Card',
+        template_id: 'dashboard-metric',
+        template_name: 'Dashboard Metric',
         category: 'composite',
-        description: 'Dashboard metric card with icon and value',
+        description: 'Universal metric card composed from atomic Stat + Card',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
-const Component = ({ label, value, icon, gradient }) => {
+const Component = ({ label, value, icon, color = '#000091', trend = null }) => {
   const [Card, setCard] = useState(null);
+  const [Stat, setStat] = useState(null);
 
   useEffect(() => {
-    const loadCard = async () => {
-      const CardComponent = await gristAPI.getChildComponent('base-card');
-      setCard(() => CardComponent);
+    const loadComponents = async () => {
+      const [CardComp, StatComp] = await Promise.all([
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('atomic-display-stat')
+      ]);
+      setCard(() => CardComp);
+      setStat(() => StatComp);
     };
-    loadCard();
+    loadComponents();
   }, []);
 
-  if (!Card) return <div>Chargement...</div>;
+  if (!Card || !Stat) return <div>Chargement...</div>;
 
   return (
     <Card variant="default">
-      <div style={{
-        background: gradient || 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        color: 'white',
-        padding: '24px',
-        borderRadius: '8px',
-        fontFamily: "'Marianne', Arial, sans-serif"
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          {icon && <div style={{ fontSize: '32px' }}>{icon}</div>}
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: '14px', opacity: 0.9, marginBottom: '4px' }}>
-              {label}
-            </div>
-            <div style={{ fontSize: '32px', fontWeight: 'bold' }}>
-              {value}
-            </div>
-          </div>
-        </div>
+      <div style={{ padding: '8px' }}>
+        <Stat
+          label={label}
+          value={value}
+          icon={icon}
+          color={color}
+          trend={trend}
+          size="large"
+        />
       </div>
     </Card>
   );
@@ -5654,22 +5650,30 @@ const Component = ({
         template_id: 'page-dashboard',
         template_name: 'Dashboard',
         category: 'pages',
-        description: 'CRM Dashboard with key metrics',
+        description: 'Universal business dashboard with key metrics - composed from atomic components',
         is_active: true,
         created_at: now,
         updated_at: now,
         component_code: `
 const Component = () => {
-  const [MetricCard, setMetricCard] = useState(null);
+  const [Grid, setGrid] = useState(null);
+  const [Card, setCard] = useState(null);
+  const [DashboardMetric, setDashboardMetric] = useState(null);
   const [metrics, setMetrics] = useState({ companies: 0, contacts: 0, opportunities: 0, revenue: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadComponent = async () => {
-      const MetricCardComp = await gristAPI.getChildComponent('metric-card');
-      setMetricCard(() => MetricCardComp);
+    const loadComponents = async () => {
+      const [GridComp, CardComp, MetricComp] = await Promise.all([
+        gristAPI.getChildComponent('atomic-layout-grid'),
+        gristAPI.getChildComponent('base-card'),
+        gristAPI.getChildComponent('dashboard-metric')
+      ]);
+      setGrid(() => GridComp);
+      setCard(() => CardComp);
+      setDashboardMetric(() => MetricComp);
     };
-    loadComponent();
+    loadComponents();
   }, []);
 
   useEffect(() => {
@@ -5698,7 +5702,7 @@ const Component = () => {
     loadData();
   }, []);
 
-  if (!MetricCard || loading) {
+  if (!Grid || !Card || !DashboardMetric || loading) {
     return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement...</div>;
   }
 
@@ -5711,56 +5715,45 @@ const Component = () => {
   return (
     <div style={{ padding: '24px', maxWidth: '1200px', margin: '0 auto', fontFamily: "'Marianne', Arial, sans-serif" }}>
       <h1 style={{ fontSize: '28px', fontWeight: 'bold', marginBottom: '24px', color: '#161616' }}>
-        Dashboard CRM
+        Dashboard
       </h1>
 
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '20px',
-        marginBottom: '32px'
-      }}>
-        <MetricCard
+      <Grid columns={4} minColumnWidth="240px" gap={20}>
+        <DashboardMetric
           label="Entreprises"
           value={metrics.companies}
           icon="🏢"
-          gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)"
+          color="#667eea"
         />
-        <MetricCard
+        <DashboardMetric
           label="Contacts"
           value={metrics.contacts}
           icon="👥"
-          gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)"
+          color="#f5576c"
         />
-        <MetricCard
+        <DashboardMetric
           label="Opportunités"
           value={metrics.opportunities}
           icon="💼"
-          gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
+          color="#00f2fe"
         />
-        <MetricCard
+        <DashboardMetric
           label="Chiffre d'affaires"
           value={revenueFormatted}
           icon="💰"
-          gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)"
+          color="#38f9d7"
         />
-      </div>
+      </Grid>
 
-      <div style={{
-        background: 'white',
-        padding: '24px',
-        borderRadius: '8px',
-        border: '1px solid #e5e5e5',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
+      <Card variant="default" style={{ marginTop: '32px' }}>
         <h2 style={{ fontSize: '20px', fontWeight: '600', marginBottom: '16px', color: '#161616' }}>
-          Bienvenue dans votre CRM
+          Bienvenue dans votre application
         </h2>
         <p style={{ color: '#666', lineHeight: '1.6', fontSize: '14px' }}>
-          Utilisez la navigation ci-dessus pour accéder aux différentes sections de votre CRM.
-          Gérez vos entreprises, contacts, opportunités et activités en toute simplicité.
+          Utilisez la navigation ci-dessus pour accéder aux différentes sections.
+          Gérez vos données en toute simplicité avec une interface moderne et intuitive.
         </p>
-      </div>
+      </Card>
     </div>
   );
 };
