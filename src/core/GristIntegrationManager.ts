@@ -1690,6 +1690,338 @@ const Component = ({ onRowClick = null }) => {
       },
 
       // ========================================
+      // FUNCTIONAL COMPONENTS (Complete Features)
+      // ========================================
+
+      // ===== FUNCTIONAL: Dynamic Form =====
+      {
+        template_id: 'dynamic-form',
+        template_name: 'Dynamic Form',
+        category: 'functional',
+        description: 'Auto-generated form based on entity type with validation',
+        is_active: true,
+        created_at: now,
+        updated_at: now,
+        component_code: `
+const Component = ({
+  entityType = 'Company',
+  mode = 'create',
+  initialData = {},
+  onSuccess = () => {},
+  onCancel = () => {}
+}) => {
+  const [Input, setInput] = useState(null);
+  const [Select, setSelect] = useState(null);
+  const [Button, setButton] = useState(null);
+  const [Alert, setAlert] = useState(null);
+  const [formData, setFormData] = useState(initialData);
+  const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+  const [companies, setCompanies] = useState([]);
+  const [contacts, setContacts] = useState([]);
+  const [opportunities, setOpportunities] = useState([]);
+
+  useEffect(() => {
+    const loadComponents = async () => {
+      const [InputComp, SelectComp, ButtonComp, AlertComp] = await Promise.all([
+        gristAPI.getChildComponent('base-input'),
+        gristAPI.getChildComponent('base-select'),
+        gristAPI.getChildComponent('base-button'),
+        gristAPI.getChildComponent('base-alert')
+      ]);
+      setInput(() => InputComp);
+      setSelect(() => SelectComp);
+      setButton(() => ButtonComp);
+      setAlert(() => AlertComp);
+    };
+    loadComponents();
+  }, []);
+
+  useEffect(() => {
+    const loadReferenceData = async () => {
+      const [companiesData, contactsData, oppsData] = await Promise.all([
+        gristAPI.getData('Companies'),
+        gristAPI.getData('Contacts'),
+        gristAPI.getData('Opportunities')
+      ]);
+      setCompanies(companiesData);
+      setContacts(contactsData);
+      setOpportunities(oppsData);
+    };
+    loadReferenceData();
+  }, []);
+
+  if (!Input || !Select || !Button || !Alert) {
+    return <div style={{ padding: '20px', textAlign: 'center' }}>Chargement du formulaire...</div>;
+  }
+
+  const entitySchemas = {
+    Company: {
+      tableName: 'Companies',
+      fields: [
+        { key: 'name', label: 'Nom', type: 'text', required: true },
+        {
+          key: 'industry',
+          label: 'Secteur',
+          type: 'select',
+          options: [
+            { value: 'Technology', label: 'Technologie' },
+            { value: 'Finance', label: 'Finance' },
+            { value: 'Healthcare', label: 'Santé' },
+            { value: 'Retail', label: 'Commerce' },
+            { value: 'Manufacturing', label: 'Industrie' },
+            { value: 'Other', label: 'Autre' }
+          ]
+        },
+        {
+          key: 'size',
+          label: 'Taille',
+          type: 'select',
+          options: [
+            { value: '1-10', label: '1-10 employés' },
+            { value: '11-50', label: '11-50 employés' },
+            { value: '51-200', label: '51-200 employés' },
+            { value: '201-500', label: '201-500 employés' },
+            { value: '500+', label: '500+ employés' }
+          ]
+        },
+        { key: 'website', label: 'Site web', type: 'text' },
+        { key: 'phone', label: 'Téléphone', type: 'tel' },
+        { key: 'address', label: 'Adresse', type: 'text' },
+        { key: 'city', label: 'Ville', type: 'text' },
+        { key: 'country', label: 'Pays', type: 'text' }
+      ]
+    },
+    Contact: {
+      tableName: 'Contacts',
+      fields: [
+        { key: 'first_name', label: 'Prénom', type: 'text', required: true },
+        { key: 'last_name', label: 'Nom', type: 'text', required: true },
+        { key: 'email', label: 'Email', type: 'email', required: true },
+        { key: 'phone', label: 'Téléphone', type: 'tel' },
+        {
+          key: 'company_id',
+          label: 'Entreprise',
+          type: 'select',
+          options: companies.map(c => ({ value: c.id, label: c.name })),
+          required: true
+        },
+        { key: 'position', label: 'Poste', type: 'text' },
+        {
+          key: 'status',
+          label: 'Statut',
+          type: 'select',
+          options: [
+            { value: 'Active', label: 'Actif' },
+            { value: 'Inactive', label: 'Inactif' },
+            { value: 'Lead', label: 'Prospect' }
+          ]
+        }
+      ]
+    },
+    Opportunity: {
+      tableName: 'Opportunities',
+      fields: [
+        { key: 'title', label: 'Titre', type: 'text', required: true },
+        {
+          key: 'company_id',
+          label: 'Entreprise',
+          type: 'select',
+          options: companies.map(c => ({ value: c.id, label: c.name })),
+          required: true
+        },
+        {
+          key: 'contact_id',
+          label: 'Contact',
+          type: 'select',
+          options: contacts.map(c => ({ value: c.id, label: \`\${c.first_name} \${c.last_name}\` }))
+        },
+        { key: 'amount', label: 'Montant (€)', type: 'number', required: true },
+        {
+          key: 'stage',
+          label: 'Étape',
+          type: 'select',
+          required: true,
+          options: [
+            { value: 'Prospecting', label: 'Prospection' },
+            { value: 'Qualification', label: 'Qualification' },
+            { value: 'Proposal', label: 'Proposition' },
+            { value: 'Negotiation', label: 'Négociation' },
+            { value: 'Closed Won', label: 'Gagné' },
+            { value: 'Closed Lost', label: 'Perdu' }
+          ]
+        },
+        { key: 'probability', label: 'Probabilité (%)', type: 'number', required: true },
+        { key: 'expected_close_date', label: 'Date de clôture prévue', type: 'date' },
+        { key: 'description', label: 'Description', type: 'text' }
+      ]
+    },
+    Activity: {
+      tableName: 'Activities',
+      fields: [
+        { key: 'subject', label: 'Sujet', type: 'text', required: true },
+        {
+          key: 'type',
+          label: 'Type',
+          type: 'select',
+          required: true,
+          options: [
+            { value: 'Call', label: 'Appel' },
+            { value: 'Email', label: 'Email' },
+            { value: 'Meeting', label: 'Réunion' },
+            { value: 'Task', label: 'Tâche' }
+          ]
+        },
+        {
+          key: 'company_id',
+          label: 'Entreprise',
+          type: 'select',
+          options: companies.map(c => ({ value: c.id, label: c.name }))
+        },
+        {
+          key: 'contact_id',
+          label: 'Contact',
+          type: 'select',
+          options: contacts.map(c => ({ value: c.id, label: \`\${c.first_name} \${c.last_name}\` }))
+        },
+        {
+          key: 'opportunity_id',
+          label: 'Opportunité',
+          type: 'select',
+          options: opportunities.map(o => ({ value: o.id, label: o.title }))
+        },
+        { key: 'scheduled_date', label: 'Date prévue', type: 'date' },
+        { key: 'description', label: 'Description', type: 'text' }
+      ]
+    }
+  };
+
+  const schema = entitySchemas[entityType];
+
+  const validate = () => {
+    const newErrors = {};
+
+    schema.fields.forEach(field => {
+      if (field.required && !formData[field.key]) {
+        newErrors[field.key] = 'Ce champ est requis';
+      }
+
+      if (field.type === 'email' && formData[field.key]) {
+        const emailRegex = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;
+        if (!emailRegex.test(formData[field.key])) {
+          newErrors[field.key] = 'Email invalide';
+        }
+      }
+
+      if (field.type === 'number' && formData[field.key]) {
+        if (isNaN(Number(formData[field.key]))) {
+          newErrors[field.key] = 'Doit être un nombre';
+        }
+      }
+    });
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) {
+      setErrorMessage('Veuillez corriger les erreurs dans le formulaire');
+      return;
+    }
+
+    setLoading(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+
+    try {
+      if (mode === 'create') {
+        await gristAPI.addRecord(schema.tableName, formData);
+        setSuccessMessage(\`\${entityType} créé avec succès!\`);
+        setFormData({});
+      } else {
+        await gristAPI.updateRecord(schema.tableName, initialData.id, formData);
+        setSuccessMessage(\`\${entityType} mis à jour avec succès!\`);
+      }
+
+      setTimeout(() => {
+        onSuccess();
+      }, 1500);
+    } catch (error) {
+      setErrorMessage(\`Erreur: \${error.message}\`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div style={{ fontFamily: "'Marianne', Arial, sans-serif", maxWidth: '600px' }}>
+      <h2 style={{ marginBottom: '24px', fontSize: '24px', fontWeight: '600', color: '#161616' }}>
+        {mode === 'create' ? \`Créer \${entityType}\` : \`Éditer \${entityType}\`}
+      </h2>
+
+      {successMessage && (
+        <Alert type="success" message={successMessage} />
+      )}
+
+      {errorMessage && (
+        <Alert type="error" message={errorMessage} closable={true} onClose={() => setErrorMessage('')} />
+      )}
+
+      <form onSubmit={(e) => { e.preventDefault(); handleSubmit(); }}>
+        {schema.fields.map(field => {
+          if (field.type === 'select') {
+            return (
+              <Select
+                key={field.key}
+                label={field.label}
+                value={formData[field.key] || ''}
+                onChange={(value) => setFormData({ ...formData, [field.key]: value })}
+                options={field.options}
+                required={field.required}
+                error={errors[field.key]}
+              />
+            );
+          }
+
+          return (
+            <Input
+              key={field.key}
+              label={field.label}
+              type={field.type}
+              value={formData[field.key] || ''}
+              onChange={(value) => setFormData({ ...formData, [field.key]: value })}
+              required={field.required}
+              error={errors[field.key]}
+            />
+          );
+        })}
+
+        <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+          <Button
+            type="submit"
+            label={loading ? 'Enregistrement...' : 'Enregistrer'}
+            variant="primary"
+            disabled={loading}
+          />
+          <Button
+            type="button"
+            label="Annuler"
+            variant="tertiary"
+            onClick={onCancel}
+            disabled={loading}
+          />
+        </div>
+      </form>
+    </div>
+  );
+};
+        `.trim(),
+      },
+
+      // ========================================
       // PAGE COMPONENTS
       // ========================================
 
